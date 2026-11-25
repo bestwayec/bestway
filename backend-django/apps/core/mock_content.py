@@ -74,8 +74,21 @@ def sanitize_content(value):
     return parser.finish()
 
 
+_GAP_SPAN = re.compile(r'<span\s+data-gap="([0-9]{1,3})"\s*>\s*</span>')
+
+
 def gap_numbers(value):
-    return [int(n) for n in re.findall(r'<span\s+data-gap="([0-9]{1,3})"\s*>\s*</span>', value or '')]
+    return [int(n) for n in _GAP_SPAN.findall(value or '')]
+
+
+def renumber_gaps(value, numbers):
+    if value is None:
+        return None
+    return _GAP_SPAN.sub(
+        lambda match: f'<span data-gap="{numbers[int(match[1])]}"></span>'
+        if int(match[1]) in numbers else match[0],
+        value,
+    )
 
 
 def _numbers(numbers):
@@ -109,17 +122,50 @@ def assert_gapped_questions(value, numbers):
 
 
 def reading_passage_count(passage_texts) -> int:
-    """Reading passages in an ordered list of group passage texts.
+    """Compatibility helper for callers with a legacy sequence of passage text."""
+    return len(exam_content_units(({'passageText': value} for value in passage_texts), 'reading'))
 
-    Mirrors ``clusterReadingPassages`` (frontend): consecutive groups that repeat the
-    same non-blank passage text (whitespace-normalised) are one passage with several
-    task groups; every other group is its own passage. A section with one group per
-    passage therefore counts exactly as before.
-    """
-    count, previous = 0, None
-    for value in passage_texts:
-        text = ' '.join((value or '').split())
-        if not (text and text == previous):
-            count += 1
-        previous = text or None
-    return count
+
+def exam_content_units(groups, skill):
+    """Resolve ordered Reading sources and numbered Listening parts without altering group IDs."""
+    units, references = [], {}
+    previous_text, previous_passage = '', None
+    for group in groups:
+        ref = group.get('stimulusRef') if skill == 'reading' else group.get('partNumber')
+        if type(ref) not in (str, int):
+            ref = None
+        value = group.get('passageText')
+        text = ' '.join(value.split()) if skill == 'reading' and not ref and isinstance(value, str) else ''
+        title = group.get('title')
+        heading = re.search(r'\bpassage\s+([1-9][0-9]*)\b', title, re.IGNORECASE) if text and isinstance(title, str) else None
+        passage = heading[1] if heading else None
+        # Two explicitly numbered legacy passages can contain identical text.
+        # Retain the text fallback for continuation groups without a heading.
+        same_passage = not passage or not previous_passage or passage == previous_passage
+        unit = references.get(ref) if ref else units[-1] if text and text == previous_text and same_passage else None
+        if unit is None:
+            unit = []
+            units.append(unit)
+            previous_passage = None
+            if ref:
+                references[ref] = unit
+        unit.append(group)
+        previous_passage = passage or previous_passage
+        previous_text = text
+    return units
+
+
+def source_only_groups(groups, skill):
+    """Find source records needed by a populated unit even if they contain no questions."""
+    if skill not in ('reading', 'listening'):
+        return set()
+    field = 'passageText' if skill == 'reading' else 'audioRef'
+    reference = 'stimulusRef' if skill == 'reading' else 'partNumber'
+    return {
+        id(group)
+        for unit in exam_content_units(groups, skill)
+        if any(isinstance(member.get('questions'), list) and member['questions'] for member in unit)
+        for group in unit
+        if group.get(reference) and group.get('questions') == []
+        and isinstance(group.get(field), str) and group[field].strip()
+    }

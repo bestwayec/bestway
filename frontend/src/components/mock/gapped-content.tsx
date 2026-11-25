@@ -68,6 +68,7 @@ export function GappedContent<Question extends GappedQuestionRef>({
   );
   const safeHtml = React.useMemo(() => sanitizeGappedContent(contentHtml), [contentHtml]);
 
+  const rendered = new Set<number>();
   return (
     <div
       className={cn(
@@ -86,6 +87,8 @@ export function GappedContent<Question extends GappedQuestionRef>({
           const raw = node.attribs?.["data-gap"];
           if (!raw || !/^\d{1,3}$/.test(raw)) return undefined;
           const number = Number(raw);
+          if (rendered.has(number)) return <span aria-hidden>____</span>;
+          rendered.add(number);
           return <React.Fragment key={`gap-${number}`}>{renderGap({ number, question: byNumber.get(number) ?? null })}</React.Fragment>;
         },
       })}

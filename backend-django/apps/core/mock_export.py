@@ -34,7 +34,7 @@ from apps.legacy_schema.models import (
 from common.api.exceptions import ContractAPIException
 
 from .mock_authoring import assert_author
-from .mock_content import LAYOUTS
+from .mock_content import LAYOUTS, source_only_groups
 from .mock_import_validate import KEY, SKILLS
 
 SKILL_TITLES = {'listening': 'Listening', 'reading': 'Reading', 'writing': 'Writing', 'speaking': 'Speaking'}
@@ -141,11 +141,17 @@ def export_package(actor, exam_id: str, skill: str | None = None, *, template: b
     for section in sections:
         section_key = keys.take('section', section.id, section.skill)
         out_groups = []
-        for gi, group in enumerate(by_section.get(section.id, [])):
+        section_groups = by_section.get(section.id, [])
+        source_skill = section.skill if exam.type != 'multilevel' or section.skill == 'reading' else None
+        association = [
+            dict(id=group.id, stimulusRef=group.stimulus_ref, partNumber=group.part_number, passageText=group.passage_text,
+                 audioRef=group.audio_key, questions=by_group.get(group.id, []))
+            for group in section_groups
+        ]
+        sources = source_only_groups(association, source_skill)
+        for gi, group in enumerate(section_groups):
             rows = by_group.get(group.id, [])
-            if not rows:
-                # The importer needs 1+ questions per group; an empty authoring group
-                # has no candidate-facing content to preserve.
+            if not rows and id(association[gi]) not in sources:
                 continue
             default_title = f'Part {group.part_number}' if group.part_number else f'{SKILL_TITLES[section.skill]} {gi + 1}'
             group_key = keys.take('group', group.id, f'{section.skill}-g{gi + 1}')
@@ -157,7 +163,7 @@ def export_package(actor, exam_id: str, skill: str | None = None, *, template: b
                 value['optionsReusable'] = group.options_reusable
             if group.max_score is not None and section.skill in ('writing', 'speaking'):
                 value['maxScore'] = group.max_score
-            if group.stimulus_ref and section.skill == 'writing' and KEY.fullmatch(group.stimulus_ref):
+            if group.stimulus_ref and section.skill in ('reading', 'writing') and KEY.fullmatch(group.stimulus_ref):
                 value['stimulusRef'] = group.stimulus_ref
             if section.skill == 'listening':
                 if group.part_number is not None:
@@ -186,6 +192,8 @@ def export_package(actor, exam_id: str, skill: str | None = None, *, template: b
                     item['skillTags'] = list(question.skill_tags)
                 if question.evidence_text and not template:
                     item['evidenceText'] = question.evidence_text
+                if getattr(question, 'review_explanation', None) and not template:
+                    item['reviewExplanation'] = question.review_explanation
                 if question.audio_start_sec is not None and not template:
                     item['audioStartSec'] = question.audio_start_sec
                 if template:

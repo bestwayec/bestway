@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+from datetime import UTC, datetime
 
 from django.db import connection
 
@@ -84,41 +85,6 @@ def multilevel_cefr_from_score(score: float) -> str:
     return multilevel_level(max(0.0, min(75.0, float(score))))
 
 
-def multilevel_to_ielts_band(score_75: float) -> float:
-    """Cross-scale projection from Multi-Level 0–75 score to IELTS 0.0–9.0 band."""
-    if score_75 is None or not isinstance(score_75, (int, float)) or not math.isfinite(score_75) or score_75 <= 0:
-        return 0.0
-    s = max(0.0, min(75.0, float(score_75)))
-    # BestWay estimate, not an official concordance: the lowest score of each Multilevel level
-    # (blueprint table) is placed at the lowest IELTS band commonly given for that CEFR level.
-    floors = {item["level"]: float(item["min"]) for item in MULTILEVEL_LEVELS}
-    anchors = [(0.0, 2.0), (floors["B1"], 4.0), (floors["B2"], 5.5), (floors["C1"], 7.0), (75.0, 8.5)]
-    for i in range(1, len(anchors)):
-        x1, y1 = anchors[i - 1]
-        x2, y2 = anchors[i]
-        if s <= x2:
-            val = y1 + ((s - x1) / (x2 - x1)) * (y2 - y1)
-            return float(round_half(val))
-    return 8.5
-
-
-def ielts_band_to_multilevel(band_9: float) -> float:
-    """Cross-scale projection from IELTS 0.0–9.0 band to Multi-Level 0–75 score."""
-    if band_9 is None or not isinstance(band_9, (int, float)) or not math.isfinite(band_9) or band_9 <= 0:
-        return 0.0
-    b = max(0.0, min(9.0, float(band_9)))
-    # BestWay estimate, the inverse of multilevel_to_ielts_band's anchors.
-    floors = {item["level"]: float(item["min"]) for item in MULTILEVEL_LEVELS}
-    anchors = [(0.0, 0.0), (4.0, floors["B1"]), (5.5, floors["B2"]), (7.0, floors["C1"]), (9.0, 75.0)]
-    for i in range(1, len(anchors)):
-        x1, y1 = anchors[i - 1]
-        x2, y2 = anchors[i]
-        if b <= x2:
-            val = y1 + ((b - x1) / (x2 - x1)) * (y2 - y1)
-            return round(max(0.0, min(75.0, val)), 1)
-    return 75.0
-
-
 def _finite(value) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
@@ -153,55 +119,41 @@ def extract_attempt_dual_metrics(attempt: MockAttempt) -> dict:
 
     for skill in ("listening", "reading", "writing", "speaking"):
         r_entry = raw_scores.get(skill) if isinstance(raw_scores, dict) else None
-        r_score = float(r_entry.get("score", 0)) if isinstance(r_entry, dict) and r_entry.get("score") is not None else None
-        r_max = float(r_entry.get("max", 0)) if isinstance(r_entry, dict) and r_entry.get("max") is not None else None
-        if r_score is not None and r_max and r_max > 0:
+        r_score = r_entry.get("score") if isinstance(r_entry, dict) else None
+        r_max = r_entry.get("max") if isinstance(r_entry, dict) else None
+        if _finite(r_score) and _finite(r_max) and r_max > 0 and 0 <= r_score <= r_max:
             raw_total += r_score
             raw_max += r_max
-        if not _full_section_evidence(family, skill, r_max):
+        if not _full_section_evidence(family, skill, r_max if _finite(r_max) else None):
             continue
 
-        b_val = section_bands.get(skill) if isinstance(section_bands, dict) else None
-        std_entry = standard_scores.get(skill) if isinstance(standard_scores, dict) else None
-        std_val = std_entry.get("estimatedStandardScore") if isinstance(std_entry, dict) else std_entry
-        std_val = float(std_val) if _finite(std_val) else None
+        if family == "ielts":
+            band = section_bands.get(skill) if isinstance(section_bands, dict) else None
+            if _finite(band) and 0 <= band <= 9:
+                skills_ielts[skill] = float(round_half(band))
+        else:
+            entry = standard_scores.get(skill) if isinstance(standard_scores, dict) else None
+            score = entry.get("estimatedStandardScore") if isinstance(entry, dict) else entry
+            if _finite(score) and 0 <= score <= 75:
+                skills_ml[skill] = round(score, 1)
 
-        if _finite(b_val):
-            skills_ielts[skill] = float(round_half(float(b_val)))
-        elif std_val is not None:
-            skills_ielts[skill] = multilevel_to_ielts_band(std_val)
-
-        if std_val is not None:
-            skills_ml[skill] = round(max(0.0, min(75.0, std_val)), 1)
-        elif skill in skills_ielts:
-            skills_ml[skill] = ielts_band_to_multilevel(skills_ielts[skill])
-
-    overall_band = getattr(attempt, "overall_band", None)
-    overall_score = getattr(attempt, "overall_score", None)
-    stored_band = float(overall_band) if _finite(overall_band) and overall_band > 0 else None
-    stored_score = float(overall_score) if _finite(overall_score) and overall_score > 0 else None
-    # An attempt that is still being graded has no overall result, and neither has a
-    # single-section practice; the mean of whatever sections exist is not one.
-    has_overall = (
-        getattr(attempt, "status", None) == "completed"
-        and is_full_exam_attempt(attempt)
-        and (stored_band is not None or stored_score is not None)
-    )
-
-    ielts_band = 0.0
-    ml_score = 0.0
-    cefr = None
-    if has_overall:
-        ielts_band = float(round_half(stored_band)) if stored_band is not None else multilevel_to_ielts_band(stored_score)
-        ml_score = round(max(0.0, min(75.0, stored_score)), 1) if stored_score is not None else ielts_band_to_multilevel(ielts_band)
-        cefr = multilevel_cefr_from_score(ml_score) if exam_type == "multilevel" else (
-            getattr(attempt, "cefr_level", None) or multilevel_cefr_from_score(ml_score)
-        )
+    allowed = getattr(attempt, "status", None) == "completed" and is_full_exam_attempt(attempt)
+    stored_band = getattr(attempt, "overall_band", None)
+    stored_score = getattr(attempt, "overall_score", None)
+    has_ielts = allowed and family == "ielts" and _finite(stored_band) and 0 <= stored_band <= 9
+    has_ml = allowed and family == "multilevel" and _finite(stored_score) and 0 <= stored_score <= 75
+    ielts_band = float(round_half(stored_band)) if has_ielts else 0.0
+    ml_score = round(stored_score, 1) if has_ml else 0.0
+    cefr = multilevel_cefr_from_score(ml_score) if has_ml else None
+    if has_ielts:
+        cefr = getattr(attempt, "cefr_level", None) or cefr_band(ielts_band)
 
     return {
         "rawScore": round(raw_total, 1),
         "rawMax": round(raw_max, 1),
-        "hasOverall": has_overall,
+        "hasOverall": has_ielts or has_ml,
+        "hasIeltsOverall": has_ielts,
+        "hasMultilevelOverall": has_ml,
         "ieltsBand": ielts_band,
         "multilevelScore": ml_score,
         "cefrLevel": cefr,
@@ -239,40 +191,32 @@ def update_student_target(student_id: str, data: dict) -> dict:
     target_cefr = data.get("targetCefr", data.get("cefrLevel"))
 
     try:
-        target_band = float(round_half(max(1.0, min(9.0, float(target_band)))))
-    except (TypeError, ValueError):
-        target_band = 7.0
-
-    try:
-        target_score = round(max(10.0, min(75.0, float(target_score))), 1)
-    except (TypeError, ValueError):
-        target_score = 65.0
-
-    if not target_cefr or str(target_cefr).upper() not in ("B1", "B2", "C1"):
-        target_cefr = multilevel_cefr_from_score(target_score)
-    else:
-        target_cefr = str(target_cefr).upper()
+        target_band, target_score = float(target_band), float(target_score)
+    except (TypeError, ValueError, OverflowError):
+        raise ContractAPIException("VALIDATION_ERROR", "Enter a valid IELTS band and Multilevel score.", 400)
+    if not 1 <= target_band <= 9 or target_band * 2 % 1:
+        raise ContractAPIException("VALIDATION_ERROR", "IELTS target must be between 1 and 9 in half-band steps.", 400)
+    if not 10 <= target_score <= 75:
+        raise ContractAPIException("VALIDATION_ERROR", "Multilevel target must be between 10 and 75.", 400)
+    target_score = round(target_score, 1)
+    target_cefr = str(target_cefr or current["targetCefr"]).upper()
+    if target_cefr not in ("B1", "B2", "C1"):
+        raise ContractAPIException("VALIDATION_ERROR", "Target CEFR level must be B1, B2 or C1.", 400)
 
     with connection.cursor() as cursor:
-        cursor.execute('SELECT 1 FROM "StudentScoreTarget" WHERE "student_id"=%s', [student_id])
-        if cursor.fetchone():
-            cursor.execute(
-                """
-                UPDATE "StudentScoreTarget"
-                SET "target_ielts_band"=%s, "target_multilevel_score"=%s, "target_cefr"=%s, "updated_at"=CURRENT_TIMESTAMP
-                WHERE "student_id"=%s
-                """,
-                [target_band, target_score, target_cefr, student_id],
-            )
-        else:
-            cursor.execute(
-                """
-                INSERT INTO "StudentScoreTarget"
-                ("student_id", "target_ielts_band", "target_multilevel_score", "target_cefr", "updated_at")
-                VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
-                """,
-                [student_id, target_band, target_score, target_cefr],
-            )
+        cursor.execute(
+            """
+            INSERT INTO "StudentScoreTarget"
+            ("student_id", "target_ielts_band", "target_multilevel_score", "target_cefr", "updated_at")
+            VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
+            ON CONFLICT ("student_id") DO UPDATE SET
+              "target_ielts_band"=EXCLUDED."target_ielts_band",
+              "target_multilevel_score"=EXCLUDED."target_multilevel_score",
+              "target_cefr"=EXCLUDED."target_cefr",
+              "updated_at"=CURRENT_TIMESTAMP
+            """,
+            [student_id, target_band, target_score, target_cefr],
+        )
     return get_student_prediction(student_id)
 
 
@@ -317,6 +261,10 @@ def _analyze_weak_modules(attempt_ids: list[str]) -> list[dict]:
         if not q or not getattr(q, "group", None) or not getattr(q.group, "section", None):
             continue
         skill = q.group.section.skill
+        if skill not in ("reading", "listening") or not (ans.response or "").strip():
+            continue
+        if ans.is_correct is None and ans.score is None:
+            continue
         q_type = q.type
         part_num = q.group.part_number or (q.group.sort_order + 1)
         type_label = QUESTION_TYPE_LABELS.get(q_type, q_type.replace("_", " ").title())
@@ -414,21 +362,24 @@ def get_student_prediction(student_id: str, limit: int = 5) -> dict:
     target = get_student_target(student_id)
     limit = max(3, min(10, int(limit or 5)))
 
-    completed_attempts = list(
-        MockAttempt.objects.filter(student_id=student_id, status__in=["completed", "grading"])
-        .select_related("exam")
-        .order_by("-finished_at", "-submitted_at", "-started_at")[:limit]
-    )
-    if not completed_attempts:
-        completed_attempts = list(
-            MockAttempt.objects.filter(student_id=student_id)
-            .exclude(overall_band=None, overall_score=None)
-            .select_related("exam")
-            .order_by("-started_at")[:limit]
-        )
+    attempts = MockAttempt.objects.filter(student_id=student_id, status__in=["completed", "grading"])
+    recent = list(attempts.select_related("exam").order_by("-started_at", "-id")[:limit])
+    overall = attempts.filter(status="completed").exclude(
+        flow_mode__in=("single_skill", "partial_practice"),
+    ).order_by("-started_at", "-id")
+    recent_ielts = overall.filter(exam__type__in=("ielts_academic", "ielts_general"), overall_band__isnull=False)
+    recent_multilevel = overall.filter(exam__type="multilevel", overall_score__isnull=False)
+    by_id = {attempt.id: attempt for attempt in reversed(recent)}
+    for rows in (recent_ielts, recent_multilevel):
+        by_id.update((attempt.id, attempt) for attempt in rows.select_related("exam")[:limit])
 
-    # Reverse to chronological order (oldest -> newest) for trend calculation
-    chronological = list(reversed(completed_attempts))
+    def chronological_key(attempt):
+        stamp = attempt.submitted_at or attempt.finished_at or attempt.started_at
+        if stamp is None:
+            return datetime.min.replace(tzinfo=UTC)
+        return stamp if stamp.tzinfo else stamp.replace(tzinfo=UTC)
+
+    chronological = sorted(by_id.values(), key=chronological_key)
     history: list[dict] = []
     ielts_series: list[float] = []
     ml_series: list[float] = []
@@ -458,8 +409,10 @@ def get_student_prediction(student_id: str, limit: int = 5) -> dict:
             pending_attempts += 1
             continue
 
-        ielts_series.append(metrics["ieltsBand"])
-        ml_series.append(metrics["multilevelScore"])
+        if metrics["hasIeltsOverall"]:
+            ielts_series.append(metrics["ieltsBand"])
+        if metrics["hasMultilevelOverall"]:
+            ml_series.append(metrics["multilevelScore"])
 
         history.append(
             {
@@ -470,8 +423,8 @@ def get_student_prediction(student_id: str, limit: int = 5) -> dict:
                 "date": dt_iso,
                 "rawScore": metrics["rawScore"],
                 "rawMax": metrics["rawMax"],
-                "ieltsBand": metrics["ieltsBand"],
-                "multilevelScore": metrics["multilevelScore"],
+                "ieltsBand": metrics["ieltsBand"] if metrics["hasIeltsOverall"] else None,
+                "multilevelScore": metrics["multilevelScore"] if metrics["hasMultilevelOverall"] else None,
                 "cefrLevel": metrics["cefrLevel"],
                 "skills": metrics["skillsIelts"],
                 "skillsMultilevel": metrics["skillsMultilevel"],
@@ -481,7 +434,8 @@ def get_student_prediction(student_id: str, limit: int = 5) -> dict:
     # Legacy TestAttempt rows store a total with no known maximum or scale, so no band,
     # standard score or level is derived from them: they simply give no prediction.
 
-    has_overall = bool(ml_series)
+    has_ielts = bool(ielts_series)
+    has_ml = bool(ml_series)
     curr_band, pred_band, delta_band = _compute_weighted_prediction(ielts_series, step_half=True, max_cap=9.0)
     curr_ml, pred_ml, delta_ml = _compute_weighted_prediction(ml_series, step_half=False, max_cap=75.0)
 
@@ -489,8 +443,8 @@ def get_student_prediction(student_id: str, limit: int = 5) -> dict:
     target_score = float(target.get("targetScore") or target.get("targetMultilevelScore") or 60.0)
     target_cefr = str(target.get("targetCefr") or "C1")
 
-    band_progress = min(100, max(0, round((pred_band / target_band) * 100))) if target_band > 0 else 0
-    ml_progress = min(100, max(0, round((pred_ml / target_score) * 100))) if target_score > 0 else 0
+    band_progress = min(100, max(0, round((curr_band / target_band) * 100))) if target_band > 0 else 0
+    ml_progress = min(100, max(0, round((curr_ml / target_score) * 100))) if target_score > 0 else 0
 
     skill_breakdown_ielts = {}
     skill_breakdown_ml = {}
@@ -502,17 +456,18 @@ def get_student_prediction(student_id: str, limit: int = 5) -> dict:
         skill_breakdown_ielts[sk] = float(round_half(sum(i_vals) / len(i_vals))) if i_vals else None
         skill_breakdown_ml[sk] = round(sum(m_vals) / len(m_vals), 1) if m_vals else None
 
-    weak_modules = _analyze_weak_modules([a.id for a in completed_attempts])
+    weak_modules = _analyze_weak_modules([a.id for a in recent])
 
     profile = StudentProfile.objects.filter(user_id=student_id).first()
     active_program = getattr(profile, "active_program", None) or "IELTS"
 
-    if len(ml_series) < 2:
+    active_series, delta, threshold = (ml_series, delta_ml, 1.0) if active_program == "MULTILEVEL" else (ielts_series, delta_band, 0.5)
+    if len(active_series) < 2:
         # One result is not a trend: never call it "stable".
         trend = "insufficient_data"
-    elif delta_ml > 1.0 or delta_band >= 0.5:
+    elif delta >= threshold:
         trend = "improving"
-    elif delta_ml < -1.0 or delta_band <= -0.5:
+    elif delta <= -threshold:
         trend = "declining"
     else:
         trend = "stable"
@@ -521,30 +476,30 @@ def get_student_prediction(student_id: str, limit: int = 5) -> dict:
         "studentId": student_id,
         "studentName": user.name,
         "activeProgram": active_program,
-        "attemptsAnalyzed": len(ml_series) if len(ml_series) > 0 else (section_attempts or len(completed_attempts)),
+        "attemptsAnalyzed": len(ielts_series) + len(ml_series),
         "sectionAttemptsAnalyzed": section_attempts,
         "pendingAttempts": pending_attempts,
         "trend": trend,
-        "targetProgressPercent": (ml_progress if active_program == "MULTILEVEL" else band_progress) if has_overall else 0,
+        "targetProgressPercent": ml_progress if active_program == "MULTILEVEL" else band_progress,
         "ielts": {
-            "currentBand": curr_band if has_overall else None,
-            "predictedBand": pred_band if has_overall else None,
+            "currentBand": curr_band if has_ielts else None,
+            "predictedBand": pred_band if len(ielts_series) >= 2 else None,
             "trendDelta": delta_band,
             "targetBand": target_band,
-            "targetProgressPercent": band_progress if has_overall else 0,
-            "gapToTarget": round(max(0.0, target_band - pred_band), 1) if has_overall else None,
-            "cefrLevel": cefr_band(pred_band) if has_overall and pred_band > 0 else None,
+            "targetProgressPercent": band_progress if has_ielts else 0,
+            "gapToTarget": round(max(0.0, target_band - curr_band), 1) if has_ielts else None,
+            "cefrLevel": cefr_band(curr_band) if has_ielts else None,
             "skillBreakdown": skill_breakdown_ielts,
         },
         "multilevel": {
-            "currentScore": curr_ml if has_overall else None,
-            "predictedScore": pred_ml if has_overall else None,
+            "currentScore": curr_ml if has_ml else None,
+            "predictedScore": pred_ml if len(ml_series) >= 2 else None,
             "trendDelta": delta_ml,
             "targetScore": target_score,
             "targetCefr": target_cefr,
-            "targetProgressPercent": ml_progress if has_overall else 0,
-            "gapToTarget": round(max(0.0, target_score - pred_ml), 1) if has_overall else None,
-            "cefrLevel": multilevel_cefr_from_score(pred_ml) if has_overall else None,
+            "targetProgressPercent": ml_progress if has_ml else 0,
+            "gapToTarget": round(max(0.0, target_score - curr_ml), 1) if has_ml else None,
+            "cefrLevel": multilevel_cefr_from_score(curr_ml) if has_ml else None,
             "scaleBands": MULTILEVEL_SCALE_BANDS,
             "skillBreakdown": skill_breakdown_ml,
         },

@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MockAttemptDetail, MockExamDetail } from '@/lib/types';
 
 const hooks = vi.hoisted(() => ({
-  save: vi.fn(async (answers: unknown[]) => ({ saved: answers.length })),
+  save: vi.fn(),
   other: vi.fn(async () => ({})),
   toastError: vi.fn(),
   exam: undefined as MockExamDetail | undefined,

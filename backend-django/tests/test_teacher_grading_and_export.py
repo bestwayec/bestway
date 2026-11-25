@@ -183,7 +183,7 @@ class GroupExamExportServiceTests(SimpleTestCase):
         self.assertEqual(group_exam_export.compute_cefr_level(None, "multilevel", existing_cefr="b2"), "B2")
 
     @patch("apps.core.group_exam_export.AssessmentJob.objects")
-    @patch("apps.core.group_exam_export.MockAttempt.objects")
+    @patch("apps.core.group_exam_export.classroom_attempts")
     @patch("apps.core.group_exam_export.StudentProfile.objects")
     @patch("apps.core.group_exam_export.MockExam.objects")
     @patch("apps.core.group_exam_export.Group.objects")
@@ -209,6 +209,8 @@ class GroupExamExportServiceTests(SimpleTestCase):
             status="completed",
             overall_band=7.0,
             overall_score=70.0,
+            exam=mock_exam,
+            flow_mode="full_test",
             section_bands={"writing": 6.5, "speaking": 7.5},
             standard_scores={"writing": 65, "speaking": 75},
             media_state={"is_teacher_reviewed": True, "teacher_score": 7.0, "teacher_comment": "Zo'r"},
@@ -216,7 +218,7 @@ class GroupExamExportServiceTests(SimpleTestCase):
             submitted_at=None,
             started_at=None,
         )
-        mock_attempts_qs.filter.return_value.order_by.return_value = [att]
+        mock_attempts_qs.return_value.filter.return_value.select_related.return_value.order_by.return_value = [att]
 
         job_w = MagicMock(attempt_id="att-1", skill="writing", ai_score=6.0, teacher_score=6.5, final_score=6.5, final_score_source="TEACHER")
         job_s = MagicMock(attempt_id="att-1", skill="speaking", ai_score=7.0, teacher_score=7.5, final_score=7.5, final_score_source="TEACHER")
@@ -228,13 +230,13 @@ class GroupExamExportServiceTests(SimpleTestCase):
         self.assertEqual(data["exam"]["title"], "Multi-Level Practice 1")
         self.assertEqual(data["totalStudents"], 1)
         self.assertEqual(data["submittedCount"], 1)
-        self.assertEqual(data["averageFinalScore"], 7.0)
+        self.assertEqual(data["averageFinalScore"], 70.0)
         self.assertEqual(data["cefrDistribution"]["C1"], 1)
         self.assertEqual(len(data["students"]), 1)
         st_row = data["students"][0]
         self.assertEqual(st_row["name"], "Komiljon Roziyev")
-        self.assertEqual(st_row["writing_score"], 6.5)
-        self.assertEqual(st_row["speaking_score"], 7.5)
+        self.assertEqual(st_row["writing_score"], 65)
+        self.assertEqual(st_row["speaking_score"], 75)
         self.assertEqual(st_row["cefr_level"], "C1")
         self.assertEqual(st_row["status"], "Ko'rib chiqildi")
 
@@ -294,6 +296,11 @@ class GroupExamExportServiceTests(SimpleTestCase):
         self.assertEqual(ws["B8"].value, "Olimjon Shokirov")
         self.assertEqual(ws["B9"].value, "Zuhra Aliyeva")
 
+        sample_data["exam"]["title"] = "=Literal title"
+        workbook = openpyxl.load_workbook(io.BytesIO(group_exam_export.generate_group_exam_excel(sample_data)))
+        self.assertEqual(workbook.active["E4"].value, "=Literal title")
+        self.assertEqual(workbook.active["E4"].data_type, "s")
+
     def test_generate_group_exam_pdf_output(self):
         sample_data = {
             "group": {"id": "group-1", "name": "B2 Exam Group", "teacherName": "Komiljon Roziyev"},
@@ -328,6 +335,15 @@ class GroupExamExportServiceTests(SimpleTestCase):
         pdf_bytes = group_exam_export.generate_group_exam_pdf(sample_data)
         self.assertTrue(pdf_bytes.startswith(b"%PDF"))
         self.assertGreater(len(pdf_bytes), 1000)
+
+        from pypdf import PdfReader
+
+        row = sample_data["students"][0]
+        sample_data["students"] = [dict(row, number=i, name=f"Learner {i:02}") for i in range(1, 22)]
+        pages = PdfReader(io.BytesIO(group_exam_export.generate_group_exam_pdf(sample_data))).pages
+        self.assertEqual(len(pages), 2)
+        self.assertIn("Learner 20", pages[0].extract_text())
+        self.assertIn("Learner 21", pages[1].extract_text())
 
 
 class GroupExamExportApiEndpointTests(SimpleTestCase):

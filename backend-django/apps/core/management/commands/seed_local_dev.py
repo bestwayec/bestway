@@ -15,9 +15,11 @@ from uuid import uuid4
 from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
-from django.db import connection
+from django.db import connection, transaction
 from django.utils import timezone
 
+from apps.core.classroom_roster import record_enrollment
+from apps.core.models import ClassroomEnrollment
 from apps.legacy_schema.models import Group, MockExam, StudentProfile, User
 from common.auth.passwords import hash_password
 
@@ -65,10 +67,11 @@ class Command(BaseCommand):
         if group is None:
             group = Group.objects.create(id=str(uuid4()), name="Local Group A", teacher_id=teacher.id, created_at=now)
 
-        with connection.cursor() as cursor:
+        with transaction.atomic(), connection.cursor() as cursor:
             for phone in ("+998900000010", "+998900000011"):
                 student = users[phone]
-                if not StudentProfile.objects.filter(user_id=student.id).exists():
+                profile = StudentProfile.objects.select_for_update().filter(user_id=student.id).first()
+                if profile is None:
                     cursor.execute(
                         'INSERT INTO "StudentProfile" ("userId","availablePrograms","activeProgram","isApproved",'
                         '"groupId","currentPoints","linkCode","createdAt","gameQualified") '
@@ -85,6 +88,14 @@ class Command(BaseCommand):
                         '"activeProgram"=\'MULTILEVEL\'::"ExamProgram" WHERE "userId"=%s',
                         [group.id, student.id],
                     )
+                previous = profile.group_id if profile else None
+                if previous == group.id and not ClassroomEnrollment.objects.filter(
+                    student_id=student.id, group_id=group.id, ended_at__isnull=True,
+                ).exists():
+                    # Existing synthetic profiles from the older seed get a
+                    # current enrollment without guessing an earlier transfer date.
+                    previous = None
+                record_enrollment(student.id, previous, group.id)
 
         # The Record Mock (MOCK-RECORD-01) is the Multi-Level exam the phone and smoke checks use.
         if not MockExam.objects.filter(id="MOCK-RECORD-01").exists():

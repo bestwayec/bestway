@@ -5,6 +5,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   ChevronDown,
+  ArrowDown,
+  ArrowUp,
   Eye,
   EyeOff,
   ImagePlus,
@@ -77,6 +79,7 @@ function toBuilderPart(group: MockGroup): BuilderPart {
       wordLimit: q.wordLimit ?? undefined,
         answerRule: q.answerRule ?? null,
       evidenceText: q.evidenceText ?? null,
+      reviewExplanation: q.reviewExplanation ?? null,
       audioStartSec: q.audioStartSec ?? null,
       savedQuestionId: q.id,
     })),
@@ -127,6 +130,9 @@ export function ListeningPartEditor({
   const tc = useTranslations("common");
   const section = detail.sections.find((s) => s.id === sectionId);
   const group = section?.groups.find((g) => g.id === groupId);
+  const audioOwner = detail.type !== "multilevel" && group?.partNumber && !group.hasAudio
+    ? section?.groups.find((item) => item.partNumber === group.partNumber && item.hasAudio)
+    : undefined;
 
   const saveContent = useSaveMockGroupContent(examId);
   // Track only IDs this editor has loaded or saved; never delete unseen additions.
@@ -250,7 +256,7 @@ export function ListeningPartEditor({
         questions: p.questions.map((q) => ({ id: q.savedQuestionId, number: q.number, type: q.type, prompt: q.prompt,
           options: q.options, correctAnswers: q.correctAnswers, acceptedVariants: q.acceptedVariants,
           points: q.points, wordLimit: q.wordLimit, answerRule: q.answerRule,
-          evidenceText: q.evidenceText, audioStartSec: q.audioStartSec })),
+          evidenceText: q.evidenceText, reviewExplanation: q.reviewExplanation, audioStartSec: q.audioStartSec })),
         deletedQuestionIds: persistedQuestionIds.current.filter((id) => !p.questions.some((local) => local.savedQuestionId === id)),
       });
       persistedQuestionIds.current = saved.questions.map((q) => q.id);
@@ -530,7 +536,12 @@ export function ListeningPartEditor({
             <p id="lp-script-hint" className="mt-1 text-xs text-fg-muted">{tr("audioScriptHint")}</p>
           </Field>
 
-          <ListeningAudioCard
+          {audioOwner ? <div className="space-y-2 rounded-field border border-border p-3">
+            <p className="text-sm">{t("sharedUnitAudio")}</p>
+            <Button variant="outline" size="sm" onClick={() => onSelect({ kind: "group", groupId: audioOwner.id })}>
+              {t("openUnitSource")}
+            </Button>
+          </div> : <ListeningAudioCard
             groupId={group.id}
             partLabel={partName}
             hasAudio={group.hasAudio || part.audioPendingFile != null}
@@ -544,7 +555,7 @@ export function ListeningPartEditor({
             onPickFile={pickAudioFile}
             onClearPending={clearPendingAudio}
             onPlayLimitChange={(n) => update((p) => ({ ...p, audioPlayLimit: n }))}
-          />
+          />}
 
           {/* Diagram / image (e.g. map labelling) — optional. */}
           <div className="rounded-field border border-border p-3">
@@ -759,7 +770,16 @@ export function ListeningPartEditor({
           </div>
         ) : (
           <ol className="mt-3 space-y-2">
-            {part.questions.map((q) => {
+            {part.questions.map((q, index) => {
+              const moveQuestion = (step: -1 | 1) => update((p) => {
+                const questions = [...p.questions];
+                const other = questions[index + step];
+                if (other) {
+                  questions[index + step] = q;
+                  questions[index] = other;
+                }
+                return { ...p, questions };
+              });
               const open = expanded.has(q.clientId);
               const issues = questionIssues(
                 {
@@ -829,12 +849,20 @@ export function ListeningPartEditor({
                   </button>
                   {open && (
                     <div className="border-t border-border p-3">
+                      <div className="mb-2 flex gap-1">
+                        <Button type="button" variant="ghost" size="sm" disabled={index === 0}
+                          aria-label={`${tx(t, "moveUp", "Move question")} ${q.number} ${tx(t, "up", "up")}`}
+                          onClick={() => moveQuestion(-1)}><ArrowUp className="size-4" aria-hidden /></Button>
+                        <Button type="button" variant="ghost" size="sm" disabled={index === part.questions.length - 1}
+                          aria-label={`${tx(t, "moveDown", "Move question")} ${q.number} ${tx(t, "down", "down")}`}
+                          onClick={() => moveQuestion(1)}><ArrowDown className="size-4" aria-hidden /></Button>
+                      </div>
                       <QuestionEditor
                         question={q}
                         skill="listening"
                         allowedTypes={LISTENING_TYPES}
-                        reviewSource={part.audioScript ?? ""}
-                        audioDurationSec={group.audioDurationSec}
+                        reviewSource={part.audioScript || audioOwner?.audioScript || audioOwner?.passageText || ""}
+                        audioDurationSec={audioOwner?.audioDurationSec ?? group.audioDurationSec}
                         onChange={(next) =>
                           update((p) => ({
                             ...p,

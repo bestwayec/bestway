@@ -3,26 +3,35 @@
 import * as React from "react";
 import { Check, ChevronDown, Flag, Minus, X } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { examContentUnits } from "@/lib/exam-content-units";
 import { cn } from "@/lib/utils";
 import type { MockAttemptGroup, MockAttemptQuestion, MockSkill } from "@/lib/types";
 import { ReviewExplain } from "./review-explain";
 
-export type ReviewFilter = "all" | "wrong" | "unanswered" | "correct" | "flagged";
+export type ReviewFilter = "all" | "wrong" | "unanswered" | "correct" | "pending" | "flagged";
 
 const answeredOf = (q: MockAttemptQuestion) =>
   Boolean((q.response ?? "").trim()) || Boolean(q.hasAudio);
 
-/** Rows a filter keeps: "wrong" is an answer that was marked wrong; an empty answer is "unanswered". */
+export function reviewState(q: MockAttemptQuestion): "correct" | "wrong" | "unanswered" | "pending" {
+  // The scorer can credit a position in a shared-response cluster even if its own field is empty.
+  if (q.isCorrect === true) return "correct";
+  if (!answeredOf(q)) return "unanswered";
+  return q.isCorrect === false || q.isGraded ? "wrong" : "pending";
+}
+
+function positions(q: MockAttemptQuestion) {
+  return Math.max(1, (q.displayNumberEnd ?? q.displayNumber ?? q.number) - (q.displayNumber ?? q.number) + 1);
+}
+
 export function filterReviewRows(
   questions: MockAttemptQuestion[],
   filter: ReviewFilter,
   flaggedIds?: Set<string>,
 ): MockAttemptQuestion[] {
-  if (filter === "unanswered") return questions.filter((q) => !answeredOf(q));
-  if (filter === "wrong") return questions.filter((q) => answeredOf(q) && q.isCorrect === false);
-  if (filter === "correct") return questions.filter((q) => q.isCorrect === true);
+  if (filter === "all") return questions;
   if (filter === "flagged") return questions.filter((q) => flaggedIds?.has(q.id));
-  return questions;
+  return questions.filter((q) => reviewState(q) === filter);
 }
 
 /**
@@ -35,59 +44,42 @@ export function ResultReviewTable({
   skill,
   groups,
   flaggedIds,
+  canonicalListening = true,
 }: {
   title: string;
   skill: MockSkill;
   groups: MockAttemptGroup[];
   flaggedIds?: Set<string>;
+  canonicalListening?: boolean;
 }) {
   const t = useTranslations("mock.resultTable");
   const [filter, setFilter] = React.useState<ReviewFilter>("all");
-  const questions = React.useMemo(() => groups.flatMap((g) => g.questions), [groups]);
-  const groupOf = React.useMemo(
-    () => new Map(groups.flatMap((g) => g.questions.map((q) => [q.id, g] as const))),
-    [groups],
-  );
-  // The open "where is the answer" panel; a wrong answer with review material opens on click.
+  const [unitKey, setUnitKey] = React.useState("");
+  const [questionType, setQuestionType] = React.useState("");
+  const units = React.useMemo(() => examContentUnits(groups, skill, canonicalListening), [groups, skill, canonicalListening]);
+  const allQuestions = units.flatMap((unit) => unit.groups.flatMap((group) => group.questions));
+  const groupOf = new Map(groups.flatMap((group) => group.questions.map((q) => [q.id, group] as const)));
+  const selectedUnits = units.filter((unit) => !unitKey || unit.key === unitKey);
+  const questions = selectedUnits.flatMap((unit) => unit.groups.flatMap((group) => group.questions))
+    .filter((q) => !questionType || q.type === questionType);
   const [open, setOpen] = React.useState<string | null>(null);
-  const explainable = (q: MockAttemptQuestion) => Boolean(q.evidence) || q.audioStartSec != null;
-
-  const counts: Record<ReviewFilter, number> = {
-    all: questions.length,
-    wrong: filterReviewRows(questions, "wrong").length,
-    unanswered: filterReviewRows(questions, "unanswered").length,
-    correct: filterReviewRows(questions, "correct").length,
-    flagged: filterReviewRows(questions, "flagged", flaggedIds).length,
-  };
-
-  const rows = filterReviewRows(questions, filter, flaggedIds);
-  const correct = questions.filter((q) => q.isCorrect === true).length;
   const tableId = React.useId();
-
-  const filterKeys: ReviewFilter[] = [
-    "all",
-    "wrong",
-    "unanswered",
-    "correct",
-    ...(counts.flagged > 0 ? (["flagged"] as const) : []),
-  ];
-
-  const hasMultipleGroups = groups.length > 1;
+  const filterKeys: ReviewFilter[] = ["all", "correct", "wrong", "unanswered", "pending",
+    ...(flaggedIds?.size ? (["flagged"] as const) : [])];
+  const count = (key: ReviewFilter) => filterReviewRows(questions, key, flaggedIds)
+    .reduce((total, question) => total + positions(question), 0);
+  const rows = filterReviewRows(questions, filter, flaggedIds);
+  const correct = count("correct");
 
   const renderTableRows = (qs: MockAttemptQuestion[]) => {
     return qs.map((q) => {
       const answered = answeredOf(q);
-      const state =
-        q.isCorrect === true
-          ? "correct"
-          : !answered
-          ? "unanswered"
-          : q.isCorrect === false
-          ? "wrong"
-          : "pending";
-      const canExplain = explainable(q);
-      const isOpen = open === q.id;
+      const state = reviewState(q);
       const group = groupOf.get(q.id);
+      const canExplain = Boolean(group && (q.correctAnswers != null || q.reviewExplanation || group.reviewText || group.reviewAudioUrl || group.audioScript));
+      const isOpen = open === q.id;
+      const number = q.displayNumber ?? q.number;
+
       const isFlagged = flaggedIds?.has(q.id);
 
       return (
@@ -97,13 +89,13 @@ export function ResultReviewTable({
             data-review-state={state}
             className={cn(
               "border-b border-border/60 last:border-0 align-top transition-colors",
-              canExplain && state !== "correct" && "cursor-pointer hover:bg-surface-hover",
+              canExplain && "cursor-pointer hover:bg-surface-hover",
             )}
-            onClick={canExplain && state !== "correct" ? () => setOpen(isOpen ? null : q.id) : undefined}
+            onClick={canExplain ? () => setOpen(isOpen ? null : q.id) : undefined}
           >
-            <td className="px-3 py-2 font-semibold tabular-nums text-fg">
+            <td className="px-1.5 py-2 font-semibold tabular-nums text-fg sm:px-3">
               <div className="flex items-center gap-1">
-                <span>{q.displayNumber ?? q.number}</span>
+                <span>{q.displayNumberEnd ? `${number}–${q.displayNumberEnd}` : number}</span>
                 {isFlagged && (
                   <Flag className="size-3 text-warning fill-warning" aria-label="Flagged" />
                 )}
@@ -113,10 +105,11 @@ export function ResultReviewTable({
               <span className="line-clamp-2" title={q.prompt}>
                 {q.prompt}
               </span>
+              <span className="text-xs">{q.type.replaceAll("_", " ")}</span>
             </td>
             <td
               className={cn(
-                "px-3 py-2 font-medium break-words",
+                "px-1.5 py-2 font-medium break-words sm:px-3",
                 state === "correct" ? "text-brand" : state === "wrong" ? "text-danger" : "text-fg",
               )}
             >
@@ -131,14 +124,14 @@ export function ResultReviewTable({
                 </span>
               )}
             </td>
-            <td className="px-3 py-2 break-words text-brand font-medium">
+            <td className="px-1.5 py-2 break-words text-brand font-medium sm:px-3">
               {q.correctAnswers && q.correctAnswers.length > 0 ? (
                 q.correctAnswers.join(" / ")
               ) : (
                 <span className="text-fg-muted">—</span>
               )}
             </td>
-            <td className="px-3 py-2">
+            <td className="px-1 py-2 sm:px-3">
               <span
                 className={cn(
                   "grid size-6 place-items-center rounded-full text-xs font-bold",
@@ -161,10 +154,11 @@ export function ResultReviewTable({
               </span>
             </td>
             <td className="px-2 py-2">
+              {q.score != null && <span className="block text-xs tabular-nums">{q.score}/{q.points}</span>}
               {canExplain && (
                 <button
                   type="button"
-                  className="grid size-8 place-items-center rounded-md text-fg-muted hover:bg-surface-hover hover:text-fg"
+                  className="grid size-9 place-items-center rounded-md text-fg-muted hover:bg-surface-hover hover:text-fg"
                   aria-expanded={isOpen}
                   aria-controls={`review-explain-${q.id}`}
                   aria-label={t("whereFor", { number: q.displayNumber ?? q.number })}
@@ -185,6 +179,11 @@ export function ResultReviewTable({
           {isOpen && group && (
             <tr id={`review-explain-${q.id}`} className="border-b border-border/60">
               <td colSpan={6} className="px-3 pb-3">
+                <div className="mb-2 space-y-0.5 text-sm" data-testid="review-original-question">
+                  <p className="font-semibold">{t("question")} {q.displayNumberEnd ? `${number}–${q.displayNumberEnd}` : number}</p>
+                  <p className="whitespace-pre-line">{q.prompt}</p>
+                  <p className="text-xs text-fg-muted">{q.type.replaceAll("_", " ")}</p>
+                </div>
                 <ReviewExplain skill={skill} group={group} question={q} />
               </td>
             </tr>
@@ -200,7 +199,7 @@ export function ResultReviewTable({
         <h2 className="text-sm font-semibold text-fg">
           {title}{" "}
           <span className="font-normal tabular-nums text-fg-muted">
-            · {t("correctOf", { correct, total: questions.length })}
+            · {t("correctOf", { correct, total: count("all") })}
           </span>
         </h2>
         <div role="group" aria-label={t("filterLabel")} className="flex flex-wrap gap-1 rounded-lg bg-bg-subtle p-0.5">
@@ -218,77 +217,49 @@ export function ResultReviewTable({
                   : "text-fg-muted hover:text-fg",
               )}
             >
-              {t(`filter_${key}`, { count: counts[key] })}
+              {t(`filter_${key}`, { count: count(key) })}
             </button>
           ))}
         </div>
       </div>
 
-      {rows.length === 0 ? (
-        <p className="px-3 py-6 text-center text-sm text-fg-muted" role="status">
-          {t(`empty_${filter}`)}
-        </p>
-      ) : hasMultipleGroups ? (
-        <div className="divide-y divide-border">
-          {groups.map((group, gIdx) => {
-            const groupFilteredRows = filterReviewRows(group.questions, filter, flaggedIds);
-            const groupTotal = group.questions.length;
-            const groupCorrect = group.questions.filter((q) => q.isCorrect === true).length;
-            const unitLabel = skill === "reading" ? "Passage" : "Section";
-            const groupTitle = group.title || `${unitLabel} ${gIdx + 1}`;
-
-            if (groupFilteredRows.length === 0) return null;
-
-            return (
-              <div key={group.id} className="p-3 sm:p-4 space-y-2">
-                <div className="flex items-center justify-between border-b border-border/80 pb-2">
-                  <h3 className="text-xs sm:text-sm font-bold text-fg">
-                    {groupTitle}
-                  </h3>
-                  <span className="text-xs text-fg-muted font-medium tabular-nums">
-                    {groupCorrect} / {groupTotal} to&apos;g&apos;ri
-                  </span>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead className="text-xs text-fg-muted">
-                      <tr className="border-b border-border">
-                        <th scope="col" className="w-12 px-3 py-1.5 font-medium">#</th>
-                        <th scope="col" className="hidden px-3 py-2 font-medium sm:table-cell">{t("question")}</th>
-                        <th scope="col" className="px-3 py-1.5 font-medium">{t("yourAnswer")}</th>
-                        <th scope="col" className="px-3 py-1.5 font-medium">{t("key")}</th>
-                        <th scope="col" className="w-12 px-3 py-1.5 font-medium"><span className="sr-only">{t("mark")}</span></th>
-                        <th scope="col" className="w-10 px-2 py-1.5 font-medium"><span className="sr-only">{t("where")}</span></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {renderTableRows(groupFilteredRows)}
-                    </tbody>
-                  </table>
-                </div>
+      <div className="flex flex-wrap gap-2 px-3 py-2">
+        <select aria-label={t("unitFilter")} value={unitKey} onChange={(event) => setUnitKey(event.target.value)} className="min-h-10 max-w-full rounded-field border border-border bg-surface px-2 text-sm text-fg">
+          <option value="">{t("allUnits")}</option>
+          {units.map((unit) => <option key={unit.key} value={unit.key}>{unit.source.title || t(skill === "reading" ? "passage" : "part", { number: unit.number })}</option>)}
+        </select>
+        <select aria-label={t("typeFilter")} value={questionType} onChange={(event) => setQuestionType(event.target.value)} className="min-h-10 max-w-full rounded-field border border-border bg-surface px-2 text-sm text-fg">
+          <option value="">{t("allTypes")}</option>
+          {[...new Set(allQuestions.map((question) => question.type))].map((type) => <option key={type} value={type}>{type.replaceAll("_", " ")}</option>)}
+        </select>
+      </div>
+      <div id={tableId}>
+        {rows.length === 0 && <p className="px-3 py-6 text-center text-sm text-fg-muted" role="status">{t(`empty_${filter}`)}</p>}
+        {selectedUnits.map((unit) => {
+          const unitRows = rows.filter((q) => unit.groups.some((g) => g.id === groupOf.get(q.id)?.id));
+          if (!unitRows.length) return null;
+          return (
+            <div key={unit.key} className="border-t border-border p-2 sm:p-3">
+              <h3 className="p-1 text-sm font-semibold">{unit.source.title || t(skill === "reading" ? "passage" : "part", { number: unit.number })}</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full table-fixed text-left text-xs sm:text-sm">
+                  <thead className="text-xs text-fg-muted">
+                    <tr className="border-b border-border">
+                      <th scope="col" className="w-8 px-1.5 py-2 sm:w-12 sm:px-2">#</th>
+                      <th scope="col" className="hidden px-3 py-2 sm:table-cell">{t("question")}</th>
+                      <th scope="col" className="px-1.5 py-2 sm:px-3">{t("yourAnswer")}</th>
+                      <th scope="col" className="px-1.5 py-2 sm:px-3">{t("key")}</th>
+                      <th scope="col" className="w-8 px-1 py-2 sm:w-12 sm:px-3"><span className="sr-only">{t("mark")}</span></th>
+                      <th scope="col" className="w-12 px-2 py-2"><span className="sr-only">{t("where")}</span></th>
+                    </tr>
+                  </thead>
+                  <tbody>{renderTableRows(unitRows)}</tbody>
+                </table>
               </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table id={tableId} className="w-full text-left text-sm">
-            <thead className="text-xs text-fg-muted">
-              <tr className="border-b border-border">
-                <th scope="col" className="w-12 px-3 py-1.5 font-medium">#</th>
-                <th scope="col" className="hidden px-3 py-2 font-medium sm:table-cell">{t("question")}</th>
-                <th scope="col" className="px-3 py-1.5 font-medium">{t("yourAnswer")}</th>
-                <th scope="col" className="px-3 py-1.5 font-medium">{t("key")}</th>
-                <th scope="col" className="w-12 px-3 py-1.5 font-medium"><span className="sr-only">{t("mark")}</span></th>
-                <th scope="col" className="w-10 px-2 py-1.5 font-medium"><span className="sr-only">{t("where")}</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              {renderTableRows(rows)}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </div>
+          );
+        })}
+      </div>
     </section>
   );
 }

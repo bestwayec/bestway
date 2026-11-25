@@ -39,6 +39,36 @@ def started_parts(attempt) -> dict:
     return {key[len(KEY_PREFIX):]: value for key, value in state.items() if key.startswith(KEY_PREFIX) and isinstance(value, dict)}
 
 
+def _recording_groups(group):
+    return MockQuestionGroup.objects.filter(
+        section_id=group.section_id, part_number=group.part_number, audio_key=group.audio_key,
+    )
+
+
+def _recording_schedule(attempt, group):
+    started = started_parts(attempt)
+    if group.id in started:
+        return started[group.id]
+    if started and group.part_number and group.audio_key:
+        ids = _recording_groups(group).filter(id__in=started).values_list('id', flat=True)
+        return min((started[group_id] for group_id in ids), key=lambda value: value['startedAt'], default=None)
+    return None
+
+
+def _recording_owner(exam_id, group):
+    if not group.part_number:
+        return group
+    siblings = list(_recording_groups(group).order_by('sort_order', 'id')[:2])
+    if len(siblings) < 2:
+        return group
+    from .exam_import_service import get_listening_timestamps
+
+    for timestamp in get_listening_timestamps(exam_id)['timestamps']:
+        if timestamp.get('partNumber') == group.part_number:
+            return _recording_groups(group).filter(id=timestamp.get('groupId')).first() or siblings[0]
+    return siblings[0]
+
+
 def start(actor, attempt_id: str, group_id: str) -> dict:
     with transaction.atomic():
         attempt = engine.own(actor, attempt_id, lock=True)
@@ -51,21 +81,21 @@ def start(actor, attempt_id: str, group_id: str) -> dict:
             engine.fail('QUESTION_NOT_IN_EXAM', 'Listening part not in this exam', 403)
         if attempt.flow_mode == 'full_test' and attempt.current_skill != 'listening':
             engine.fail('SECTION_LOCKED', 'Listening section is locked', 403)
-        state = dict(attempt.media_state or {})
-        key = state_key(group_id)
-        if key not in state:  # once only: a second start returns the first schedule
+        schedule = _recording_schedule(attempt, group)
+        if schedule is None:
+            owner = _recording_owner(attempt.exam_id, group)
             now = timezone.now()
             reading = reading_seconds(attempt.exam.type)
-            state[key] = dict(startedAt=engine.iso(now), readingEndsAt=engine.iso(now + timedelta(seconds=reading)),
-                              readingSeconds=reading, durationSec=group.audio_duration_sec)
-            attempt.media_state = state
+            schedule = dict(startedAt=engine.iso(now), readingEndsAt=engine.iso(now + timedelta(seconds=reading)),
+                            readingSeconds=reading, durationSec=owner.audio_duration_sec)
+            attempt.media_state = {**(attempt.media_state or {}), state_key(owner.id): schedule}
             attempt.save(update_fields=['media_state'])
-        return dict(state[key], serverTime=engine.iso(timezone.now()))
+        return dict(schedule, serverTime=engine.iso(timezone.now()))
 
 
 def access_window_open(attempt, group) -> bool | None:
     """True/False when the part was started with the schedule; None for clients that never started it."""
-    schedule = started_parts(attempt).get(group.id)
+    schedule = _recording_schedule(attempt, group)
     if schedule is None:
         return None
     reading_end = engine.aware(parse_datetime(schedule['readingEndsAt']))

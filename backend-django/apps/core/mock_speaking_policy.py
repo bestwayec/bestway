@@ -29,6 +29,14 @@ def expected(attempt, question):
 
 
 UPLOAD_RECOVERY = timedelta(minutes=5)
+# A response still contains exactly its configured number of seconds. The
+# browser may use this fixed allowance for microphone startup and delivery of
+# the phase receipt. It is granted once and cannot cross an attempt deadline.
+CAPTURE_STARTUP_ALLOWANCE = timedelta(seconds=3)
+
+
+def capture_deadline(response_end, attempt_deadlines):
+    return min([response_end + CAPTURE_STARTUP_ALLOWANCE, *(limit for limit in attempt_deadlines if limit is not None)])
 
 
 def upload_window_closed(phase, at):

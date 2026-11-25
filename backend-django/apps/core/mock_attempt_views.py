@@ -1,6 +1,5 @@
 """HTTP boundary for the migrated student attempt mutations."""
 import json
-import math
 from datetime import datetime
 
 from django.db import transaction
@@ -14,7 +13,6 @@ from . import exam_session
 from . import mock_attempts as engine
 from .views import body, require_authenticated, require_role
 from .views import success as envelope
-from common.api.exceptions import ContractAPIException
 
 
 def wire(value):
@@ -45,7 +43,7 @@ ANNOTATIONS_MAX_BYTES = 256 * 1024
 def validate_answer(data):
     if not isinstance(data, dict):
         engine.fail('VALIDATION_ERROR', 'nested property answers must be either object or array')
-    extra = next((k for k in data if k not in {'questionId', 'response', 'editedAt'}), None)
+    extra = next((k for k in data if k not in {'questionId', 'response', 'editedAt', 'baseRevision'}), None)
     if extra:
         engine.fail('VALIDATION_ERROR', f'property {extra} should not exist')
     if not isinstance(data.get('questionId'), str) or not data['questionId']:
@@ -55,15 +53,19 @@ def validate_answer(data):
     if len(data['response']) > 10000:
         engine.fail('VALIDATION_ERROR', 'response must be shorter than or equal to 10000 characters')
     edited = data.get('editedAt')
-    if edited is not None and (isinstance(edited, bool) or not isinstance(edited, (int, float)) or not math.isfinite(edited) or edited <= 0):
-        engine.fail('VALIDATION_ERROR', 'editedAt must be a positive number of milliseconds')
+    if edited is not None and (isinstance(edited, bool) or not isinstance(edited, (int, float)) or not 0 < edited <= 253402300799999):
+        engine.fail('VALIDATION_ERROR', 'editedAt must be a valid timestamp in milliseconds')
+    revision = data.get('baseRevision')
+    if 'baseRevision' in data and (edited is None or (revision is not None and
+        (not isinstance(revision, str) or len(revision) != 24))):
+        engine.fail('VALIDATION_ERROR', 'baseRevision requires editedAt and must be null or a server revision')
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def start_view(request, exam_id=None):
     student(request)
-    data = body(request, {'mode', 'flow', 'skills', 'skill', 'section', 'section_filter', 'examId', 'exam_id', 'retake', 'allow_retake', 'allowRetake', 'force', 'groupIds', 'timer'})
+    data = body(request, {'mode', 'flow', 'skills', 'skill', 'section', 'section_filter', 'examId', 'exam_id', 'retake', 'allow_retake', 'allowRetake', 'force', 'groupIds', 'timer', 'assignmentId'})
     target_exam_id = exam_id or data.get('examId') or data.get('exam_id') or request.query_params.get('examId') or request.query_params.get('exam_id')
     if not target_exam_id:
         engine.fail('VALIDATION_ERROR', 'examId should not be empty')
@@ -110,6 +112,7 @@ def start_view(request, exam_id=None):
 
 @api_view(['POST', 'PUT'])
 @permission_classes([AllowAny])
+@exam_session.serialize
 def answer_view(request, attempt_id):
     student(request)
     attempt_signature.verify_request(request, attempt_id)
@@ -132,6 +135,7 @@ def answer_view(request, attempt_id):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@exam_session.serialize
 def answers_view(request, attempt_id):
     student(request)
     attempt_signature.verify_request(request, attempt_id)
@@ -149,12 +153,13 @@ def answers_view(request, attempt_id):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@exam_session.serialize
 def submit_view(request, attempt_id):
     from .mock_submissions import submit
     student(request)
     attempt_signature.verify_request(request, attempt_id)
     exam_session.guard(request, attempt_id)
-    data = body(request, {'skills', 'skill', 'section', 'section_filter', 'confirm', 'confirmed', 'force', 'reason', 'autoSubmit', 'timeUp', 'timeout', 'answers'})
+    data = body(request, {'skills', 'skill', 'section', 'section_filter', 'confirm', 'confirmed', 'force', 'reason', 'autoSubmit', 'timeUp', 'timeout', 'answers', 'requireExpired'})
     skills = data.get('skills')
     sec = (
         data.get('skill')
@@ -173,7 +178,7 @@ def submit_view(request, attempt_id):
             engine.fail('VALIDATION_ERROR', 'skills must be an array')
         if any(skill not in engine.SKILLS for skill in skills):
             engine.fail('VALIDATION_ERROR', 'each value in skills must be one of the following values: listening, reading, writing, speaking')
-    force = bool(
+    force = request.user.role in ('admin', 'super_admin') and bool(
         data.get('confirm')
         or data.get('confirmed')
         or data.get('force')
@@ -183,23 +188,18 @@ def submit_view(request, attempt_id):
         or request.query_params.get('force')
     )
     in_flight_answers = data.get('answers')
-    if isinstance(in_flight_answers, list) and in_flight_answers:
+    if in_flight_answers is not None:
+        if not isinstance(in_flight_answers, list) or len(in_flight_answers) > 200:
+            engine.fail('VALIDATION_ERROR', 'answers must be an array of at most 200 entries')
         for item in in_flight_answers:
             validate_answer(item)
-        # Answers that ride along with the final submit are saved under the same
-        # server deadline as every other save. `force`/`timeUp` come from the client
-        # and must never extend the timer: once time is up the late answers are
-        # dropped and the attempt is still submitted with what was saved in time.
-        try:
-            engine.save_answers(request.user, attempt_id, in_flight_answers, bulk=True)
-        except ContractAPIException as error:
-            if error.contract_code not in ('MOCK_TIME_UP', 'MOCK_SECTION_TIME_UP'):
-                raise
-    return success(submit(request.user, attempt_id, skills, force=force), 201)
+    return success(submit(request.user, attempt_id, skills, force=force, in_flight_answers=in_flight_answers,
+                          require_expired=data.get('requireExpired') is True), 201)
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@exam_session.serialize
 def switch_section_view(request, attempt_id):
     student(request)
     exam_session.guard(request, attempt_id)
@@ -213,28 +213,39 @@ def switch_section_view(request, attempt_id):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@exam_session.serialize
 def advance_view(request, attempt_id):
     student(request)
+    attempt_signature.verify_request(request, attempt_id)
     exam_session.guard(request, attempt_id)
-    return success(engine.advance(request.user, attempt_id), 201)
+    data = body(request, {'expectedSkill', 'requireExpired'})
+    expected_skill = data.get('expectedSkill')
+    if expected_skill is not None and expected_skill not in engine.SKILLS:
+        engine.fail('VALIDATION_ERROR', 'expectedSkill must be an exam skill')
+    return success(engine.advance(request.user, attempt_id, expected_skill, require_expired=data.get('requireExpired') is True), 201)
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@exam_session.serialize
 def prepare_view(request, attempt_id, group_id):
     student(request)
+    exam_session.guard(request, attempt_id)
     return success(engine.media_phase(request.user, attempt_id, group_id, 'listening'), 201)
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@exam_session.serialize
 def play_view(request, attempt_id, group_id):
     student(request)
+    exam_session.guard(request, attempt_id)
     return success(engine.media_phase(request.user, attempt_id, group_id, 'listening', True), 201)
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@exam_session.serialize
 def listening_start_view(request, attempt_id, group_id):
     """IELTS timed Listening: record when this part starts (reading time, then the recording)."""
     from . import ielts_listening
@@ -245,8 +256,10 @@ def listening_start_view(request, attempt_id, group_id):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@exam_session.serialize
 def speaking_start_view(request, attempt_id, question_id):
     student(request)
+    exam_session.guard(request, attempt_id)
     return success(engine.media_phase(request.user, attempt_id, question_id, 'speaking'), 201)
 
 
@@ -288,6 +301,7 @@ def telemetry_view(request, attempt_id):
 
 @api_view(['PUT'])
 @permission_classes([AllowAny])
+@exam_session.serialize
 def annotations_view(request, attempt_id):
     student(request)
     exam_session.guard(request, attempt_id)
@@ -399,6 +413,7 @@ def detail_view(request, attempt_id):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@exam_session.serialize
 def speaking_upload_view(request, attempt_id, question_id):
     student(request)
     exam_session.guard(request, attempt_id)
@@ -426,9 +441,10 @@ def speaking_audio_view(request, attempt_id, question_id):
         engine.fail('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404)
     engine.assert_view(request.user, attempt.student_id, started_at=attempt.started_at if request.user.role == "teacher" else None)
     answer = MockAnswer.objects.filter(attempt_id=attempt_id, question_id=question_id).first()
-    if answer is None or not answer.audio_key or not resolve_key(answer.audio_key).is_file():
+    path = resolve_key(answer.audio_key) if answer and answer.audio_key else None
+    if path is None or not path.is_file() or not path.stat().st_size:
         engine.fail('FILE_NOT_FOUND', 'Audio topilmadi', 404)
-    return stream_audio(request, resolve_key(answer.audio_key))
+    return stream_audio(request, path)
 
 
 def _extract_uploaded_images(request, max_size=10 * 1024 * 1024):
@@ -586,6 +602,8 @@ def writing_ocr_view(request, attempt_id, question_id=None):
     try:
         with transaction.atomic():
             writable_handwriting(request.user, attempt_id, question_id, lock=True)
+            # OCR may take longer than a lease or overlap an explicit takeover.
+            exam_session.guard(request, attempt_id)
             existing = MockAnswer.objects.filter(attempt_id=attempt_id, question_id=question_id).first()
             rubric = dict(existing.rubric_scores) if existing and isinstance(existing.rubric_scores, dict) else {}
             keys = list(rubric.get('imageKeys') or [])

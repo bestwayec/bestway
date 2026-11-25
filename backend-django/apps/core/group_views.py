@@ -5,7 +5,7 @@ from rest_framework.decorators import api_view, permission_classes
 
 from common.auth.permissions import Authenticated
 
-from . import classroom_roster, groups as service
+from . import classroom_roster, group_report, groups as service
 from .domain_contracts import invalid, payload
 from .mock_attempt_views import success
 from .views import require_role
@@ -97,20 +97,20 @@ def group_view(request, group_id):
     return success(service.update(actor, group_id, validate(clean_data)))
 
 
-def _build_excel_response(actor, group_id):
-    xlsx_bytes, filename = service.export_group_xlsx(actor, group_id)
+def _build_excel_response(actor, group_id, params):
+    xlsx_bytes = group_report.generate_group_workbook(actor, group_id, params.get("month"), params)
     response = HttpResponse(
         xlsx_bytes,
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     )
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response['Content-Disposition'] = 'attachment; filename="classroom-report.xlsx"'
     return response
 
 
 @api_view(['GET'])
 @permission_classes([Authenticated])
 def export_group_excel_view(request, group_id):
-    return _build_excel_response(request.user, group_id)
+    return _build_excel_response(request.user, group_id, request.query_params)
 
 
 @api_view(['GET'])
@@ -118,7 +118,7 @@ def export_group_excel_view(request, group_id):
 def export_group_results_view(request, group_id):
     fmt = (request.query_params.get('format') or '').strip().lower()
     if fmt in ('xlsx', 'excel'):
-        return _build_excel_response(request.user, group_id)
+        return _build_excel_response(request.user, group_id, request.query_params)
 
     actor = request.user
     group = service.get_group(group_id)
@@ -127,8 +127,7 @@ def export_group_results_view(request, group_id):
     elif actor.role not in ('admin', 'super_admin', 'teacher'):
         service.fail('FORBIDDEN', 'Ruxsat berilmagan', 403)
 
-    from . import statistics
-    body = statistics.group_results_csv(group_id)
+    body = group_report.generate_group_monthly_csv(actor, group_id, request.query_params.get("month"), request.query_params)
     safe_name = re.sub(r'[^a-zA-Z0-9_\-]+', '_', group.name)
     response = HttpResponse(body, content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="guruh-{safe_name}-natijalar.csv"'

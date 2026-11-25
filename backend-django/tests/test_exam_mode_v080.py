@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+from datetime import datetime
 from io import BytesIO
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -169,9 +170,14 @@ class ScorePredictionEngineTests(SimpleTestCase):
             with self.subTest(score=score):
                 self.assertEqual(prediction_service.multilevel_cefr_from_score(score), level)
 
-    def test_dual_scale_conversions(self):
-        self.assertGreaterEqual(prediction_service.multilevel_to_ielts_band(65), 7.0)
-        self.assertGreaterEqual(prediction_service.ielts_band_to_multilevel(7.0), 65.0)
+    def test_multilevel_result_uses_only_the_stored_standard_score(self):
+        attempt = SimpleNamespace(exam=SimpleNamespace(type="multilevel"), status="completed", flow_mode="full_test",
+                                  overall_score=0, overall_band=7.0, section_bands={"reading": 7.0})
+        metrics = prediction_service.extract_attempt_dual_metrics(attempt)
+        self.assertTrue(metrics["hasMultilevelOverall"])
+        self.assertFalse(metrics["hasIeltsOverall"])
+        self.assertEqual(metrics["multilevelScore"], 0)
+        self.assertEqual(metrics["skillsIelts"], {})
 
     @patch("apps.core.prediction_service.StudentProfile")
     @patch("apps.core.prediction_service.User")
@@ -224,8 +230,9 @@ class ScorePredictionEngineTests(SimpleTestCase):
                 raw_scores={"listening": {"score": 29, "max": 35}, "reading": {"score": 28, "max": 35}},
                 section_bands={},
                 standard_scores={"listening": {"estimatedStandardScore": 63}, "reading": {"estimatedStandardScore": 61}},
-                finished_at=SimpleNamespace(isoformat=lambda: "2026-10-16T10:00:00Z"),
-                started_at=SimpleNamespace(isoformat=lambda: "2026-10-16T09:00:00Z"),
+                finished_at=datetime.fromisoformat("2026-10-16T10:00:00+00:00"),
+                submitted_at=datetime.fromisoformat("2026-10-16T09:45:00+00:00"),
+                started_at=datetime.fromisoformat("2026-10-16T09:00:00+00:00"),
             ),
             SimpleNamespace(
                 id="att-3",
@@ -238,8 +245,9 @@ class ScorePredictionEngineTests(SimpleTestCase):
                 raw_scores={"listening": {"score": 25, "max": 35}, "reading": {"score": 24, "max": 35}},
                 section_bands={},
                 standard_scores={"listening": {"estimatedStandardScore": 55}, "reading": {"estimatedStandardScore": 53}},
-                finished_at=SimpleNamespace(isoformat=lambda: "2026-10-12T10:00:00Z"),
-                started_at=SimpleNamespace(isoformat=lambda: "2026-10-12T09:00:00Z"),
+                finished_at=datetime.fromisoformat("2026-10-12T10:00:00+00:00"),
+                submitted_at=datetime.fromisoformat("2026-10-12T09:45:00+00:00"),
+                started_at=datetime.fromisoformat("2026-10-12T09:00:00+00:00"),
             ),
             SimpleNamespace(
                 id="att-2",
@@ -252,8 +260,9 @@ class ScorePredictionEngineTests(SimpleTestCase):
                 raw_scores={"listening": {"score": 20, "max": 35}, "reading": {"score": 21, "max": 35}},
                 section_bands={},
                 standard_scores={"listening": {"estimatedStandardScore": 44}, "reading": {"estimatedStandardScore": 44}},
-                finished_at=SimpleNamespace(isoformat=lambda: "2026-10-08T10:00:00Z"),
-                started_at=SimpleNamespace(isoformat=lambda: "2026-10-08T09:00:00Z"),
+                finished_at=datetime.fromisoformat("2026-10-08T10:00:00+00:00"),
+                submitted_at=datetime.fromisoformat("2026-10-08T09:45:00+00:00"),
+                started_at=datetime.fromisoformat("2026-10-08T09:00:00+00:00"),
             ),
         ]
         mock_attempt_cls.objects.filter.return_value.select_related.return_value.order_by.return_value.__getitem__.return_value = fake_attempts
@@ -264,7 +273,7 @@ class ScorePredictionEngineTests(SimpleTestCase):
         self.assertEqual(pred["multilevel"]["currentScore"], 62.0)
         self.assertGreaterEqual(pred["multilevel"]["predictedScore"], 60.0)
         # 60-64 is B2 under the agency criteria (C1 starts at 65).
-        self.assertEqual(pred["multilevel"]["cefrLevel"], "B2" if pred["multilevel"]["predictedScore"] < 65 else "C1")
+        self.assertEqual(pred["multilevel"]["cefrLevel"], "B2")
         self.assertEqual(len(pred["history"]), 3)
         self.assertEqual(pred["weakModules"][0]["module"], "Reading — Matching Headings")
 

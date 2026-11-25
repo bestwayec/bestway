@@ -1,7 +1,6 @@
 "use client";
 
-import type { DisplayPassage, PreviewStaticDoc } from "./reading-preview-model";
-import { PreviewStaticHtml } from "./preview-static-html";
+import type { DisplayPassage } from "./reading-preview-model";
 
 /**
  * Left panel of the Reading preview: passage source content ONLY.
@@ -12,15 +11,9 @@ import { PreviewStaticHtml } from "./preview-static-html";
  */
 export function ReadingPassagePanel({
   passage,
-  staticDocs,
   labelledBy,
 }: {
   passage: DisplayPassage;
-  /**
-   * Gap-free static markup shown only when the passage has no passageText.
-   * Gap-bearing task documents are never passed here.
-   */
-  staticDocs: PreviewStaticDoc[];
   labelledBy?: string;
 }) {
   const audioSrc = passage.hasAudio ? `/api/backend/mock/groups/${passage.audioGroupId}/audio` : null;
@@ -66,16 +59,6 @@ export function ReadingPassagePanel({
       {hasPassageText ? (
         <div className="mt-3 whitespace-pre-line break-words text-[15px] leading-8 text-fg">
           {passage.passageText}
-        </div>
-      ) : staticDocs.length > 0 ? (
-        <div className="mt-3 space-y-3">
-          {staticDocs.map((doc) => (
-            <PreviewStaticHtml
-              key={doc.groupId}
-              html={doc.staticHtml}
-              className="text-[15px] leading-8"
-            />
-          ))}
         </div>
       ) : (
         <p className="mt-3 text-sm text-fg-subtle">No passage text available.</p>

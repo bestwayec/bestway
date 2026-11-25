@@ -12,7 +12,21 @@ const attempt = (over: Partial<MockAttemptSummary>): MockAttemptSummary =>
 
 describe("resultsProgress", () => {
   it("is empty without attempts", () => {
-    expect(resultsProgress([])).toEqual({ finished: 0, checking: 0, mocks: { ielts: [], multilevel: [] }, practice: [] });
+    expect(resultsProgress([])).toMatchObject({ finished: 0, checking: 0, mocks: { ielts: [], multilevel: [] }, practice: [] });
+  });
+
+  it("plots zero and discards out-of-range and pending scores on their own scales", () => {
+    const p = resultsProgress([
+      attempt({ flowMode: "full_test", overallBand: 0, sectionBands: { listening: 0, reading: 65 } }),
+      attempt({ flowMode: "full_test", examType: "multilevel", overallScore: 65, overallBand: 7 }),
+      attempt({ flowMode: "full_test", status: "grading", overallBand: 8 }),
+      attempt({ rawScores: { reading: { score: 0, max: 8 }, listening: { score: 10, max: 8 } } }),
+    ]);
+    expect(p.mocks.ielts.map((item) => item.value)).toEqual([0]);
+    expect(p.mocks.multilevel.map((item) => item.value)).toEqual([65]);
+    expect(p.skills.ielts.listening.map((item) => item.value)).toEqual([0]);
+    expect(p.skills.ielts.reading).toEqual([]);
+    expect(p.practice[0]).toMatchObject({ correct: 0, total: 8, percent: 0 });
   });
 
   it("counts only submitted attempts; a server-closed duplicate is not finished", () => {

@@ -131,6 +131,17 @@ describe("ProfileView Data Consistency", () => {
     expect(html).not.toContain("Hali natija yo'q — birinchi testni boshlang");
   });
 
+  it("offers resume across tracks and excludes expired attempts from the resume list", () => {
+    fixture.attempts = [
+      { ...makeAttempt("multilevel-open", "in_progress"), examType: "multilevel", examTitle: "Multilevel in progress" },
+      { ...makeAttempt("expired", "in_progress"), deadlineAt: "2020-01-01T00:00:00Z" },
+    ];
+    const html = renderToStaticMarkup(React.createElement(ProfileView));
+    expect(html).toContain("Multilevel in progress");
+    expect(html.match(/>Continue<\/a>/g)).toHaveLength(2);
+    expect(html).toMatch(/href="\/mock\/attempt\/expired"[^>]*>Details<\/a>/);
+  });
+
   it("displays friendly empty state only when student has 0 attempts", () => {
     fixture.attempts = [];
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { UnitGroupActions } from "./unit-group-actions";
 import * as React from "react";
 import { CheckCircle2, FileText, Plus, Save, Trash2, XCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -9,12 +10,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import {
   useCreateMockGroup,
+  useUpdateMockGroup,
   useDeleteMockSection,
   useUpdateMockSection,
 } from "@/hooks/use-mock";
 import { ApiError } from "@/lib/api-client";
+import { objectivePositionCount } from "@/lib/objective-question";
 import type { MockExamDetail } from "@/lib/types";
-import { groupIssueCount } from "./checks";
+import { groupIssueCount, groupSourceStatuses } from "./checks";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { partRangeLabel } from "./ReadingPassageEditor";
 import { QTYPE_LABEL } from "@/components/mock/exam-builder/types";
@@ -54,6 +57,7 @@ export function ReadingSectionPanel({
   const update = useUpdateMockSection(examId);
   const delSection = useDeleteMockSection(examId);
   const createGroup = useCreateMockGroup(examId);
+  const updateGroup = useUpdateMockGroup(examId);
 
   const [title, setTitle] = React.useState(section?.title ?? "");
   const [duration, setDuration] = React.useState(
@@ -111,6 +115,7 @@ export function ReadingSectionPanel({
     [...section.groups].sort((a, b) => a.sortOrder - b.sortOrder),
   );
   const questionCount = section.groups.reduce((a, g) => a + g.questions.length, 0);
+  const sources = groupSourceStatuses(section.groups, "reading");
   const nextNo = passages.length + 1;
 
   function handleAddPassage() {
@@ -128,6 +133,30 @@ export function ReadingSectionPanel({
       },
     );
   }
+
+  const moveTaskGroup = (groupId: string, parentGroupId: string) => updateGroup.mutate(
+    { groupId, input: { parentGroupId } },
+    { onError: (e) => toast.error(e instanceof ApiError ? e.message : tc("unknownError")) },
+  );
+  const reorderTaskGroup = (groupId: string, siblingId: string, before: boolean) => updateGroup.mutate(
+    { groupId, input: { groupPlacement: { siblingId, before } } },
+    { onError: (e) => toast.error(e instanceof ApiError ? e.message : tc("unknownError")) },
+  );
+  const selectGroup = (groupId: string) => onSelect({ kind: "group", groupId });
+  const duplicateTaskGroup = (copyFromGroupId: string) => createGroup.mutate(
+    { sectionId: section.id, input: { copyFromGroupId } },
+    {
+      onSuccess: (g) => selectGroup((g as { id: string }).id),
+      onError: (e) => toast.error(e instanceof ApiError ? e.message : tc("unknownError")),
+    },
+  );
+  const addTaskGroup = (parentGroupId: string) => createGroup.mutate(
+    { sectionId: section.id, input: { parentGroupId, title: t("newUnitTaskGroup") } },
+    {
+      onSuccess: (g) => selectGroup((g as { id: string }).id),
+      onError: (e) => toast.error(e instanceof ApiError ? e.message : tc("unknownError")),
+    },
+  );
 
   return (
     <div className="space-y-4">
@@ -171,14 +200,17 @@ export function ReadingSectionPanel({
         <div className="grid gap-3 sm:grid-cols-2">
           {passages.map((passage) => {
             const passageNo = passage.ordinal;
-            const firstGroup = passage.groups[0];
+            const firstGroup = passage.groups.find((g) => g.passageText?.trim()) ?? passage.groups[0];
             const issues = passage.groups.reduce(
-              (total, group) => total + groupIssueCount(group, "reading"),
+              (total, group) => total + groupIssueCount(group, "reading", sources.get(group.id)),
               0,
             );
             const n = passage.questions.length;
             const hasText = !!passage.passageText?.trim();
-            const range = partRangeLabel(passage.questions.map((q) => q.number));
+            const range = partRangeLabel(passage.questions.flatMap((q) => [
+              q.displayNumber ?? q.number, q.displayNumberEnd ?? q.displayNumber ?? q.number,
+            ]));
+            const scoringPositions = passage.questions.reduce((total, q) => total + objectivePositionCount(q), 0);
             const types = [
               ...new Set(
                 passage.groups.flatMap((group) => group.questions.map((q) => q.type)),
@@ -200,12 +232,12 @@ export function ReadingSectionPanel({
                   : `${issues} ${tx(t, "issues", "issues")}`,
               );
             return (
+              <div key={firstGroup.id} className="min-w-0 rounded-card border border-border">
               <button
-                key={firstGroup.id}
                 type="button"
                 onClick={() => onSelect({ kind: "group", groupId: firstGroup.id })}
                 aria-label={`Passage ${passageNo}${passage.title?.trim() ? ` — ${passage.title.trim()}` : ""} — ${missing.length ? missing.join(", ") : tx(t, "ready", "Ready")}`}
-                className="rounded-card border border-border bg-surface p-4 text-left transition hover:border-fg-subtle focus-visible:outline-2 focus-visible:outline-brand"
+                className="w-full rounded-card bg-surface p-4 text-left transition hover:bg-bg-subtle focus-visible:outline-2 focus-visible:outline-brand"
               >
                 <div className="flex items-center gap-2">
                   {missing.length > 0 ? (
@@ -223,6 +255,7 @@ export function ReadingSectionPanel({
                     {range ? `Q${range}` : "—"}
                     {" · "}
                     {n} {n === 1 ? tx(t, "questionOne", "question") : tx(t, "questions", "questions")}
+                    {scoringPositions !== n && ` · ${t("scoringPositions", { count: scoringPositions })}`}
                   </span>
                 </div>
                 {typeText && (
@@ -244,6 +277,13 @@ export function ReadingSectionPanel({
                   </span>
                 </p>
               </button>
+              <UnitGroupActions groups={passage.groups} select={selectGroup} add={() => addTaskGroup(firstGroup.id)}
+                duplicate={duplicateTaskGroup} move={moveTaskGroup} reorder={reorderTaskGroup}
+                busy={createGroup.isPending || updateGroup.isPending}
+                targets={passages.filter((other) => other !== passage).map((other) => ({
+                  id: other.groups[0].id, label: other.title ?? `${t("passage")} ${other.ordinal}`,
+                }))} />
+              </div>
             );
           })}
         </div>

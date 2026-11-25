@@ -35,11 +35,13 @@ export function PreviewQuestionInput({
   value,
   onChange,
   unavailableOptions,
+  sharedBank,
 }: {
   question: PreviewQuestion;
   value: string;
   onChange: (v: string) => void;
   unavailableOptions?: string[];
+  sharedBank?: boolean;
 }) {
   const t = useTranslations("mock");
 
@@ -95,5 +97,5 @@ export function PreviewQuestionInput({
     );
   }
 
-  return <ObjectiveQuestionInput question={q} value={value} onChange={onChange} unavailableOptions={unavailableOptions} />;
+  return <ObjectiveQuestionInput question={q} value={value} onChange={onChange} unavailableOptions={unavailableOptions} sharedBank={sharedBank} />;
 }

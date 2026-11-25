@@ -6,7 +6,7 @@ import { TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/feedback";
 import type { MockAttemptSummary } from "@/lib/types";
-import { MAX_POINTS, MOCK_SCALE, resultsProgress, type MockFamily } from "@/lib/results-progress";
+import { MOCK_SCALE, PROGRESS_SKILLS, resultsProgress, type MockFamily } from "@/lib/results-progress";
 import { cn } from "@/lib/utils";
 import { multilevelLevelText } from "@/lib/multilevel-scale";
 
@@ -86,7 +86,7 @@ function PointsChart({
               <div
                 key={p.id}
                 className={cn("absolute bottom-0 -translate-x-1/2 rounded-t-[4px] bg-chart-series transition-opacity", active != null && active !== i && "opacity-60")}
-                style={{ left: `${x(i)}%`, height: `${y(p.value)}%`, width: `min(28px, ${60 / n}%)`, minHeight: p.value > 0 ? 2 : 0 }}
+                style={{ left: `${x(i)}%`, height: `${y(p.value)}%`, width: `min(28px, ${60 / n}%)`, minHeight: 2 }}
                 aria-hidden="true"
               />
             ) : (
@@ -163,7 +163,9 @@ export function ResultsProgressCard({ attempts, loading }: { attempts: MockAttem
   const t = useTranslations("profile.progress");
   const tMock = useTranslations("mock");
   const data = React.useMemo(() => resultsProgress(attempts), [attempts]);
-  const hasCharts = data.mocks.ielts.length + data.mocks.multilevel.length + data.practice.length > 0;
+  const families = ["ielts", "multilevel"] as const;
+  const hasSkills = families.some((family) => PROGRESS_SKILLS.some((skill) => data.skills[family][skill].length > 0));
+  const hasCharts = hasSkills || data.mocks.ielts.length + data.mocks.multilevel.length + data.practice.length > 0;
 
   const mockText = (family: MockFamily, value: number, cefr: string | null) =>
     `${family === "ielts" ? t("band", { value: value.toFixed(1) }) : t("score", { value })}${cefr ? ` · ${multilevelLevelText(cefr, tMock("levelBelowB1"))}` : ""}`;
@@ -202,24 +204,41 @@ export function ResultsProgressCard({ attempts, loading }: { attempts: MockAttem
             </p>
           ) : (
             <>
-              {(["ielts", "multilevel"] as const).map((family) =>
+              {families.map((family) =>
                 data.mocks[family].length > 0 ? (
                   <PointsChart
                     key={family}
                     kind="dot"
                     title={family === "ielts" ? t("mockIeltsTitle") : t("mockMultilevelTitle")}
-                    caption={t("mockCaption", { count: MAX_POINTS })}
+                    caption={t("mockCaption", { count: data.mocks[family].length })}
                     max={MOCK_SCALE[family]}
                     ticks={MOCK_TICKS[family]}
                     points={data.mocks[family].map((m) => ({ id: m.id, at: m.at, examTitle: m.examTitle, value: m.value, text: mockText(family, m.value, m.cefrLevel) }))}
                   />
                 ) : null,
               )}
+              {hasSkills && (
+                <details className="rounded-card border border-border p-4">
+                  <summary className="cursor-pointer font-semibold">{t("skillTrends")}</summary>
+                  <div className="mt-4 grid gap-6 sm:grid-cols-2">
+                    {families.flatMap((family) => PROGRESS_SKILLS.map((skill) => {
+                      const points = data.skills[family][skill];
+                      return points.length > 0 && (
+                        <PointsChart key={`${family}-${skill}`} kind="dot"
+                          title={t("skillTrend", { family: family === "ielts" ? "IELTS" : "Multilevel", skill: t(skill) })}
+                          caption={t("mockCaption", { count: points.length })} max={MOCK_SCALE[family]} ticks={MOCK_TICKS[family]}
+                          points={points.map((point) => ({ ...point, text: mockText(family, point.value, null) }))}
+                        />
+                      );
+                    }))}
+                  </div>
+                </details>
+              )}
               {data.practice.length > 0 && (
                 <PointsChart
                   kind="bar"
                   title={t("practiceTitle")}
-                  caption={t("practiceCaption", { count: MAX_POINTS })}
+                  caption={t("practiceCaption", { count: data.practice.length })}
                   max={100}
                   ticks={[0, 50, 100]}
                   points={data.practice.map((p) => ({

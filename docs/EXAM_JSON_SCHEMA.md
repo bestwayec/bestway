@@ -64,11 +64,14 @@ Roles: `teacher`, `admin`, `super_admin`. Students get 403 on every route above;
 | `audioPlayLimit` | 1–10 (Listening) |
 | `audioRef` / `imageRef` | key of a `media` declaration of kind audio / image |
 | `maxScore` | **new, optional.** Writing/Speaking part maximum (Multilevel blueprint: 5/5/6, 5/5/5/6) |
-| `stimulusRef` | **new, optional.** Writing only; Tasks 1.1 and 1.2 share one value |
-| `questions` | 1–200 |
+| `stimulusRef` | Optional section-scoped identity. Reading groups for one passage share a value. Writing Tasks 1.1 and 1.2 may share a stimulus. |
+| `questions` | 1–200. A source group can use `[]` when a linked group in the same passage or IELTS Listening part contains questions. |
 
-Several consecutive Reading groups with the **same** `passageText` are one passage with several
-task groups (this is how the student UI and the IELTS full-mock readiness count passages).
+Give each Reading passage a unique `stimulusRef`. Set `passageText` on its source group and reuse its reference on continuation groups. Keep rich task documents in each group's `contentHtml`. Legacy consecutive groups repeating whitespace-normalized source text still form one passage. Review source-less continuations and conflicting source text before publication.
+
+IELTS Listening groups with the same `partNumber` belong to one part. Supply one recording for the part. Older packages can reuse the same `audioRef` on its groups. Other groups can supply instructions, tasks, and maps. Full IELTS sections validate the number of logical units and the sum of objective scoring positions.
+
+An exported Reading source group can contain the passage with `questions: []` when another group shares its reference and contains the questions. An IELTS Listening recording can also live on a source-only group in its numbered part. Whole-section audio markers are saved through the existing exam `audio-timestamps` endpoint. JSON packages carry media references. Reattach the file and restore its verified markers when moving a whole-section recording into another draft.
 
 ## question
 

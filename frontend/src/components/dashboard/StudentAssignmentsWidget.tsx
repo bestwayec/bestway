@@ -72,7 +72,7 @@ export function StudentAssignmentsWidget({ groupName }: StudentAssignmentsWidget
     try {
       const exam = await apiClient.get<{ id: string }>(`/student/assignments/${encodeURIComponent(assignment.id)}/exam`);
       if (exam.id !== assignment.exam_id) throw new Error("Assignment changed");
-      router.push(`/mock/${encodeURIComponent(exam.id)}`);
+      router.push(`/mock/${encodeURIComponent(exam.id)}?assignment=${encodeURIComponent(assignment.id)}`);
     } catch {
       toast.error(tu("assignments.examUnavailable"));
       void fetchAssignments();

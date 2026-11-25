@@ -121,7 +121,6 @@ export function ReadingPreviewShell({ groups }: { groups: PreviewGroup[] }) {
           >
             <ReadingPassagePanel
               passage={active}
-              staticDocs={active.staticDocs}
               labelledBy={`reading-passage-title-${active.key}`}
             />
           </div>
@@ -182,7 +181,7 @@ export function ReadingPreviewShell({ groups }: { groups: PreviewGroup[] }) {
             aria-label={`Questions for passage ${active.ordinal}`}
             className="h-full overflow-y-auto overscroll-contain px-5 py-4 md:px-8"
           >
-            {active.passageText?.trim() && active.staticDocs.length > 0 && (
+            {active.staticDocs.length > 0 && (
               <div className="mb-6 space-y-3">
                 {active.staticDocs.map((doc) => (
                   <PreviewStaticHtml key={doc.groupId} html={doc.staticHtml} />

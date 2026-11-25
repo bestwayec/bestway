@@ -65,7 +65,7 @@ function HomeworkCard({ item }: { item: StudentHomeworkItem }) {
     setBusy(true);
     try {
       const exam = await api.get<{ id: string }>(`/student/assignments/${encodeURIComponent(item.id)}/exam`);
-      router.push(`/mock/${encodeURIComponent(exam.id)}`);   // the established exam runner — no second engine
+      router.push(`/mock/${encodeURIComponent(exam.id)}?assignment=${encodeURIComponent(item.id)}`);
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : t("common.loadError"));
     } finally {

@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const OUT = join(here, "..", "..", ".local", "e2e");
+const OUT = process.env.BW_OUT || join(here, "..", "..", ".local", "e2e");
 mkdirSync(OUT, { recursive: true });
 const STATE_FILE = join(OUT, "multilevel-full.json");
 
@@ -64,11 +64,37 @@ const PICTURE = pngFile("ml-speaking.png");
 // Fake microphone: Speaking records Chromium's synthetic tone, never a person.
 const browser = await chromium.launch({
   ...(process.env.BW_CHROMIUM ? { executablePath: process.env.BW_CHROMIUM } : {}),
-  args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"],
+  args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream", "--autoplay-policy=no-user-gesture-required"],
 });
 
 async function session(phone, viewport = { width: 1440, height: 900 }) {
   const ctx = await browser.newContext({ viewport, permissions: ["microphone"] });
+  if (process.env.BW_SYNTHETIC_AUDIO_CONTEXT) {
+    // Feed the real Chromium MediaRecorder from Web Audio on hosts whose fake input drops frames.
+    await ctx.addInitScript(() => {
+      const nativeInput = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+      navigator.mediaDevices.getUserMedia = async (constraints) => {
+        if (!constraints?.audio || constraints.video) return nativeInput(constraints);
+        const context = new AudioContext();
+        const destination = context.createMediaStreamDestination();
+        const tone = context.createOscillator();
+        const gain = context.createGain();
+        gain.gain.value = 0.05;
+        tone.frequency.value = 440;
+        tone.connect(gain).connect(destination);
+        tone.start();
+        await context.resume();
+        for (const track of destination.stream.getTracks()) {
+          const stop = track.stop.bind(track);
+          track.stop = () => {
+            stop();
+            if (context.state !== "closed") void context.close();
+          };
+        }
+        return destination.stream;
+      };
+    });
+  }
   const page = await ctx.newPage();
   page.setDefaultTimeout(30000);
   page.on("pageerror", (e) => {
@@ -276,6 +302,11 @@ const correct = (q) => (q.correctAnswers || [])[0];
 async function answerObjective(page, q) {
   if (q.type === "short_answer") await page.getByLabel(`Answer for question ${q.number}`, { exact: true }).fill(correct(q));
   else {
+    const select = page.locator(`[id="q-${q.id}"] select`);
+    if (await select.count()) {
+      await select.selectOption(correct(q));
+      return;
+    }
     const radio = page.locator(`input[name="objective-answer-${q.id}"][value="${correct(q).replace(/"/g, '\\"')}"]`);
     // Like a student: scroll the option to the middle of the screen (the question palette sits at the bottom), then click it.
     await radio.evaluate((el) => el.scrollIntoView({ block: "center" }));
@@ -288,7 +319,11 @@ async function openPart(page, n) {
 }
 async function answeredCount(page) {
   const text = await page.locator("body").innerText();
-  return Number((text.match(/(\d+) \/ 81 answered/) || [])[1] ?? -1);
+  return Number((text.match(/(\d+) \/ 81 confirmed/) || [])[1] ?? -1);
+}
+async function waitConfirmed(page, count) {
+  await page.getByText(`${count} / 81 confirmed`, { exact: true }).locator("visible=true").first()
+    .waitFor({ timeout: 20000 });
 }
 async function finishSection(page) {
   await page.getByRole("button", { name: "Next section" }).locator("visible=true").first().click();
@@ -344,7 +379,7 @@ async function student() {
         await playButton.click();
         expect((await granted).status() === 201, "play refused");
         if (i === 0 && play === 1) {
-          await page.reload({ waitUntil: "networkidle" }); await dismissExamNotices(page); await openPart(page, 1);
+          await page.reload({ waitUntil: "domcontentloaded" }); await dismissExamNotices(page); await openPart(page, 1);
           await page.getByRole("region", { name: /listening/i }).first().getByText("Plays 1/2").waitFor({ timeout: 15000 });
           notes.push("reload keeps plays 1/2");
         }
@@ -357,18 +392,14 @@ async function student() {
     // The server refuses a third play even when asked directly.
     const third = await api(page, "POST", `/mock/attempts/${state.attemptId}/listening/${by.listening.groups[0].id}/play`, undefined, { allow: [403] });
     expect(third.status === 403 && third.error?.code === "AUDIO_REPLAY_BLOCKED", `third play: ${third.status} ${third.error?.code}`);
-    await page.waitForTimeout(2500);
-    const answered = await answeredCount(page);
-    expect(answered === 35, `answered after Listening: ${answered}`);
+    await waitConfirmed(page, 35);
     await finishSection(page);
     return `6 parts × 2 server plays, third play 403 AUDIO_REPLAY_BLOCKED; ${notes.join("; ")}; 35/35 answered`;
   });
 
   await step(page, "07-reading", async () => {
     for (const [i, group] of by.reading.groups.entries()) { await openPart(page, i + 1); for (const q of group.questions) await answerObjective(page, q); }
-    await page.waitForTimeout(2500);
-    const answered = await answeredCount(page);
-    expect(answered === 70, `answered after Reading: ${answered}`);
+    await waitConfirmed(page, 70);
     await finishSection(page);
     return "35/35 answered";
   });
@@ -388,14 +419,13 @@ async function student() {
         await area.pressSequentially(texts[0].slice(60), { delay: 2 });
         await page.getByText(/kept on this device/).first().waitFor();
         await page.context().setOffline(false);
-        await page.getByText("Saved", { exact: true }).first().waitFor({ timeout: 20000 });
-        await page.reload({ waitUntil: "networkidle" }); await dismissExamNotices(page);
+        await waitConfirmed(page, 71);
+        await page.reload({ waitUntil: "domcontentloaded" }); await dismissExamNotices(page);
         await page.locator(`[aria-label^="Task 1.1"]`).first().click();
         expect((await page.locator("main textarea").first().inputValue()) === texts[0], "the offline part of the essay was lost");
       } else await area.fill(texts[i]);
     }
-    await page.waitForTimeout(2500);
-    expect((await answeredCount(page)) === 73, `answered after Writing: ${await answeredCount(page)}`);
+    await waitConfirmed(page, 73);
     await finishSection(page);
     return "3 tasks; typed offline, sent when back online, intact after reload";
   });
@@ -404,10 +434,48 @@ async function student() {
     const mic = page.getByRole("button", { name: "Start the test (5 seconds)" });
     if (await mic.count()) { await mic.click(); await page.getByRole("button", { name: /I can hear it/ }).click({ timeout: 20000 }); }
     const uploads = [];
+    const receipts = new Map();
+    let rejectedRecording;
+    if (process.env.BW_CAPTURE_SPEAKING) {
+      await page.exposeFunction("saveRejectedSyntheticRecording", (questionId, bytes) => {
+        if (!/^[a-zA-Z0-9-]+$/.test(questionId) || bytes.length > 25 * 1024 * 1024) return;
+        writeFileSync(join(OUT, `ml-speaking-rejected-${questionId}.webm`), Buffer.from(bytes));
+      });
+      await page.evaluate(() => {
+        const fetchImpl = window.fetch.bind(window);
+        window.fetch = async (resource, init) => {
+          const response = await fetchImpl(resource, init);
+          const path = new URL(response.url || String(resource), location.href).pathname;
+          const match = path.match(/\/speaking\/([a-zA-Z0-9-]+)$/);
+          if (response.status === 400 && match && init?.body instanceof FormData) {
+            const recording = init.body.get("audio");
+            if (recording instanceof Blob) {
+              void recording.arrayBuffer().then((bytes) => window.saveRejectedSyntheticRecording(match[1], [...new Uint8Array(bytes)]));
+            }
+          }
+          return response;
+        };
+      });
+    }
     page.on("response", async (r) => {
-      if (r.request().method() !== "POST" || !/\/speaking\/[^/]+$/.test(new URL(r.url()).pathname)) return;
+      const match = new URL(r.url()).pathname.match(/\/speaking\/([^/]+)$/);
+      if (r.request().method() !== "POST" || !match) return;
       // A rejected upload is reported with its error code (the take must never be lost).
-      uploads.push(r.status() < 400 ? r.status() : `${r.status()} ${(await r.json().catch(() => ({})))?.error?.code ?? (await r.text().catch(() => "")).slice(0, 80)}`);
+      if (r.ok()) {
+        uploads.push(r.status());
+        const { data } = await r.json().catch(() => ({}));
+        if (data?.saved) receipts.set(match[1], data.audioDurationMs);
+        return;
+      }
+      const { error } = await r.json().catch(() => ({}));
+      uploads.push(`${r.status()} ${error?.code ?? "unknown"}`);
+      if (error?.code === "SPEAKING_AUDIO_DURATION_INVALID") {
+        rejectedRecording = error.code;
+        const upload = r.request().postDataBuffer();
+        if (upload && upload.length <= 25 * 1024 * 1024) {
+          writeFileSync(join(OUT, "ml-speaking-rejected.multipart"), upload);
+        }
+      }
     });
     await page.getByRole("button", { name: "Test microphone" }).first().click();
     await page.locator('meter[aria-label="Microphone input level"]').first().waitFor();
@@ -419,12 +487,21 @@ async function student() {
     await page.context().setOffline(false);
     // The remaining 7 answers start on their own (server timing: up to 60 s preparation + 120 s).
     const deadline = Date.now() + 15 * 60 * 1000;
-    while ((await answeredCount(page)) < 81) {
+    while ((await answeredCount(page)) < 81 || receipts.size < 8) {
+      if (rejectedRecording) throw new Error(`Speaking recording rejected at ${await answeredCount(page)}/81: ${rejectedRecording}`);
       if (Date.now() > deadline) throw new Error(`speaking stalled at ${await answeredCount(page)}/81; uploads ${uploads.join(",")}`);
       await page.waitForTimeout(5000);
     }
+    const expectedSeconds = [30, 30, 30, 45, 30, 30, 120, 120];
+    const durations = by.speaking.groups.flatMap((group) => group.questions).map((question, index) => {
+      const duration = receipts.get(question.id);
+      const expected = expectedSeconds[index] * 1000;
+      expect(Number.isFinite(duration) && duration >= expected - 1000 && duration <= expected + 500,
+        `Speaking response ${index + 1}: server receipt measured ${duration}ms, expected ${expected}ms`);
+      return duration;
+    });
     expect(await page.getByRole("button", { name: "Previous", exact: true }).isDisabled(), "Previous is enabled in timed Speaking");
-    return `8/8 answers uploaded one by one (${uploads.filter((s) => s === 201).length}×201), one retried after a network drop, no way back`;
+    return `8 native takes, confirmed durations ${durations.join(", ")} ms; one retried after a network drop, no way back`;
   });
 
   await page.context().close();
@@ -484,8 +561,14 @@ async function grade() {
     expect((await fields.count()) === 11, `grade fields: ${await fields.count()}`);
     const max = await fields.evaluateAll((els) => els.map((e) => Number(e.max)));
     expect(JSON.stringify(max) === JSON.stringify(maxima), `rubric maxima ${max}`);
-    const players = await teacher.locator("main audio").count();
-    expect(players >= 8, `audio players: ${players}`);
+    const players = teacher.locator("main audio");
+    expect(await players.count() >= 8, `audio players: ${await players.count()}`);
+    for (const player of (await players.all()).slice(0, 8)) {
+      await player.evaluate((audio) => audio.play());
+      const element = await player.elementHandle();
+      await teacher.waitForFunction((audio) => audio.currentTime > 0.1, element, { timeout: 5000 });
+      await player.evaluate((audio) => audio.pause());
+    }
     for (const [i, value] of scores.entries()) {
       const field = fields.nth(i);
       await field.fill(String(value));

@@ -125,6 +125,11 @@ const correct = (q) => (q.correctAnswers || [])[0];
 async function answerObjective(page, q) {
   if (q.type === "short_answer") await page.getByLabel(`Answer for question ${q.displayNumber ?? q.number}`, { exact: true }).fill(correct(q));
   else {
+    const select = page.locator(`[id="q-${q.id}"] select`);
+    if (await select.count()) {
+      await select.selectOption(correct(q));
+      return;
+    }
     const radio = page.locator(`input[name="objective-answer-${q.id}"][value="${correct(q).replace(/"/g, '\\"')}"]`);
     // Like a student: scroll the option to the middle of the screen (the question palette sits at the bottom), then click it.
     await radio.evaluate((el) => el.scrollIntoView({ block: "center" }));
@@ -188,7 +193,7 @@ async function build() {
       await putContent(teacher, group, rows, { instructions: `Synthetic listening part ${i + 1}.`, ...(i === 0 ? { audioScript: "Synthetic recording one. The answer is choice A. Then the tone ends." } : {}) });
     }
     for (const [i, group] of by.reading.groups.entries()) {
-      const rows = i === 0 ? IELTS_READING[i].map((q, k) => (k === 0 ? { ...q, evidenceText: "every   statement is true" } : q)) : IELTS_READING[i];
+      const rows = i === 0 ? IELTS_READING[i].map((q, k) => (k === 0 ? { ...q, evidenceText: "every   statement is true", reviewExplanation: "The statement follows directly from the passage." } : q)) : IELTS_READING[i];
       await putContent(teacher, group, rows, { passageText: `Synthetic passage ${i + 1}. The answer word is alpha and every statement is true.` });
     }
     const authored = (await tree(teacher, state.examId)).sections;
@@ -218,12 +223,17 @@ async function build() {
 
 const roundHalf = (x) => { const f = Math.floor(x), r = x - f; return r < 0.25 ? f : r < 0.75 ? f + 0.5 : f + 1; };
 async function openBlock(page, n) {
+  const tabs = page.locator("[data-runner-bottom]").getByRole("tab");
+  if (await tabs.count() >= n) {
+    await tabs.nth(n - 1).click();
+    return;
+  }
   await page.locator(`[aria-label^="Part ${n}:"], [aria-label^="Passage ${n}:"], [aria-label^="Task ${n}:"], [aria-label^="Part ${n} "], [aria-label^="Passage ${n} "], [aria-label^="Task ${n} "]`).first().click();
   await page.waitForTimeout(600);
 }
-async function answered(page) {
-  const text = await page.locator("body").innerText();
-  return Number((text.match(/(\d+) \/ 86 answered/) || [])[1] ?? -1);
+async function waitConfirmed(page, count) {
+  await page.getByText(`${count} / 86 confirmed`, { exact: true }).locator("visible=true").first()
+    .waitFor({ timeout: 20000 });
 }
 
 /* ── phase: student ──────────────────────────────────────────────────────────────────────────── */
@@ -240,7 +250,8 @@ async function student() {
   await step(page, "03-student-starts-on-ielts-track", async () => {
     await page.goto(`${WEB}/en/mock`, { waitUntil: "networkidle" });
     const toIelts = page.getByTestId("exam-track-card-IELTS").getByRole("button", { name: /Switch to/ });
-    if (await toIelts.count()) { await toIelts.click(); await page.waitForTimeout(2500); }
+    if (await toIelts.count()) await toIelts.click();
+    else await page.getByText("IELTS", { exact: true }).first().click();
     const card = page.locator('[data-testid^="mock-card-"]').filter({ hasText: state.title }).first();
     await card.getByRole("button").filter({ hasText: /^(Start|Start full exam|Resume)$/ }).first().click();
     const dialog = page.getByRole("dialog"); await dialog.waitFor();
@@ -259,8 +270,7 @@ async function student() {
       if (await play.count() && !(await play.isDisabled())) await play.click();
       for (const q of group.questions) await answerObjective(page, q);
     }
-    await page.waitForTimeout(2500);
-    expect((await answered(page)) === 40, `after Listening: ${await answered(page)}`);
+    await waitConfirmed(page, 40);
     await finishSection(page);
     // Owner decision: IELTS Reading is numbered from 1 like the paper (stored numbers 41–80 are unchanged).
     expect(by.reading.groups[0].questions[0].displayNumber === 1, "reading display numbering");
@@ -270,8 +280,7 @@ async function student() {
     const clock = await page.locator('[aria-label*="Time left"], [aria-label*="time left"], [role="timer"]').first().innerText().catch(() => "");
     expect(/\d{1,2}:\d{2}/.test(clock), `no section timer in the IELTS window (${clock})`);
     for (const [i, group] of by.reading.groups.entries()) { await openBlock(page, i + 1); for (const q of group.questions) await answerObjective(page, q); }
-    await page.waitForTimeout(2500);
-    expect((await answered(page)) === 80, `after Reading: ${await answered(page)}`);
+    await waitConfirmed(page, 80);
     await finishSection(page);
     return "40 + 40 answered; Reading numbered 1–40; section timer shown";
   });
@@ -281,8 +290,7 @@ async function student() {
       await openBlock(page, i + 1);
       await page.getByLabel(`Written response to question ${group.questions[0].displayNumber ?? group.questions[0].number}`).fill(essay(i ? 260 : 160));
     }
-    await page.waitForTimeout(2500);
-    expect((await answered(page)) === 82, `after Writing: ${await answered(page)}`);
+    await waitConfirmed(page, 82);
     await finishSection(page);
     return "Task 1 (160 words) and Task 2 (260 words)";
   });
@@ -371,6 +379,7 @@ async function grade() {
     await reading.getByRole("button", { name: "Where is the answer to question 1?" }).click();
     const mark = reading.getByTestId("review-evidence");
     expect((await mark.innerText()) === "every statement is true", "Reading evidence not highlighted");
+    expect((await reading.getByTestId("review-explanation").innerText()) === "The statement follows directly from the passage.", "teacher explanation was not persisted");
     const listening = page.locator('section[aria-label="Listening"]');
     await listening.getByRole("button", { name: "Where is the answer to question 1?" }).click();
     expect((await listening.getByTestId("review-evidence").innerText()) === "The answer is choice A", "Listening evidence not highlighted");

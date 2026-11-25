@@ -121,7 +121,7 @@ class TelegramOtpAndGroupRenameTests(SimpleTestCase):
 
         self.client.force_authenticate(teacher)
         with patch('apps.core.groups.get_group', return_value=group), \
-             patch('apps.core.statistics.group_results_csv', return_value='Ism;Telefon\nAli;+998901234567'):
+             patch('apps.core.group_views.group_report.generate_group_monthly_csv', return_value='Oquvchi,IELTS Academic\nAli,7.0'):
             res = self.client.get(f'/v1/assessment/groups/{group.id}/export')
             self.assertEqual(res.status_code, 200)
             self.assertEqual(res['Content-Type'], 'text/csv; charset=utf-8')

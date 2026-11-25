@@ -33,6 +33,9 @@ export function ReviewEvidenceFields({ question, skill, source, audioDurationSec
     <fieldset className="space-y-2 rounded-field border border-dashed border-border p-3" data-testid="review-evidence-fields">
       <legend className="px-1 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">{t("legend")}</legend>
       <p className="text-xs text-fg-muted">{t(skill === "listening" ? "hintListening" : "hintReading")}</p>
+      <label htmlFor={`${id}-explanation`} className="block text-sm font-medium text-fg">{t("explanationLabel")}</label>
+      <Textarea id={`${id}-explanation`} value={question.reviewExplanation ?? ""} maxLength={2000} rows={2}
+        onChange={(event) => onChange({ ...question, reviewExplanation: event.target.value })} />
       <label htmlFor={`${id}-evidence`} className="block text-sm font-medium text-fg">{t("evidenceLabel")}</label>
       <Textarea
         id={`${id}-evidence`}

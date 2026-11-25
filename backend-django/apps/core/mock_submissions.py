@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from apps.legacy_schema.models import MockAnswer, Setting
+from common.api.exceptions import ContractAPIException
 
 from . import mock_attempts as attempts
 from . import mock_catalog
@@ -56,7 +57,7 @@ def band_tables():
 
 
 @transaction.atomic
-def submit(actor, attempt_id, skills=None, *, force=False):
+def submit(actor, attempt_id, skills=None, *, force=False, in_flight_answers=None, require_expired=False):
     """Lock shared with response/media writers; a timeout uses this same route.
 
     Only the deterministic result is computed while the attempt row is locked. The
@@ -78,6 +79,18 @@ def submit(actor, attempt_id, skills=None, *, force=False):
             transaction.on_commit(lambda: handoff.schedule(attempt.id))
         return saved_result(attempt)
     attempts.assert_in_progress(attempt)
+    if require_expired:
+        attempts.assert_expired(attempt)
+    if in_flight_answers:
+        try:
+            saved = attempts.save_answers(actor, attempt_id, in_flight_answers, bulk=True)
+        except ContractAPIException as error:
+            # After expiry, hand in only the responses already on the server.
+            if error.contract_code not in ('MOCK_TIME_UP', 'MOCK_SECTION_TIME_UP'):
+                raise
+        else:
+            if any(receipt['status'] == 'conflict' for receipt in saved.get('receipts', {}).values()):
+                attempts.fail('ANSWER_CONFLICT', 'Review conflicting answers before submitting', 409)
     if versioned and not force:
         try:
             attempts.assert_program(actor, attempt)

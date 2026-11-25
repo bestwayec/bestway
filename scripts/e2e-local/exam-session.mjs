@@ -3,7 +3,7 @@
 //   BW_WEB=http://localhost:3300 node exam-session.mjs
 // Tab A answers; tab B (and a second device = separate browser context) opening the same attempt
 // sees "open somewhere else" and cannot change answers; "Continue here" moves the exam; the
-// old tab is then stopped, and what it typed meanwhile is kept and sent when it continues.
+// old tab is then stopped, and its pending edit needs an explicit choice if the server changed.
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -52,7 +52,12 @@ async function freshAttempt(page) {
 }
 async function open(tab, id) {
   await tab.ctx.addCookies([{ name: "NEXT_LOCALE", value: tab.locale, url: WEB }]);
+  const claim = tab.page.waitForResponse((response) => response.url().endsWith(`/mock/attempts/${id}/session`));
   await tab.page.goto(`${WEB}${tab.locale === "en" ? "/en" : ""}/mock/attempt/${id}?skill=reading`, { waitUntil: "domcontentloaded" });
+  if ((await claim).status() === 409) {
+    await gate(tab.page).waitFor();
+    return;
+  }
   const notice = tab.page.getByTestId("fullscreen-notice");
   await notice.waitFor({ timeout: 15000 }).then(() => notice.getByRole("button").click()).catch(() => {});
   await tab.page.getByRole("timer").waitFor({ timeout: 30000 });
@@ -71,7 +76,8 @@ async function run(name, deviceA, deviceB, sameBrowser) {
   const detail = (await api(A.page, `/mock/attempts/${id}`)).body.data;
   const questionId = detail.sections.flatMap((s) => s.groups).flatMap((g) => g.questions).find((q) => ["short_answer", "sentence_completion", "note_completion", "summary_completion"].includes(q.type))?.id;
   const serverValue = async (page) => {
-    const d = (await api(page, `/mock/attempts/${id}`)).body?.data;
+    const response = await page.context().request.get(`${WEB}/api/backend/mock/attempts/${id}`);
+    const d = (await response.json()).data;
     for (const s of d?.sections ?? []) for (const g of s.groups ?? []) for (const q of g.questions ?? []) if (q.id === questionId) return q.response;
   };
   await open(A, id);
@@ -80,6 +86,9 @@ async function run(name, deviceA, deviceB, sameBrowser) {
   ok(await serverValue(A.page) === "from tab A", `${name}: the first tab saves`);
 
   // Second tab in the same browser, or a second device (own browser context).
+  // Hold A's cached revision to exercise a conflict even if tab focus triggers a refetch.
+  await A.page.route(`**/api/backend/mock/attempts/${id}`, (route) =>
+    route.request().resourceType() === "fetch" ? route.abort("failed") : route.continue());
   const B = sameBrowser ? { ctx: A.ctx, page: await A.ctx.newPage(), errors: [], locale: deviceB.locale } : await device(deviceB);
   if (sameBrowser) await B.page.setViewportSize({ width: deviceB.width, height: deviceB.height });
   await open(B, id);
@@ -108,12 +117,19 @@ async function run(name, deviceA, deviceB, sameBrowser) {
   await textInput(A.page).fill("typed in A after the takeover");
   await gate(A.page).waitFor({ timeout: 20000 });
   ok(await serverValue(B.page) === "from tab B", `${name}: the old place is stopped and its edit is not stored over the new one`);
-  const queued = await A.page.evaluate((attempt) => localStorage.getItem(`bw_answer_queue_${attempt}`), id);
-  ok(queued?.includes("typed in A after the takeover"), `${name}: what the old place typed is kept on its device`);
+  const queued = await A.page.evaluate((attempt) => Object.keys(localStorage)
+    .filter((key) => key.startsWith(`bw_answer_edit_${attempt}::`))
+    .some((key) => JSON.parse(localStorage.getItem(key)).response === "typed in A after the takeover"), id);
+  ok(queued, `${name}: what the old place typed is kept on its device`);
   await gate(A.page).getByRole("button").click();
   await gate(A.page).waitFor({ state: "detached", timeout: 10000 });
-  await A.page.waitForTimeout(4000);
-  ok(await serverValue(A.page) === "typed in A after the takeover", `${name}: after "continue here" the kept answer is sent (newest edit wins)`);
+  const conflictChoice = A.page.getByRole("button", { name: "Save my local edits" });
+  await conflictChoice.waitFor({ timeout: 15000 });
+  ok(await serverValue(A.page) === "from tab B", `${name}: takeover keeps the remote value until the student resolves the conflict`);
+  const saved = A.page.waitForResponse((response) => response.url().endsWith(`/mock/attempts/${id}/answers`) && response.status() === 201);
+  await conflictChoice.click();
+  await saved;
+  ok(await serverValue(A.page) === "typed in A after the takeover", `${name}: the chosen local answer is persisted`);
   ok(A.errors.length === 0 && B.errors.length === 0, `${name}: no page errors ${[...A.errors, ...B.errors].slice(0, 2).join(" | ")}`);
   await api(A.page, `/mock/attempts/${id}/submit`, json({ confirm: true, confirmed: true, force: true }));
   await A.ctx.close();

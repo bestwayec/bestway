@@ -10,12 +10,13 @@ import copy
 import json
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from django.db import connection
 from django.test import SimpleTestCase, TestCase
 from rest_framework.test import APIClient
 
-from apps.core.mock_content import reading_passage_count
+from apps.core.mock_content import gap_numbers, reading_passage_count
 from apps.core.mock_import_validate import validate_package
 from apps.core.multilevel import blueprint_issues
 from apps.legacy_schema import models as legacy_models
@@ -95,14 +96,15 @@ class TemplateValidationTests(SimpleTestCase):
 
     def test_group_score_fields_are_validated(self):
         package = fixture('reading-passage-1')
-        package['exam']['sections'][0]['groups'][0].update(maxScore=5, stimulusRef='x')
+        package['exam']['sections'][0]['groups'][0].update(maxScore=5, stimulusRef='INVALID REF')
         codes = {i['code'] for i in validate_package(package)['issues']}
         self.assertTrue({'MAX_SCORE', 'STIMULUS_REF'} <= codes)
 
-    def test_three_reading_groups_still_pass_even_with_identical_text(self):
-        # Legacy rule kept: one group per passage passes regardless of clustering.
+    def test_three_distinct_reading_references_pass_even_with_identical_text(self):
         from tests.mock27_fixtures import listening_package, reading_package
         package = reading_package()
+        for i, group in enumerate(package['exam']['sections'][0]['groups'], 1):
+            group['stimulusRef'] = f'passage-{i}'
         package['exam']['sections'] += listening_package()['exam']['sections']
         issues = [i['message'] for i in validate_package(package)['issues'] if i['code'] == 'PROFILE_BLUEPRINT']
         self.assertFalse([m for m in issues if 'reading' in m], issues)
@@ -190,6 +192,95 @@ class ExportRoundTripTests(TestCase):
         copied = MockQuestion.objects.filter(group__section__exam_id=copy_id).order_by('number').first()
         self.assertEqual((copied.cefr_level, copied.skill_tags, copied.audio_start_sec), ('B2', ['detail', 'numbers'], 12.5))
 
+    def test_reading_source_and_blank_continuation_round_trip(self):
+        package = fixture('reading-passage-1')
+        groups = package['exam']['sections'][0]['groups']
+        first = groups[0]
+        first['stimulusRef'] = 'shared-source'
+        continuation = {**first, 'key': 'reading-continuation', 'title': 'Continuation',
+                        'passageText': '', 'questions': first['questions'][2:]}
+        first['questions'] = first['questions'][:2]
+        groups.insert(1, continuation)
+        created = self.commit(package)
+        self.assertEqual(created.status_code, 201, created.data)
+        exam_id = created.data['data']['examId']
+        exported = self.export(exam_id).data['data']
+        imported_id = self.commit(exported).data['data']['examId']
+        self.assertEqual(content(exported), content(self.export(imported_id).data['data']))
+        persisted = list(MockQuestionGroup.objects.filter(section__exam_id=imported_id).order_by('sort_order'))
+        self.assertEqual([group.stimulus_ref for group in persisted[:2]], ['shared-source'] * 2)
+        self.assertTrue(persisted[0].passage_text)
+        self.assertIsNone(persisted[1].passage_text)
+
+    def test_whole_listening_recording_uses_explicit_part_markers(self):
+        exam_id = self.commit(fixture('listening-full')).data['data']['examId']
+        section = MockSection.objects.get(exam_id=exam_id, skill='listening')
+        part_one = MockQuestionGroup.objects.get(section=section, part_number=1)
+        part_two = MockQuestionGroup.objects.get(section=section, part_number=2)
+        part_two.sort_order = 20
+        part_two.save(update_fields=['sort_order'])
+        extra = self.client.post(f'/v1/mock/sections/{section.id}/groups', {'parentGroupId': part_one.id}, format='json')
+        self.assertEqual(extra.status_code, 201, extra.data)
+        extra_id = extra.data['data']['id']
+        MockQuestionGroup.objects.filter(id=extra_id).update(sort_order=1)
+        route = f'/v1/mock/exams/{exam_id}/audio-timestamps'
+        payload = {'audioKey': 'mock-audio/synthetic.wav', 'timestamps': [
+            {'partNumber': 1, 'startSec': 0.25, 'endSec': 1.75},
+            {'partNumber': 2, 'groupId': extra_id, 'startSec': 2, 'endSec': 4},
+        ]}
+        with patch('apps.core.exam_import_service._listening_table_ensured', False):
+            self.assertEqual(self.client.get(route).data['data']['timestamps'], [])
+            saved = self.client.post(route, payload, format='json')
+            self.assertEqual(saved.status_code, 200, saved.data)
+            markers = saved.data['data']['timestamps']
+            self.assertEqual([item['groupId'] for item in markers], [part_one.id, part_two.id])
+            self.assertEqual([item['startSec'] for item in markers], [0.25, 2])
+            self.assertEqual(MockQuestionGroup.objects.get(id=extra_id).audio_key, payload['audioKey'])
+            ready = self.client.get(f'/v1/mock/exams/{exam_id}/readiness').data['data']
+            self.assertTrue(all(i['ok'] for i in ready['items'] if i['key'] == 'listening_audio'))
+            MockExam.objects.filter(id=exam_id).update(is_published=True)
+            self.assertEqual(self.client.post(route, payload, format='json').status_code, 409)
+
+    def test_source_only_group_survives_round_trip(self):
+        exam_id = self.commit(fixture('reading-passage-1')).data['data']['examId']
+        source = MockQuestionGroup.objects.filter(section__exam_id=exam_id).order_by('sort_order').first()
+        route = f'/v1/mock/sections/{source.section_id}/groups'
+        added = self.client.post(route, {'parentGroupId': source.id, 'title': 'Source questions'}, format='json')
+        self.assertEqual(added.status_code, 201, added.data)
+        MockQuestion.objects.filter(group=source).update(group_id=added.data['data']['id'])
+        exported = self.export(exam_id).data['data']
+        groups = exported['exam']['sections'][0]['groups']
+        owner, task = groups[0], next(group for group in groups if group['title'] == 'Source questions')
+        self.assertEqual(owner['questions'], [])
+        self.assertEqual(owner['passageText'], source.passage_text)
+        self.assertEqual(owner['stimulusRef'], task['stimulusRef'])
+        result = self.commit(exported)
+        self.assertEqual(result.status_code, 201, result.data)
+        imported = self.export(result.data['data']['examId']).data['data']
+        self.assertEqual(content(imported), content(exported))
+
+    def test_teacher_can_move_a_task_without_changing_question_ids(self):
+        exam_id = self.commit(fixture('reading-passage-1')).data['data']['examId']
+        section = MockSection.objects.get(exam_id=exam_id)
+        original = MockQuestionGroup.objects.filter(section=section).order_by("sort_order").first()
+        route = f'/v1/mock/sections/{section.id}/groups'
+        child = self.client.post(route, {'title': 'New task', 'parentGroupId': original.id}, format='json')
+        self.assertEqual(child.status_code, 201, child.data)
+        task_id = child.data['data']['id']
+        source = self.client.post(route, {'title': 'Another passage', 'passageText': 'A new source.'}, format='json')
+        self.assertEqual(source.status_code, 201, source.data)
+        question = MockQuestion.objects.filter(group=original).first()
+        MockQuestion.objects.filter(id=question.id).update(group_id=task_id)
+        target = {'parentGroupId': source.data['data']['id']}
+        self.client.force_authenticate(OTHER_TEACHER)
+        self.assertEqual(self.client.patch(f'/v1/mock/groups/{task_id}', target, format='json').status_code, 403)
+        self.client.force_authenticate(TEACHER)
+        moved = self.client.patch(f'/v1/mock/groups/{task_id}', target, format='json')
+        self.assertEqual(moved.status_code, 200, moved.data)
+        self.assertEqual(moved.data['data']['stimulusRef'], source.data['data']['stimulusRef'])
+        question.refresh_from_db()
+        self.assertEqual(question.group_id, task_id)
+
     def test_reading_evidence_offset_is_recomputed(self):
         package = fixture('reading-passage-1')
         group = package['exam']['sections'][0]['groups'][0]
@@ -200,6 +291,40 @@ class ExportRoundTripTests(TestCase):
         self.assertEqual(row.evidence_offset, group['passageText'].index(row.evidence_text))
         exported = self.export(exam_id).data['data']
         self.assertEqual(exported['exam']['sections'][0]['groups'][0]['questions'][0]['evidenceText'], row.evidence_text)
+
+    def test_duplicate_task_keeps_the_source_and_remaps_only_the_copy(self):
+        exam_id = self.commit(fixture('reading-passage-1')).data['data']['examId']
+        section = MockSection.objects.get(exam_id=exam_id)
+        source = MockQuestionGroup.objects.filter(section=section).order_by('sort_order').first()
+        original = list(MockQuestion.objects.filter(group=source).order_by('sort_order', 'number', 'id'))
+        source.content_html = f'<p>Draft example <span data-gap="{original[0].number}"></span></p>'
+        source.save(update_fields=['content_html'])
+        route = f'/v1/mock/sections/{section.id}/groups'
+        payload = {'copyFromGroupId': source.id}
+        self.client.force_authenticate(OTHER_TEACHER)
+        self.assertEqual(self.client.post(route, payload, format='json').status_code, 403)
+        self.client.force_authenticate(TEACHER)
+        response = self.client.post(route, payload, format='json')
+        self.assertEqual(response.status_code, 201, response.data)
+        duplicate = MockQuestionGroup.objects.get(id=response.data['data']['id'])
+        cloned = list(MockQuestion.objects.filter(group=duplicate).order_by('sort_order', 'number', 'id'))
+        source.refresh_from_db()
+        self.assertEqual(duplicate.stimulus_ref, source.stimulus_ref)
+        self.assertIsNone(duplicate.passage_text)
+        self.assertIsNone(duplicate.audio_key)
+        self.assertEqual([q.correct_answers for q in cloned], [q.correct_answers for q in original])
+        self.assertFalse({q.id for q in original} & {q.id for q in cloned})
+        self.assertGreater(cloned[0].number, max(q.number for q in original))
+        self.assertEqual(gap_numbers(source.content_html), [original[0].number])
+        self.assertEqual(gap_numbers(duplicate.content_html), [cloned[0].number])
+        placement = {'groupPlacement': {'siblingId': source.id, 'before': True}}
+        for _ in range(2):
+            moved = self.client.patch(f'/v1/mock/groups/{duplicate.id}', placement, format='json')
+            self.assertEqual(moved.status_code, 200, moved.data)
+        duplicate.refresh_from_db()
+        source.refresh_from_db()
+        self.assertLess(duplicate.sort_order, source.sort_order)
+        self.assertEqual(gap_numbers(duplicate.content_html), [cloned[0].number])
 
     def test_multilevel_writing_scores_and_shared_stimulus_are_stored(self):
         exam_id = self.commit(fixture('multilevel-writing')).data['data']['examId']

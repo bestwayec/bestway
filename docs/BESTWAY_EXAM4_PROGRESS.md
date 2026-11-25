@@ -1,0 +1,47 @@
+# Bestway Exam System 4.0 progress
+
+## Phase 1 · Exam reliability
+
+The reliability branch starts at `9c37f60c0b23c7e6e0cde254632da7cdd9c281c1`, the fetched `origin/main`. Phase 1 covers autosave, attempt recovery, section transitions, hand-in, and playback. [Phase 1 report](BESTWAY_EXAM4_PHASE1_REPORT.md)
+
+- The web runner sends changed responses with the server revision the student saw. It keeps each edit until a matching receipt arrives and asks the student to resolve conflicts explicitly.
+- The browser keeps unsent edits by attempt, question, and writer. It reports storage failures and keeps recoverable edits available after a hand-in or section closure.
+- The server serializes saves, session takeover, advance, and hand-in against the attempt row. A repeated advance targets the same section, and a repeated hand-in returns the existing result.
+- Speaking upload status requires a saved receipt. The server measures new recordings, protects existing media on rejected uploads, and supports authorized byte-range playback.
+
+## Integration handoff
+
+Phase 4 should verify the final candidate against a deployment-equivalent PostgreSQL and shared Redis stack. Check the health endpoint's build commit, mobile recording and playback, and compatibility with the released desktop client before approving a deployment. Keep the backend and web revision contract in the same coordinated release.
+
+## Phase 2 · Canonical exam content
+
+Phase 2 uses existing Reading stimulus references and IELTS Listening part numbers to share sources across question groups. Draft authoring, JSON packages, preview and candidate navigation use those associations. [Phase 2 report](BESTWAY_EXAM4_PHASE2_REPORT.md)
+
+The resumed workspace verified draft group duplication on PostgreSQL and in Chromium. A copy keeps its passage or part and receives new question IDs and gap mappings. Same-unit reordering preserves the original IDs and stored numbers. The Chromium fixture submitted Reading at 4/40 and Listening at 1/40. Both result records and their answer IDs were checked in PostgreSQL.
+
+The Multilevel production-build journey reached a graded result with all eight timed Speaking receipts, including retry after a network drop. PostgreSQL confirmed 81 unique answers and eight stored recordings. The mobile retest at 390 pixels passed after the compact header fix.
+
+The cumulative backend, frontend, and browser checks passed for the canonical Reading and Listening fixture, builder publication, and Phase 1 regression. Builder authoring, preview, and the published partial practice shared the same audio markers and question associations. PostgreSQL and the normal Prisma engine download were checked separately. The engine download still returns HTTP 403.
+
+## Phase 3 · CBT, result review and classroom analytics
+
+Phase 3 continues from Phase 2 commit `16d0ea90a99b81682eed8bb5a19a12f756119e3e`. The Phase 3 branch includes canonical result review and teacher explanations, separate IELTS and Multilevel charts and predictions, dated classroom participation and comparable rankings, and filtered PDF and Excel reports. PostgreSQL passed 1,703 tests and 325 subtests. Vitest passed 989 tests. Browser verification, delivery, and limitations are tracked in the [Phase 3 report](BESTWAY_EXAM4_PHASE3_REPORT.md).
+
+The production-build IELTS journey passed all ten steps. The Phase 1 browser tests verified offline recovery, idempotent submit, speaking upload, and two-tab and two-device takeover. The Phase 2 browser test also checked that a continuation question retained its ID and inherited canonical Listening evidence. The Phase 3 browser journey caught a naive UTC versus timezone-aware comparison on assignment resume and confirmed the report's privacy gates. The date comparison fix and two-track profile history passed the rerun. Profile prediction now retains the latest eligible graded full mocks independently of recent practice. Classroom reports and legacy download actions share the filtered report input.
+
+The Phase 3 Multilevel attempt reached teacher grading and an estimated 68.5/75 (C1). PostgreSQL confirmed 81 distinct answers and eight recordings. Seven recordings came from Chromium's MediaRecorder with a synthetic microphone. For the last response, a 120-second WAV verified the authenticated upload after the browser's short recording was correctly rejected. The same last prompt received HTTP 201 with 119.70 seconds in an isolated native Chromium retest. The production-build final submission, pending result, grading, cross-group restrictions, and 390px learner check all passed. The uninterrupted eight-recording run on this host and physical mobile microphone verification remain open.
+
+The Phase 3 branch was pushed and the remote SHA was verified. GitHub returned HTTP 403 for draft PR creation and hosted CI lookup. [Open the stacked comparison](https://github.com/bestwayec/bestway/compare/feat/bestway-exam4-builder-reading-listening...feat/bestway-exam4-cbt-analysis?expand=1)
+
+## Phase 4 · Final integration
+
+The pushed integration branch is `fix/bestway-exam4-final-integration`. The latest implementation commit is `7e535e0482ba7af748281becaf6ebaf45cc21d0a`. The final tested code and test revision is `3d250c2ebd3b56903f7e75e60e35ee9957dc0c9d`. Main stays at `9c37f60c0b23c7e6e0cde254632da7cdd9c281c1`.
+
+The candidate includes recorder readiness and bounded startup, the legacy Reading source fix, session transaction checks, cache outage responses, export pagination and literal text, release metadata timeout, dependency updates and the normal Prisma CI upgrade check.
+
+- [Audit and findings](BESTWAY_EXAM4_FINAL_AUDIT.md)
+- [Tests and measurements](BESTWAY_EXAM4_TEST_REPORT.md)
+- [GitHub and merge gates](BESTWAY_EXAM4_MERGE_REPORT.md)
+- [Release and manual device checklist](BESTWAY_EXAM4_RELEASE_CHECKLIST.md)
+
+IELTS passed 10/10 and Multilevel passed 16/16 on the Next.js 16.4.6 production build. All eight Multilevel recordings came from native MediaRecorder in one Chromium session. Independent decoding matched each server receipt. Physical devices remain pending. The earlier sample-loss failures remain in the audit as separate evidence. GitHub REST and Prisma checksum access are pending.

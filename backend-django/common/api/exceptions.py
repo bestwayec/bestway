@@ -32,11 +32,18 @@ def exception_handler(exc: Exception, context: dict[str, Any]) -> Response:
     import logging
 
     from django.db import OperationalError
-    if isinstance(exc, OperationalError):
-        # Transient database unavailability (e.g. connection slots exhausted):
-        # log for operators, tell the user to retry, never echo driver text,
-        # which contains internal hosts and ports.
-        logging.getLogger("django.request").error("Database unavailable in %s", context.get("view", "unknown_view"), exc_info=exc)
+    unavailable = (OperationalError,)
+    try:
+        from redis.exceptions import ConnectionError as RedisConnectionError
+        from redis.exceptions import TimeoutError as RedisTimeoutError
+    except ImportError:
+        pass  # Redis is optional in development.
+    else:
+        unavailable += (RedisConnectionError, RedisTimeoutError)
+    if isinstance(exc, unavailable):
+        # Keep mutations closed during connection failures and keep driver
+        # addresses out of the response.
+        logging.getLogger("django.request").error("Data service unavailable in %s", context.get("view", "unknown_view"), exc_info=exc)
         return Response({"success":False,"error":{"code":"SERVICE_UNAVAILABLE","message":"Server hozir band. Bir necha soniyadan so'ng qayta urinib ko'ring"}}, status=503, headers={"Retry-After":"5"})
     logging.getLogger("django.request").exception("Unhandled API exception in %s: %s", context.get("view", "unknown_view"), exc)
     return Response({"success":False,"error":{"code":"INTERNAL_ERROR","message":"Serverda kutilmagan xatolik yuz berdi"}}, status=500)

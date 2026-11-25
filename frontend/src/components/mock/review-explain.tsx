@@ -22,7 +22,7 @@ export function reviewAudioSrc(url: string | undefined): string | undefined {
  */
 export function ReviewExplain({ skill, group, question }: { skill: MockSkill; group: MockAttemptGroup; question: MockAttemptQuestion }) {
   const t = useTranslations("mock.reviewExplain");
-  const text = (skill === "listening" ? group.audioScript : group.passageText) ?? "";
+  const text = (skill === "listening" ? group.audioScript : group.reviewText ?? group.passageText) ?? "";
   const parts = splitAtEvidence(text, question.evidence);
   const box = React.useRef<HTMLDivElement>(null);
   const mark = React.useRef<HTMLElement>(null);
@@ -31,7 +31,7 @@ export function ReviewExplain({ skill, group, question }: { skill: MockSkill; gr
 
   React.useEffect(() => {
     // Bring the panel into view, then the highlighted words to the middle of the text box.
-    panel.current?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+    panel.current?.scrollIntoView?.({ block: "nearest", behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "auto" : "smooth" });
     const container = box.current;
     const target = mark.current;
     if (container && target) container.scrollTop = Math.max(0, target.offsetTop - container.offsetTop - container.clientHeight / 2);
@@ -45,10 +45,11 @@ export function ReviewExplain({ skill, group, question }: { skill: MockSkill; gr
     else { element.addEventListener("loadedmetadata", start, { once: true }); element.load(); }
   };
 
-  const hasText = Boolean(parts) && text.trim();
+  const hasText = Boolean(text.trim());
   const hasAudio = skill === "listening" && Boolean(group.reviewAudioUrl);
   return (
     <div ref={panel} className="space-y-2 rounded-field border border-border bg-bg-subtle p-3" data-testid="review-explain">
+      {question.reviewExplanation && <p className="whitespace-pre-line text-sm text-fg" data-testid="review-explanation">{question.reviewExplanation}</p>}
       {hasText ? (
         <div
           ref={box}
@@ -57,9 +58,7 @@ export function ReviewExplain({ skill, group, question }: { skill: MockSkill; gr
           aria-label={t(skill === "listening" ? "scriptLabel" : "passageLabel")}
           className="max-h-64 overflow-y-auto whitespace-pre-line rounded-field border border-border bg-surface p-3 text-sm leading-relaxed text-fg"
         >
-          {parts![0]}
-          <mark ref={mark} className="rounded bg-warning-bg px-0.5 text-fg ring-1 ring-warning" data-testid="review-evidence">{parts![1]}</mark>
-          {parts![2]}
+          {parts ? <>{parts[0]}<mark ref={mark} className="rounded bg-warning-bg px-0.5 text-fg ring-1 ring-warning" data-testid="review-evidence">{parts[1]}</mark>{parts[2]}</> : text}
         </div>
       ) : (
         <p className="text-sm text-fg-muted">{t("noEvidence")}</p>

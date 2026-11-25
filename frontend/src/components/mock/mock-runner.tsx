@@ -43,14 +43,14 @@ import type {
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ListeningAudio } from "@/components/mock/listening-engine";
-import { GappedContent, hasGappedDocument } from "@/components/mock/gapped-content";
+import { GappedContent, hasGappedDocument, sanitizeGappedContent } from "@/components/mock/gapped-content";
 import { MultilevelListening, MultilevelRecorder, type MediaPhase } from './multilevel-media';
 import { SpeakingRecorder } from './speaking-recorder';
 import { recordingFileName } from '@/lib/microphone';
 import { api } from '@/lib/api-client';
 import { hasPendingRecordings, hasActiveRecording } from '@/lib/durable-recordings';
-import { ObjectiveQuestionInput } from './objective-question-input';
-import { usedMatchingOptions } from '@/lib/objective-question';
+import { MatchingOptionBank, ObjectiveQuestionInput } from './objective-question-input';
+import { sharedMatchingOptions, usedMatchingOptions } from '@/lib/objective-question';
 import { MultilevelSectionProgress, MultilevelTaskMeta, MultilevelTaskProgress, multilevelTaskLabels, multilevelTaskName, isExplainedSaveError, studentSaveErrorMessage, studentSubmitMessage, studentSubmitNeedsReview } from './multilevel-student-ui';
 import { MultilevelSubmitReview } from './multilevel-submit-review';
 import { multilevelMissingWork } from '@/lib/multilevel-completeness';
@@ -84,7 +84,10 @@ import { AudioScriptToggle, RevealAnswer } from "./practice-tools";
 import { RunnerTools, PhoneToolsRow, ClearAnswersDialog } from "./runner-tools";
 import { ShortcutsDialog, useRunnerShortcuts } from "./runner-shortcuts";
 import { highlightCurrentSelection } from "./cbt-annotated-text";
-import { enqueue as enqueueAnswer, confirm as confirmQueuedAnswers, loadQueue, clearQueue } from "@/lib/answer-queue";
+import {
+  isMemoryEdit, loadQueue, persistEdit, readUnconfirmedSubmit, rememberUnconfirmedSubmit, removeEdit,
+  type AnswerEdit, type AnswerReceipt, type QueuedAnswer,
+} from "@/lib/answer-queue";
 import { AnswerQueueBanner } from "./answer-queue-banner";
 import { ApiError } from "@/lib/api-client";
 import { installHaptics } from "@/lib/haptics";
@@ -94,12 +97,22 @@ import { LoadErrorPanel } from "@/components/common/load-error-panel";
 
 const ESSAY = new Set<MockQuestionType>(["essay_task1", "essay_task2"]);
 
-const STOP_RECORDINGS_EVENT = "mock-stop-recordings";
+type SaveState = "idle" | "queued" | "saving" | "saved" | "retrying" | "error" | "offline" | "conflict";
+
+function isExamTimeUp(error: unknown) {
+  return error instanceof ApiError && ["MOCK_TIME_UP", "MOCK_SECTION_TIME_UP"].includes(error.code);
+}
+
+function isSubmitted(status: unknown): boolean {
+  return status === "grading" || status === "completed";
+}
 
 
 /** Media backend proxy orqali oqadi — token httpOnly cookie'da */
 const media = (path: string) => `/api/backend${path}`;
 
+import { examContentUnits } from "@/lib/exam-content-units";
+import { gapNumbersIn } from "@/components/exam-builder/reading-preview-model";
 import { nextSectionOnTimeout } from "@/lib/section-timeout";
 import { GroupImage } from "./group-image";
 export { GroupImage };
@@ -127,7 +140,7 @@ function sectionGroupsOf(section: unknown): SectionGroupShape[] {
   return (value?.parts as SectionGroupShape[] | undefined) || [];
 }
 
-export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
+export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDetail; refreshAttempt?: () => void }) {
   const t = useTranslations("mock");
   const tc = useTranslations("common");
   const tm = useTranslations("errorPanel");
@@ -295,23 +308,22 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     const ans: Record<string, string> = {};
     const audio = new Set<string>();
     const durations: Record<string, number> = {};
+    const revisions: Record<string, string | null> = {};
     for (const s of (attempt?.sections || [])) {
       const groups = s?.groups || (s as any)?.parts || [];
       for (const g of groups) {
         for (const q of (g?.questions || [])) {
           ans[q.id] = q.response ?? "";
+          revisions[q.id] = q.answerRevision ?? null;
           if (q.hasAudio) audio.add(q.id);
           if (q.hasAudio && q.audioDurationMs != null) durations[q.id] = q.audioDurationMs;
         }
       }
     }
-    return { ans, audio, durations };
+    return { ans, audio, durations, revisions };
   }, [attempt]);
 
-  // Server answers are the authoritative resume state. Edits stay in memory only
-  // until autosave persists them, so a reload cannot manufacture a second attempt.
-  // Unsent edits from this device (a reload or a lost connection) are shown and sent
-  // again; the server keeps whichever edit is newer.
+  // Recover device edits over the last authorized server snapshot.
   const [queuedAtStart] = React.useState(() => loadQueue(attempt.id));
   const [answers, setAnswers] = React.useState<Record<string, string>>(() => {
     const merged = { ...initial.ans };
@@ -371,26 +383,28 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const [transitionModal, setTransitionModal] = React.useState<{ completedSkill: MockSkill; nextSkill: MockSkill } | null>(null);
 
   const answersRef = React.useRef(answers);
-  React.useEffect(() => {
-    answersRef.current = answers;
-  }, [answers]);
-  const dirty = React.useRef<Set<string>>(new Set(Object.keys(queuedAtStart).filter((id) => id in initial.ans)));
-  // Edit time of each unsent answer (ms, server clock).
-  const editedAt = React.useRef<Map<string, number>>(new Map(Object.entries(queuedAtStart).map(([id, entry]) => [id, entry.editedAt])));
-  const [queuedCount, setQueuedCount] = React.useState(() => Object.keys(queuedAtStart).filter((id) => id in initial.ans).length);
-  // Submit could not be confirmed (network / 5xx): answers are on the server, the hand-in is not.
-  const [submitUnconfirmed, setSubmitUnconfirmed] = React.useState(false);
-  const outgoing = React.useCallback((ids: string[], snapshot: Record<string, string>) =>
-    ids.map((id) => ({ questionId: id, response: snapshot[id] ?? "", editedAt: editedAt.current.get(id) ?? Date.now() + serverOffsetRef.current })), []);
-  // A newer answer from another tab or device wins; show it instead of the old edit.
-  const adoptServerValues = React.useCallback((stale: Record<string, string> | undefined) => {
-    if (!stale || !Object.keys(stale).length) return;
-    const next = { ...answersRef.current, ...stale };
-    answersRef.current = next;
-    for (const id of Object.keys(stale)) { dirty.current.delete(id); editedAt.current.delete(id); }
-    setAnswers(next);
-    toast.info(tr("answerUpdatedElsewhere"));
-  }, [tr]);
+  const revisions = React.useRef(initial.revisions);
+  const edits = React.useRef(new Map(Object.entries(queuedAtStart).filter(([id]) => Object.hasOwn(initial.ans, id))));
+  const conflicts = React.useRef(new Map<string, Extract<AnswerReceipt, { status: "conflict" }>>());
+  const [writer] = React.useState(() => typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2));
+  const lastLocalEdit = React.useRef(Math.max(0, ...[...edits.current.values()].map((edit) => edit.editedAt)));
+  const memoryOnly = React.useRef(new Set([...edits.current].filter(([id, edit]) =>
+    isMemoryEdit(attempt.id, id, edit)).map(([id]) => id)));
+  const [storageUnavailable, setStorageUnavailable] = React.useState(memoryOnly.current.size > 0);
+  const [confirmedAnswers, setConfirmedAnswers] = React.useState(initial.ans);
+  const [queuedCount, setQueuedCount] = React.useState(edits.current.size);
+  const [conflictCount, setConflictCount] = React.useState(0);
+  const [submitUnconfirmed, setSubmitUnconfirmed] = React.useState(() => readUnconfirmedSubmit(attempt.id));
+  const activeQuestionIds = React.useMemo(() => {
+    const section = attempt.sections?.find((item) => item.skill === attempt.currentSkill);
+    return new Set(sectionGroupsOf(section).flatMap((group) => (group.questions ?? []).map((question) => question.id)));
+  }, [attempt.sections, attempt.currentSkill]);
+  const canSaveQuestion = React.useCallback((id: string) => !isFullTest || activeQuestionIds.has(id), [activeQuestionIds, isFullTest]);
+  const saveItems = React.useCallback(() =>
+    [...edits.current].filter(([id]) => canSaveQuestion(id) && !conflicts.current.has(id))
+      .sort(([, left], [, right]) => left.editedAt - right.editedAt), [canSaveQuestion]);
   const submittingRef = React.useRef(false);
   const saveInFlight = React.useRef<Promise<unknown> | null>(null);
   const [saveRevision, setSaveRevision] = React.useState(0);
@@ -402,7 +416,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   });
   const sessionElsewhereRef = React.useRef(false);
   React.useEffect(() => { sessionElsewhereRef.current = examSession.elsewhere; }, [examSession.elsewhere]);
-  const [saveState, setSaveState] = React.useState<"idle" | "saving" | "saved" | "error" | "offline">("saved");
+  const [saveState, setSaveState] = React.useState<SaveState>(edits.current.size ? "queued" : "idle");
   React.useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
@@ -418,59 +432,156 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     return () => window.removeEventListener('multilevel:recording-uploaded', saved);
   }, [attempt.id]);
 
-  const flush = React.useCallback(() => {
-    if (saveInFlight.current || submittingRef.current || sessionElsewhereRef.current) return;
-    const targetSection = attempt?.sections?.find((s) => s.skill === attempt.currentSkill);
-    const targetGroups = targetSection?.groups || (targetSection as any)?.parts || [];
-    const ids = [...dirty.current].filter((id) => !versioned || !isFullTest || targetGroups.some((g: any) => (g?.questions || []).some((q: any) => q.id === id)));
-    if (!ids.length) return;
-    const snapshot = { ...answersRef.current };
-    const items = outgoing(ids, snapshot).sort((a, b) => a.editedAt - b.editedAt);
-    setSaveState("saving");
+  // Refetches can update clean fields, but never replace an edit or a more recent receipt.
+  React.useEffect(() => {
+    const clean: Record<string, string> = {};
+    for (const [id, value] of Object.entries(initial.ans)) {
+      const remote = initial.revisions[id];
+      const known = revisions.current[id];
+      if (edits.current.has(id) || (known && (!remote || remote < known))) continue;
+      revisions.current[id] = remote;
+      if (answersRef.current[id] !== value) clean[id] = value;
+    }
+    if (!Object.keys(clean).length) return;
+    answersRef.current = { ...answersRef.current, ...clean };
+    setAnswers(answersRef.current);
+    setConfirmedAnswers((confirmed) => ({ ...confirmed, ...clean }));
+  }, [initial]);
+
+  const updateQueueState = React.useCallback(() => {
+    setQueuedCount(edits.current.size);
+    setConflictCount(conflicts.current.size);
+    setStorageUnavailable(memoryOnly.current.size > 0);
+    setSaveState(conflicts.current.size ? "conflict" : edits.current.size ? "queued" : "saved");
+  }, []);
+
+  const savePending = React.useCallback(async () => {
+    const items = saveItems();
+    if (items.length) setSaveState((state) => state === "retrying" ? state : "saving");
+    for (let offset = 0; offset < items.length; offset += 200) {
+      const batch = items.slice(offset, offset + 200);
+      const payload: AnswerEdit[] = batch.map(([questionId, { response, editedAt, baseRevision }]) => ({
+        questionId, response, editedAt, ...(baseRevision !== undefined ? { baseRevision } : {}),
+      }));
+      const result = await bulkMutateAsync(payload);
+      if (result.saved !== batch.length || !result.receipts || batch.some(([id, edit]) => {
+        const receipt = result.receipts?.[id];
+        return !receipt || receipt.editedAt !== edit.editedAt ||
+          (receipt.revision !== null && typeof receipt.revision !== "string") ||
+          (receipt.status !== "saved" && (receipt.status !== "conflict" || typeof receipt.response !== "string"));
+      })) throw new Error("Missing answer acknowledgment");
+      const confirmed: Record<string, string> = {};
+      for (const [id, sent] of batch) {
+        const receipt = result.receipts[id];
+        revisions.current[id] = receipt.revision;
+        if (receipt.status === "conflict") {
+          conflicts.current.set(id, receipt);
+          confirmed[id] = receipt.response;
+          continue;
+        }
+        confirmed[id] = sent.response;
+        removeEdit(attempt.id, id, sent);
+        const current = edits.current.get(id);
+        if (current?.editedAt === sent.editedAt && current.response === sent.response) {
+          edits.current.delete(id);
+          memoryOnly.current.delete(id);
+        } else if (current?.writer && current.baseRevision === sent.baseRevision) {
+          // The next edit was typed while this request was in flight. Advance only
+          // its base revision. The editor and journal retain its current value.
+          const rebased = { ...current, writer: current.writer, baseRevision: receipt.revision };
+          edits.current.set(id, rebased);
+          if (persistEdit(attempt.id, id, rebased)) memoryOnly.current.delete(id);
+          else memoryOnly.current.add(id);
+        }
+      }
+      setConfirmedAnswers((previous) => ({ ...previous, ...confirmed }));
+      updateQueueState();
+    }
+  }, [attempt.id, bulkMutateAsync, saveItems, updateQueueState]);
+
+  const flush = React.useCallback((retry = false) => {
+    if (saveInFlight.current || submittingRef.current || sessionElsewhereRef.current || !saveItems().length) return;
+    if (!navigator.onLine) {
+      setSaveState("offline");
+      return;
+    }
+    setSaveState((state) => retry || state === "error" || state === "offline" ? "retrying" : "saving");
     let succeeded = false;
-    saveInFlight.current = bulkMutateAsync(items).then((result) => {
-      if (result.saved !== ids.length) throw new Error('Some answers could not be saved');
+    saveInFlight.current = savePending().then(() => {
       succeeded = true;
-      confirmQueuedAnswers(attempt.id, items);
-      items.forEach((item) => { if (editedAt.current.get(item.questionId) === item.editedAt || answersRef.current[item.questionId] === snapshot[item.questionId]) { dirty.current.delete(item.questionId); editedAt.current.delete(item.questionId); } });
-      adoptServerValues(result.stale);
-      setQueuedCount(dirty.current.size);
-      if (!dirty.current.size) setSaveState("saved");
     }).catch((error: unknown) => {
-      if (error instanceof ApiError && error.code === "EXAM_SESSION_ELSEWHERE") { setSaveState("idle"); return; }
-      setSaveState(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
-      toast.error(versioned || isExplainedSaveError(error) ? studentSaveErrorMessage(error) : tc("saveFailed"));
+      if (error instanceof ApiError && error.code === "EXAM_SESSION_ELSEWHERE") {
+        sessionElsewhereRef.current = true;
+        setSaveState("queued");
+        return;
+      }
+      setSaveState(navigator.onLine ? "error" : "offline");
+      if (versioned || isExplainedSaveError(error)) toast.error(studentSaveErrorMessage(error));
     }).finally(() => {
       saveInFlight.current = null;
-      // Edits made while saving remain dirty; debounce their latest snapshot.
-      if (succeeded && dirty.current.size) setSaveRevision((revision) => revision + 1);
+      if (succeeded && saveItems().length) setSaveRevision((revision) => revision + 1);
     });
-  }, [bulkMutateAsync, tc, versioned, isFullTest, attempt.id, attempt.sections, attempt.currentSkill, outgoing, adoptServerValues]);
+  }, [saveItems, savePending, versioned]);
 
-  // Debounce autosave
   React.useEffect(() => {
     const id = setTimeout(flush, 1500);
     return () => clearTimeout(id);
   }, [answers, flush, saveRevision]);
 
   function setAnswer(qid: string, val: string) {
-    if (submittingRef.current) return;
-    dirty.current.add(qid);
-    const stamp = Math.max(Date.now() + serverOffsetRef.current, (editedAt.current.get(qid) ?? 0) + 1);
-    editedAt.current.set(qid, stamp);
-    enqueueAnswer(attempt.id, qid, val, stamp);
-    setQueuedCount(dirty.current.size);
-    const next = { ...answersRef.current, [qid]: val };
-    answersRef.current = next;
-    setSaveState(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "saving");
-    setAnswers(next);
+    if (submittingRef.current || submitUnconfirmed || !canSaveQuestion(qid) || !Object.hasOwn(initial.ans, qid)) return;
+    const previous = edits.current.get(qid);
+    const stamp = Math.max(Date.now() + serverOffsetRef.current, lastLocalEdit.current + 1);
+    lastLocalEdit.current = stamp;
+    const edit = { response: val, editedAt: stamp, writer, baseRevision: previous ? previous.baseRevision : revisions.current[qid] ?? null };
+    edits.current.set(qid, edit);
+    if (persistEdit(attempt.id, qid, edit)) {
+      memoryOnly.current.delete(qid);
+      if (previous && previous.writer !== writer) removeEdit(attempt.id, qid, previous);
+    } else memoryOnly.current.add(qid);
+    answersRef.current = { ...answersRef.current, [qid]: val };
+    updateQueueState();
+    if (!navigator.onLine) setSaveState("offline");
+    setAnswers(answersRef.current);
   }
+
+  function resolveConflicts(useLocal: boolean) {
+    if (submittingRef.current || saveInFlight.current) return;
+    const next = { ...answersRef.current };
+    for (const [id, receipt] of conflicts.current) {
+      const edit = edits.current.get(id);
+      if (!edit) continue;
+      if (useLocal) {
+        const resolved = { ...edit, writer, baseRevision: receipt.revision };
+        edits.current.set(id, resolved);
+        if (persistEdit(attempt.id, id, resolved)) {
+          memoryOnly.current.delete(id);
+          if (edit.writer !== writer) removeEdit(attempt.id, id, edit);
+        } else memoryOnly.current.add(id);
+      } else {
+        removeEdit(attempt.id, id, edit);
+        edits.current.delete(id);
+        memoryOnly.current.delete(id);
+        next[id] = receipt.response;
+      }
+    }
+    conflicts.current.clear();
+    answersRef.current = next;
+    setAnswers(next);
+    updateQueueState();
+  }
+
   React.useEffect(() => {
-    window.addEventListener('online', flush);
-    const onOffline = () => { if (dirty.current.size) setSaveState("offline"); };
-    window.addEventListener('offline', onOffline);
+    const retry = () => flush(true);
+    window.addEventListener("online", retry);
+    const onOffline = () => { if (edits.current.size) setSaveState("offline"); };
+    window.addEventListener("offline", onOffline);
     const id = window.setInterval(flush, 10000);
-    return () => { window.removeEventListener('online', flush); window.removeEventListener('offline', onOffline); window.clearInterval(id); };
+    return () => {
+      window.removeEventListener("online", retry);
+      window.removeEventListener("offline", onOffline);
+      window.clearInterval(id);
+    };
   }, [flush]);
 
   // Native-feeling tap feedback on answer options and buttons (touch devices only).
@@ -483,8 +594,9 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     : isFullTest && attempt.currentSkill && attempt.sectionDeadlines?.[attempt.currentSkill]
     ? attempt.sectionDeadlines[attempt.currentSkill]
     : attempt.overallDeadlineAt ?? attempt.deadlineAt;
-  const deadline = deadlineTs ? new Date(deadlineTs).getTime() : null;
-  const [serverOffset] = React.useState(() => attempt.serverTime ? Date.parse(attempt.serverTime) - Date.now() : 0);
+  const overallDeadline = attempt.overallDeadlineAt ? Date.parse(attempt.overallDeadlineAt) : Infinity;
+  const deadline = deadlineTs ? Math.min(Date.parse(deadlineTs), overallDeadline) : null;
+  const serverOffset = openingOffset;
   const [remaining, setRemaining] = React.useState<number | null>(
     () => (deadline ? deadline - Date.now() - serverOffset : null),
   );
@@ -525,123 +637,125 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
 
   const doSubmit = React.useCallback(
     async (auto = false, confirmed = false) => {
-      if (submittingRef.current) return;
+      if (submittingRef.current || sessionElsewhereRef.current) return;
       if (total <= 0) {
         toast.error(tr("noQuestionsToSubmit"));
         return;
       }
       if (!auto && !confirmed) {
-        const isMockedConfirm = typeof window !== 'undefined' && typeof window.confirm === 'function' && !window.confirm.toString().includes('[native code]');
-        if (isMockedConfirm) {
-          if (!window.confirm(t("submitConfirm"))) return;
-        } else {
+        const isMockedConfirm = typeof window.confirm === "function" && !window.confirm.toString().includes("[native code]");
+        if (!isMockedConfirm) {
           setShowSubmitConfirm(true);
           return;
         }
+        if (!window.confirm(t("submitConfirm"))) return;
       }
       setShowSubmitConfirm(false);
       submittingRef.current = true;
-      if (versioned) {
-        try {
-          if (hasActiveRecording(attempt.id) || await hasPendingRecordings(attempt.id)) {
-            toast.error('Finish recording and upload saved takes before submitting.');
-            submittingRef.current = false;
+      const payload = { confirm: true, ...(auto ? { requireExpired: true } : {}) };
+      const checkResult = () => api.get<{ status: string }>(`/mock/attempts/${attempt.id}`).catch(() => null);
+      let submitted = false;
+      try {
+        if (submitUnconfirmed || readUnconfirmedSubmit(attempt.id)) {
+          const current = await checkResult();
+          if (isSubmitted(current?.status)) {
+            submitted = true;
             return;
           }
-        } catch {
-          toast.error('Recording recovery could not be checked. Keep this page open and retry.');
-          submittingRef.current = false;
+          if (current?.status !== "in_progress") return;
+        }
+        if (!navigator.onLine) {
+          toast.error(tr("finishOffline"));
           return;
         }
-      }
-      window.dispatchEvent(new Event(STOP_RECORDINGS_EVENT));
-      try {
-        try {
-          await saveInFlight.current;
-        } catch {}
-        const targetSec = attempt?.sections?.find((s) => s.skill === attempt.currentSkill);
-        if (isFullTest && !targetSec) throw new Error('Current section could not be loaded. Keep this page open and retry.');
-        const targetGrps = targetSec?.groups || (targetSec as any)?.parts || [];
-        const ids = Object.keys(answersRef.current)
-          .filter((qid) => (!auto || dirty.current.has(qid)) && (!isFullTest || targetGrps.some((g: any) => (g?.questions || []).some((q: any) => q.id === qid))));
-        const all = outgoing(ids, answersRef.current);
-        for (let offset = 0; offset < all.length; offset += 200) {
-          const batch = all.slice(offset, offset + 200);
-          const saved = await bulkMutateAsync(batch);
-          if (saved.saved !== batch.length) {
-            throw new Error("Some answers could not be saved. Keep this page open and retry.");
-          }
-          confirmQueuedAnswers(attempt.id, batch);
-          batch.forEach((item) => { if (editedAt.current.get(item.questionId) === item.editedAt) { dirty.current.delete(item.questionId); editedAt.current.delete(item.questionId); } });
-          adoptServerValues(saved.stale);
+        if (hasActiveRecording(attempt.id) ||
+            ((versioned || attempt.currentSkill === "speaking") && await hasPendingRecordings(attempt.id))) {
+          toast.error(tr("finishPendingRecording"));
+          return;
         }
-        setQueuedCount(dirty.current.size);
+        await saveInFlight.current;
         try {
-          await submitMutateAsync({ confirm: true, confirmed: true, force: true });
+          await savePending();
         } catch (error) {
-          // A gateway error (e.g. 502) or a lost connection does not tell whether the
-          // hand-in happened. Ask the server: submitting again never makes a second attempt.
-          if (error instanceof ApiError && error.status > 0 && error.status < 500) throw error;
-          const current = await api.get<{ status: string }>(`/mock/attempts/${attempt.id}`).catch(() => null);
-          if (!current || current.status === "in_progress") {
+          setSaveState(navigator.onLine ? "error" : "offline");
+          if (!auto || !isExamTimeUp(error)) throw error;
+        }
+        if (!auto && [...edits.current.keys()].some(canSaveQuestion)) {
+          toast.error(tr("finishPendingAnswers"));
+          return;
+        }
+
+        // Persist the uncertain hand-in before the request so reload can reconcile it.
+        rememberUnconfirmedSubmit(attempt.id, true);
+        try {
+          const result = await submitMutateAsync(payload);
+          if (!isSubmitted(result.status)) throw new Error("Missing submission acknowledgment");
+        } catch (error) {
+          if (error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 408) {
+            rememberUnconfirmedSubmit(attempt.id, false);
+            setSubmitUnconfirmed(false);
+            throw error;
+          }
+          const current = await checkResult();
+          if (!isSubmitted(current?.status)) {
             setSubmitUnconfirmed(true);
-            submittingRef.current = false;
             return;
           }
-          // Already handed in: the repeated submit returns the stored state and refreshes the page data.
-          await submitMutateAsync({ confirm: true, confirmed: true, force: true }).catch(() => undefined);
         }
-        setSubmitUnconfirmed(false);
-        clearQueue(attempt.id);
-        if (liveRoomId) {
-          reportProgressMutate({
-            attemptId: attempt.id,
-            status: "submitted",
-          });
+        submitted = true;
+      } catch (error) {
+        if (error instanceof ApiError && error.code === "EXAM_DEADLINE_ACTIVE" && auto) return;
+        if (studentSubmitNeedsReview(error)) setReview("submit");
+        toast.error(isExamTimeUp(error) ? tr("saveExpired") : versioned ? studentSubmitMessage(error) : tr("finishPendingAnswers"));
+      } finally {
+        if (submitted) {
+          rememberUnconfirmedSubmit(attempt.id, false);
+          setSubmitUnconfirmed(false);
+          if (liveRoomId) reportProgressMutate({ attemptId: attempt.id, status: "submitted" });
+          toast.success(t("submitted"));
+          refreshAttempt?.();
+        } else {
+          submittingRef.current = false;
         }
-        toast.success(t("submitted"));
-      } catch (e) {
-        submittingRef.current = false;
-        // A refused incomplete hand-in reopens the review panel so the student
-        // sees exactly which section still owes work.
-        if (studentSubmitNeedsReview(e)) setReview("submit");
-        toast.error(versioned ? studentSubmitMessage(e) : (e instanceof Error ? e.message : tc("unknownError")));
       }
     },
-    [bulkMutateAsync, submitMutateAsync, t, tc, versioned, attempt.id, attempt.sections, attempt.currentSkill, isFullTest, liveRoomId, reportProgressMutate, total, outgoing, adoptServerValues],
+    [attempt.id, attempt.currentSkill, canSaveQuestion, liveRoomId, refreshAttempt, reportProgressMutate, savePending, submitMutateAsync, submitUnconfirmed, t, total, tr, versioned],
   );
 
-  // Full-test: keyingi bo'limga o'tish (flush + advance). Review tugashi ham shu yerga keladi.
   const goNextSection = React.useCallback(async (automatic = false) => {
-    if (submittingRef.current) return;
+    const currentSkill = attempt.currentSkill;
+    if (submittingRef.current || sessionElsewhereRef.current || !currentSkill ||
+        !attempt.sections.some((section) => section.skill === currentSkill)) return;
     submittingRef.current = true;
     try {
       await saveInFlight.current;
-      const curSec = attempt?.sections?.find((s) => s.skill === attempt.currentSkill);
-      if (!curSec) throw new Error('Current section could not be loaded');
-      const curGrps = curSec?.groups || (curSec as any)?.parts || [];
-      const ids = curGrps.flatMap((g: any) => (g?.questions || []).map((q: any) => q.id)) as string[];
-      const answers = outgoing(ids.filter((id) => Object.hasOwn(answersRef.current, id) && (!automatic || dirty.current.has(id))), answersRef.current);
-      for (let offset = 0; offset < answers.length; offset += 200) {
-        const batch = answers.slice(offset, offset + 200);
-        const saved = await bulkMutateAsync(batch);
-        if (saved.saved !== batch.length) throw new Error('Some answers could not be saved');
-        confirmQueuedAnswers(attempt.id, batch);
+      try {
+        await savePending();
+      } catch (error) {
+        setSaveState(navigator.onLine ? "error" : "offline");
+        if (!automatic || !isExamTimeUp(error)) throw error;
       }
-      ids.forEach((id) => { dirty.current.delete(id); editedAt.current.delete(id); });
-      setQueuedCount(dirty.current.size);
-      const currentSkill = attempt.currentSkill;
-      await advanceMutateAsync();
-      const currentIdx = exam?.sections.findIndex((s) => s.skill === currentSkill) ?? -1;
-      const nextSkill = exam?.sections[currentIdx + 1]?.skill;
-      if (currentSkill && nextSkill) {
-        setTransitionModal({ completedSkill: currentSkill, nextSkill });
+      const hasPending = [...edits.current.keys()].some((id) => activeQuestionIds.has(id));
+      if (!automatic && hasPending) {
+        toast.error(tr("finishPendingAnswers"));
+        return;
       }
+      const result = await advanceMutateAsync({ expectedSkill: currentSkill, ...(automatic ? { requireExpired: true } : {}) });
+      if (!result.saved || !result.submittedSections.includes(currentSkill) || !result.currentSkill || result.currentSkill === currentSkill) {
+        throw new Error("Missing section acknowledgment");
+      }
+      setSelectedSection(null);
+      setTransitionModal({ completedSkill: currentSkill, nextSkill: result.currentSkill as MockSkill });
       toast.success(tr("nextSectionDone"));
-    } catch (e) {
-      toast.error(versioned ? "This section could not be completed. Please try again." : (e instanceof Error ? e.message : tc("unknownError")));
-    } finally { submittingRef.current = false; }
-  }, [advanceMutateAsync, tc, tr, versioned, attempt.id, attempt.sections, attempt.currentSkill, bulkMutateAsync, exam, outgoing]);
+      if (hasPending) toast.warning(tr("saveExpired"));
+    } catch (error) {
+      if (error instanceof ApiError && error.code === "EXAM_DEADLINE_ACTIVE" && automatic) return;
+      refreshAttempt?.();
+      toast.error(isExamTimeUp(error) ? tr("saveExpired") : tr("advanceUnconfirmed"));
+    } finally {
+      submittingRef.current = false;
+    }
+  }, [activeQuestionIds, advanceMutateAsync, attempt.currentSkill, attempt.sections, refreshAttempt, savePending, tr]);
 
   React.useEffect(() => {
     if (!deadline) return;
@@ -655,13 +769,13 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         nextRetry = Date.now() + 10000;
         // Full test (Multilevel and IELTS): a section's time ends → the next section; only the
         // last timed section (or a single-section attempt) hands in the exam.
-        if (nextSectionOnTimeout(isFullTest, attempt.currentSkill, exam?.sections.map((section) => section.skill) ?? [])) {
+        if (Date.now() + serverOffset < overallDeadline && nextSectionOnTimeout(isFullTest, attempt.currentSkill, exam?.sections.map((section) => section.skill) ?? [])) {
           void goNextSection(true);
         } else void doSubmit(true);
       }
     }, 1000);
     return () => { clearInterval(id); clearInterval(clock); };
-  }, [deadline, doSubmit, serverOffset, isFullTest, attempt.currentSkill, goNextSection, exam]);
+  }, [deadline, doSubmit, serverOffset, overallDeadline, isFullTest, attempt.currentSkill, goNextSection, exam]);
 
   // Listening review tugashi: full_test da keyingi bo'limga, single_skill da
   // bo'lim yagona bo'lgani uchun to'g'ridan-to'g'ri auto-submit (advanceSection
@@ -681,6 +795,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   }, [exam, flush]);
 
   const answered = exam ? countAnswered(exam, answers, audioSet) : 0;
+  const confirmedCount = exam ? countAnswered(exam, confirmedAnswers, audioSet) : 0;
   const section: MockSection | undefined = exam?.sections[activeSection];
   const firstShownNumber = section?.groups?.[0]?.questions?.[0]?.displayNumber ?? section?.groups?.[0]?.questions?.[0]?.number ?? 1;
   const activeQuestionNumber = activeQuestion.section === (section?.id ?? null) ? activeQuestion.number : firstShownNumber;
@@ -693,7 +808,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         attemptId: attempt.id,
         currentSkill: section?.skill,
         currentQuestionNumber: activeQuestionNumber,
-        answeredCount: answered,
+        answeredCount: confirmedCount,
         flaggedCount: flaggedQuestions.size,
         status: "in_progress",
       });
@@ -707,7 +822,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     attempt.id,
     section?.skill,
     activeQuestionNumber,
-    answered,
+    confirmedCount,
     flaggedQuestions.size,
     reportProgressMutate,
   ]);
@@ -720,7 +835,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     e.preventDefault();
   }
 
-  if (examQ.isError) {
+  if (examQ.isError && !exam) {
     return (
       <div className="mx-auto max-w-3xl">
         <ErrorState title={tc("error")} />
@@ -758,7 +873,8 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
 
   const contrastClasses = COLOUR_CLASS[examSettings.colours];
   // Index of the last Listening part that has a recording (all parts share one recording when a single audio is used).
-  const listeningGroups = section?.skill === "listening" ? sectionGroupsOf(section) : [];
+  const listeningGroups = section?.skill === "listening"
+    ? examContentUnits(section.groups ?? [], "listening", exam?.type !== "multilevel").map((unit) => unit.source) : [];
   const sharedListeningAudio = Boolean(audioTimestampsQ.data?.audioUrl);
   const lastListeningAudioPart = sharedListeningAudio
     ? listeningGroups.length - 1
@@ -825,6 +941,11 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
       <AnswerQueueBanner
         queued={queuedCount}
         failing={saveState === "error" || saveState === "offline"}
+        storageUnavailable={storageUnavailable}
+        conflicts={conflictCount}
+        lockedEdits={[...edits.current.keys()].filter((id) => !canSaveQuestion(id)).length}
+        onKeepLocal={() => resolveConflicts(true)}
+        onUseServer={() => resolveConflicts(false)}
         submitUnconfirmed={submitUnconfirmed}
         onRetrySubmit={() => void doSubmit(false, true)}
       />
@@ -847,7 +968,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           className="sticky top-0 z-20 -mx-4 mb-2 flex h-14 items-center gap-1.5 border-b border-border bg-surface/95 px-3 backdrop-blur sm:gap-2 sm:px-4 lg:-mx-5 lg:px-5"
         >
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <span className="font-black text-brand tracking-wider text-sm sm:text-base mr-0.5 select-none shrink-0">BESTWAY</span>
+            <span className="mr-0.5 hidden shrink-0 select-none text-base font-black tracking-wider text-brand sm:inline">BESTWAY</span>
             {isSingleSection && targetSkill && (
               <span className="hidden shrink-0 whitespace-nowrap rounded-chip border border-brand/30 bg-brand-subtle px-2 py-0.5 text-sm font-semibold text-brand-subtle-fg md:inline">
                 {tr(attempt.mode === "practice" ? "practiceBadge" : "examBadge", { skill: t(`skills.${targetSkill}`) })}
@@ -863,12 +984,12 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           </div>
           <span className="hidden lg:inline-flex">
             <StatusChip>
-              {answered} / {total} {t("answered")}
+              {tr("confirmedAnswerCount", { count: confirmedCount, total })}
               {bulk.isPending && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
             </StatusChip>
           </span>
-          <SaveStatusChip state={saveState} compact label={tr({ idle: "saveSaved", saving: "saveSaving", saved: "saveSaved", error: "saveError", offline: "saveOffline" }[saveState])} />
-          {(saveState === "error" || saveState === "offline") && <button type="button" className="hidden min-h-[40px] px-1 text-sm font-semibold text-brand underline-offset-2 hover:underline sm:inline" onClick={flush}>{tr("saveRetry")}</button>}
+          <SaveStatusChip state={saveState} compact label={tr({ idle: "saveIdle", queued: "saveQueued", saving: "saveSaving", saved: "saveSaved", retrying: "saveRetrying", error: "saveError", offline: "saveOffline", conflict: "saveConflict" }[saveState])} />
+          {(saveState === "error" || saveState === "offline") && <button type="button" className="hidden min-h-[40px] px-1 text-sm font-semibold text-brand underline-offset-2 hover:underline sm:inline" onClick={() => flush(true)}>{tr("saveRetry")}</button>}
           <RunnerTools
             infoOpen={infoOpen}
             onInfo={() => setInfoOpen((open) => !open)}
@@ -905,14 +1026,14 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           <section id="runner-info" aria-label={tr("infoTitle")} className="mb-3 space-y-3 rounded-card border border-border bg-surface p-3 text-sm sm:p-4">
             <div className="flex flex-wrap items-center gap-2">
               {showQuestionPosition && <StatusChip>{tr("questionPosition", { number: activeQuestionNumber })}</StatusChip>}
-              <span className="lg:hidden"><StatusChip>{answered} / {total} {t("answered")}</StatusChip></span>
+              <span className="lg:hidden"><StatusChip>{tr("confirmedAnswerCount", { count: confirmedCount, total })}</StatusChip></span>
               {flaggedQuestions.size > 0 && (
                 <StatusChip tone="warning">
                   <Flag className="size-3.5" aria-hidden />
                   {tr("flaggedCount", { count: flaggedQuestions.size })}
                 </StatusChip>
               )}
-              {(saveState === "error" || saveState === "offline") && <button type="button" className="min-h-[40px] px-2 text-sm font-semibold text-brand underline-offset-2 hover:underline sm:hidden" onClick={flush}>{tr("saveRetry")}</button>}
+              {(saveState === "error" || saveState === "offline") && <button type="button" className="min-h-[40px] px-2 text-sm font-semibold text-brand underline-offset-2 hover:underline sm:hidden" onClick={() => flush(true)}>{tr("saveRetry")}</button>}
             </div>
             {!isSingleSection && exam.sections.length > 1 && (
               <div className="flex flex-wrap gap-1.5 xl:hidden" role="group" aria-label={tr("sectionsLabel")}>{sectionSwitcher("full")}</div>
@@ -997,6 +1118,8 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
             /> : <CbtSectionStepper
               // A new section starts on its first part (its own part and question state).
               key={section.id}
+              attemptId={attempt.id}
+              canonicalListening={exam.type !== "multilevel"}
               skill={section.skill}
               groups={section.groups || (section as any).parts || []}
               answers={answers}
@@ -1011,9 +1134,13 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
                 // stepper a new callback, which reports the question again — an endless render loop.
                 setActiveQuestion((current) => (current.section === sectionId && current.number === number ? current : { section: sectionId, number }));
               }}
-              renderGroupBlock={(g, reviewComplete, partIdx) => (
-                <GroupBlock
-                  key={g.id}
+              renderGroupBlock={(source, reviewComplete, partIdx, taskGroups = [source], partNumber, unitKey) => {
+                const render = (g: MockSection["groups"][number], taskOnly = false, taskContent?: React.ReactNode) => <GroupBlock
+                  key={taskContent ? unitKey : g.id}
+                  taskOnly={taskOnly}
+                  taskContent={taskContent}
+                  taskCount={taskGroups.reduce((count, group) => count + group.questions.length, 0)}
+                  partNumber={partNumber}
                   group={!versioned && exam.type === 'multilevel' ? { ...g, questions: g.questions.map((q) => ({ ...q, guidance: undefined })) } : g}
                   skill={section.skill}
                   strict={strict && section.skill === "listening"}
@@ -1031,7 +1158,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
                   onToggleFlag={toggleQuestionFlag}
                   partIndex={partIdx}
                   audioTimestamps={examAudioTimestamps}
-                  sharedSingleAudioUrl={sharedSingleAudioUrl}
+                  sharedSingleAudioUrl={taskOnly ? null : sharedSingleAudioUrl}
                   // Timed IELTS: each part's start is kept on the server, so a reload resumes the recording.
                   listeningSchedule={attempt.listeningSchedule?.[g.id] ?? null}
                   mediaAlreadyStarted={strict && (attempt.mediaStarted ?? []).includes(g.id)}
@@ -1040,8 +1167,23 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
                     : undefined}
                   serverOffsetMs={openingOffset}
                   practice={practiceHelp ? { script: practiceScripts.get(g.id), revealed: practiceRevealed } : null}
-                />
-              )}
+                />;
+                if (section.skill === "reading") {
+                  return render({ ...source, questions: [], contentHtml: null, instructions: null }, false,
+                    taskGroups.map((group) => render(group.id === source.id ? { ...group, title: null, imageUrl: null } : group, true)));
+                }
+                if (section.skill === "listening" && taskGroups.length > 1) {
+                  const timestamp = examAudioTimestamps.find((item) => item.partNumber === partNumber);
+                  const audioSource = taskGroups.find((group) => attempt.listeningSchedule?.[group.id])
+                    ?? taskGroups.find((group) => group.hasAudio && group.id === timestamp?.groupId)
+                    ?? source;
+                  return <div key={unitKey} className="space-y-3">
+                    {render({ ...audioSource, title: null, questions: [], contentHtml: null, instructions: null, imageUrl: null })}
+                    {taskGroups.map((group) => <div key={group.id}>{render(group, true)}</div>)}
+                  </div>;
+                }
+                return render(source);
+              }}
               onReviewComplete={section.skill === "listening" ? onListeningReviewComplete : undefined}
               onNextSection={() => {
                 if (multilevelReview && missingWork) setReview("advance");
@@ -1115,7 +1257,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
 }
 
 /** Compact header chip (docs/design/DESIGN_SYSTEM.md §5). */
-export function StatusChip({ tone = "neutral", children }: { tone?: "neutral" | "warning" | "success" | "danger"; children?: React.ReactNode }) {
+export function StatusChip({ tone = "neutral", children, className }: { tone?: "neutral" | "warning" | "success" | "danger"; children?: React.ReactNode; className?: string }) {
   return (
     <span
       className={cn(
@@ -1124,6 +1266,7 @@ export function StatusChip({ tone = "neutral", children }: { tone?: "neutral" | 
         tone === "warning" && "border-warning-border bg-warning-bg text-warning",
         tone === "success" && "border-success-border bg-success-bg text-success",
         tone === "danger" && "border-danger-border bg-danger-bg text-danger",
+        className,
       )}
     >
       {children}
@@ -1132,20 +1275,20 @@ export function StatusChip({ tone = "neutral", children }: { tone?: "neutral" | 
 }
 
 /** Save state as an icon + text chip; the only live region in the runner header. */
-export function SaveStatusChip({ state, label, compact = false }: { state: "idle" | "saving" | "saved" | "error" | "offline"; label: string; compact?: boolean }) {
-  const failed = state === "error" || state === "offline";
+export function SaveStatusChip({ state, label, compact = false }: { state: SaveState; label: string; compact?: boolean }) {
+  const failed = state === "error" || state === "offline" || state === "conflict";
+  const working = state === "saving" || state === "retrying";
   return (
     <span role="status" aria-live="polite" title={label}>
-      <StatusChip tone={failed ? "danger" : state === "saving" ? "neutral" : "success"}>
-        {state === "saving" ? (
-          <Loader2 className="size-3.5 animate-spin" aria-hidden />
+      <StatusChip tone={failed ? "danger" : state === "saved" ? "success" : "neutral"} className={compact ? "max-sm:max-w-[25vw]" : undefined}>
+        {working ? (
+          <Loader2 className="size-3.5 shrink-0 animate-spin" aria-hidden />
         ) : failed ? (
-          <AlertTriangle className="size-3.5" aria-hidden />
-        ) : (
-          <CheckCircle2 className="size-3.5" aria-hidden />
-        )}
-        {/* Compact (header): the icon shows the state and the label is read out; a failure is always written out. */}
-        <span className={compact && !failed ? "sr-only" : undefined}>{label}</span>
+          <AlertTriangle className="size-3.5 shrink-0" aria-hidden />
+        ) : state === "saved" ? (
+          <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />
+        ) : null}
+        <span className={cn(compact && "min-w-0 truncate", compact && state === "saved" && "max-sm:sr-only")}>{label}</span>
       </StatusChip>
     </span>
   );
@@ -1287,6 +1430,10 @@ export function GuidedMultilevelGroups({
 
 function GroupBlock({
   group,
+  taskOnly = false,
+  taskContent,
+  taskCount,
+  partNumber,
   skill,
   strict,
   timed,
@@ -1310,6 +1457,10 @@ function GroupBlock({
   practice = null,
 }: {
   group: MockSection["groups"][number];
+  taskOnly?: boolean;
+  taskContent?: React.ReactNode;
+  taskCount?: number;
+  partNumber?: number;
   skill: MockSkill;
   strict: boolean;
   timed: boolean;
@@ -1335,17 +1486,26 @@ function GroupBlock({
   practice?: { script?: string | null; revealed: Set<string> } | null;
 }) {
   const tg = useTranslations("mock.runnerUx");
-  const [readingMobileTab, setReadingMobileTab] = React.useState<"passage" | "questions">("passage");
-  const hasPassage = !!group.passageText && !(skill === "writing" && sharedWritingStimulus);
+  const readingPositionKey = `bw_exam_reading_${attemptId}_${group.id}`;
+  const [readingMobileTab, setReadingMobileTab] = React.useState<"passage" | "questions">(() => {
+    try { return sessionStorage.getItem(`${readingPositionKey}_tab`) === "questions" ? "questions" : "passage"; }
+    catch { return "passage"; }
+  });
+  const passageRef = React.useRef<HTMLDivElement>(null);
+  const questionsRef = React.useRef<HTMLDivElement>(null);
+  const hasPassage = !taskOnly && !!(group.passageText || (skill === "reading" && group.imageUrl)) && !(skill === "writing" && sharedWritingStimulus);
   const hasGappedContent = hasGappedDocument(group.contentHtml);
+  const matchingBank = sharedMatchingOptions(group.questions);
+  const gapNumbers = React.useMemo(() => new Set(gapNumbersIn(sanitizeGappedContent(group.contentHtml ?? ""))), [group.contentHtml]);
 
   // Resolve single-audio timestamp boundaries for this Listening part
   const stimTs = group.stimulusRef as { startSec?: number; endSec?: number | null } | null | undefined;
-  const matchedTs = audioTimestamps.find((ts) => ts.partNumber === partIndex + 1);
+  const matchedTs = audioTimestamps.find((ts) => ts.groupId === group.id)
+    ?? audioTimestamps.find((ts) => ts.partNumber === (partNumber ?? partIndex + 1));
   const startSec = group.startSec ?? stimTs?.startSec ?? matchedTs?.startSec;
   const endSec = group.endSec ?? stimTs?.endSec ?? matchedTs?.endSec ?? null;
 
-  const hasListeningAudio = Boolean(group.hasAudio || (skill === "listening" && sharedSingleAudioUrl));
+  const hasListeningAudio = !taskOnly && Boolean(group.hasAudio || (skill === "listening" && sharedSingleAudioUrl));
   const audioSrc = group.hasAudio
     ? media(`/mock/groups/${group.id}/audio${strict ? `?attemptId=${attemptId}` : ""}`)
     : sharedSingleAudioUrl
@@ -1358,17 +1518,48 @@ function GroupBlock({
   // Writing: the task (picture, instructions, text, prompt) beside the answer. One split only — the passage lives in
   // the task column, so there is never a split inside a split.
   const isWritingSplit = skill === "writing" && !hasGappedContent;
-  const isPassageSplit = hasPassage && !hasGappedContent && !isWritingSplit;
+  const isPassageSplit = hasPassage && !isWritingSplit;
   // Passage / Questions tabs on phones are for Reading; Writing stacks the task above the answer.
-  const tabbed = hasPassage && !hasGappedContent && !isWritingSplit;
+  const tabbed = isPassageSplit && skill === "reading";
   const [readingSplit, setReadingSplit] = useReadingSplit();
   const [writingSplit, setWritingSplit] = useWritingSplit();
   const splitRef = React.useRef<HTMLDivElement>(null);
   const isMapSplit = Boolean(skill === "listening" && group.imageUrl);
+  React.useEffect(() => {
+    if (!tabbed) return;
+    try { sessionStorage.setItem(`${readingPositionKey}_tab`, readingMobileTab); } catch {}
+  }, [readingMobileTab, readingPositionKey, tabbed]);
+  React.useEffect(() => {
+    if (!tabbed) return;
+    const save = (key: string, panel: HTMLDivElement | null) => {
+      if (!panel || !panel.getClientRects().length) return undefined;
+      try { panel.scrollTop = Number(sessionStorage.getItem(key)) || 0; } catch {}
+      const onScroll = () => {
+        try { sessionStorage.setItem(key, String(panel.scrollTop)); } catch {}
+      };
+      panel.addEventListener("scroll", onScroll, { passive: true });
+      return () => panel.removeEventListener("scroll", onScroll);
+    };
+    const cleanPassage = save(`${readingPositionKey}_passage`, passageRef.current);
+    const cleanQuestions = save(`${readingPositionKey}_questions`, questionsRef.current);
+    return () => { cleanPassage?.(); cleanQuestions?.(); };
+  }, [readingMobileTab, readingPositionKey, tabbed]);
+  React.useEffect(() => {
+    const element = splitRef.current;
+    if (!tabbed || !element) return;
+    const show = (event: Event) => {
+      if (readingMobileTab === "passage" && window.matchMedia("(max-width: 1023px)").matches) {
+        event.preventDefault();
+        setReadingMobileTab("questions");
+      }
+    };
+    element.addEventListener("bw-exam-show-question", show);
+    return () => element.removeEventListener("bw-exam-show-question", show);
+  }, [tabbed, readingMobileTab]);
 
   return (
     <Card className="p-3 sm:p-4">
-      {group.title && <h3 className="font-semibold text-fg">{group.title}</h3>}
+      {group.title && !taskContent && <h3 className="font-semibold text-fg">{group.title}</h3>}
       {hasListeningAudio && skill === "listening" ? (
         // The recording is content (not chrome): it stays in view under the header while the questions scroll.
         <div data-layout-content className={cn("z-10 -mx-3 mb-3 border-b border-border bg-surface/95 px-3 py-2 backdrop-blur-xl sm:-mx-4 sm:px-4 [@media(min-height:720px)]:sticky [@media(min-height:720px)]:top-14", group.title ? "mt-2" : "-mt-3 rounded-t-card sm:-mt-4")}>
@@ -1392,7 +1583,7 @@ function GroupBlock({
           />}
         </div>
       ) : (
-        group.hasAudio && (
+        !taskOnly && group.hasAudio && (
           <audio
             controls
             src={audioSrc}
@@ -1403,10 +1594,11 @@ function GroupBlock({
           </audio>
         )
       )}
+      {skill === "listening" && !taskOnly && !hasListeningAudio && <p role="status" className="text-sm text-fg-muted">{tg("partAudioUnavailable")}</p>}
       {practice && skill === "listening" && <div className="mt-2"><AudioScriptToggle script={practice.script} /></div>}
-      {group.imageUrl && !isMapSplit && !isWritingSplit && (
+      {group.imageUrl && !(skill === "reading" && taskContent) && !isMapSplit && !isWritingSplit && (
         <div className="mt-3">
-          <GroupImage groupId={group.id} alt={group.title ? tg("pictureFor", { title: group.title }) : tg("pictureForPart")} />
+          <GroupImage groupId={group.id} compact={skill === "speaking"} alt={group.title ? tg("pictureFor", { title: group.title }) : tg("pictureForPart")} />
         </div>
       )}
       {group.instructions && !isWritingSplit && (
@@ -1464,7 +1656,7 @@ function GroupBlock({
                 : "text-fg-muted hover:text-fg"
             )}
           >
-            {tg("questionsTab", { count: (group?.questions || []).length })}
+            {tg("questionsTab", { count: taskCount ?? group.questions.length })}
           </button>
         </div>
       )}
@@ -1510,7 +1702,7 @@ function GroupBlock({
             )}
             {hasPassage && (
               <div className="whitespace-pre-line text-base leading-relaxed text-fg sm:text-[17px] sm:leading-[1.75]" {...{ [VOCAB_TEXT_ATTRIBUTE]: "" }}>
-                <CbtAnnotatedText text={group.passageText!} storageKey={`${attemptId}.${group.id}.passage`} />
+                <CbtAnnotatedText text={group.passageText ?? ""} storageKey={`${attemptId}.${group.id}.passage`} />
               </div>
             )}
             {/* Wide screens: the prompt sits with the task (phones keep it with the answer, below). */}
@@ -1524,8 +1716,9 @@ function GroupBlock({
           </div>
         )}
         {isWritingSplit && <ReadingSplitDivider variant="writing" value={writingSplit} onChange={setWritingSplit} containerRef={splitRef} />}
-        {hasPassage && !hasGappedContent && !isWritingSplit && (
+        {isPassageSplit && (
           <div
+            ref={passageRef}
             className={cn(
               "whitespace-pre-line rounded-card border border-border bg-surface p-5 text-base leading-relaxed text-fg max-w-[70ch] sm:text-[17px] sm:leading-[1.75] lg:max-w-none lg:rounded-none lg:border-0 lg:bg-transparent lg:py-1 lg:pl-1 lg:pr-4",
               "lg:block lg:sticky lg:top-16 lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto lg:overscroll-contain",
@@ -1542,9 +1735,10 @@ function GroupBlock({
                 {group.title}
               </h2>
             )}
+            {taskContent && group.imageUrl && <GroupImage groupId={group.id} alt={group.title ?? tg("pictureForPart")} />}
             <div className="font-serif leading-relaxed text-fg/95">
               <CbtAnnotatedText
-                text={group.passageText!}
+                text={group.passageText ?? ""}
                 storageKey={`${attemptId}.${group.id}.passage`}
               />
             </div>
@@ -1562,7 +1756,11 @@ function GroupBlock({
           </div>
         )}
         {isPassageSplit && <ReadingSplitDivider value={readingSplit} onChange={setReadingSplit} containerRef={splitRef} />}
-        {hasGappedContent ? (
+        {taskContent ? <div ref={questionsRef} data-testid="reading-task-groups" className={cn(
+          "min-w-0 space-y-3 lg:sticky lg:top-16 lg:block lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto lg:overscroll-contain",
+          tabbed && readingMobileTab === "passage" && "hidden",
+        )}>{taskContent}</div> : <div className="min-w-0 space-y-4">
+        {hasGappedContent && (
           <div className="overflow-x-auto rounded-field border border-border bg-surface p-3 sm:p-4">
             {practice && (skill === "listening" || skill === "reading") && (
               <details className="mb-3 text-sm">
@@ -1582,7 +1780,7 @@ function GroupBlock({
               questions={group.questions}
               renderGap={({ number, question }) =>
                 question ? (
-                  <span className="mx-1 inline-flex max-w-full items-center gap-1 align-middle">
+                  <span id={`q-${question.id}`} className="mx-1 inline-flex max-w-full items-center gap-1 align-middle">
                     <span className="grid size-6 shrink-0 place-items-center rounded-full bg-brand-subtle text-xs font-semibold text-brand-subtle-fg tabular-nums">
                       {(question as { displayNumber?: number }).displayNumber ?? number}
                     </span>
@@ -1601,7 +1799,7 @@ function GroupBlock({
               }
             />
           </div>
-        ) : (
+        )}
           <div
             className={cn(
               "space-y-4",
@@ -1624,7 +1822,8 @@ function GroupBlock({
                 </button>
               </div>
             )}
-            {(group?.questions || []).map((q) => (
+            <MatchingOptionBank options={matchingBank} />
+            {group.questions.filter((q) => !gapNumbers.has(q.number)).map((q) => (
               <div key={q.id} id={`q-${q.id}`} className="scroll-mt-28" {...(isWritingSplit ? { "data-testid": "writing-answer-panel" } : {})}>
                 <QuestionInput
                   key={q.id}
@@ -1635,6 +1834,7 @@ function GroupBlock({
                   hasAudio={audioSet.has(q.id)}
                   audioDurationMs={audioDurations?.[q.id]}
                   timed={timed}
+                  sharedBank={matchingBank.length > 0}
                   unavailableOptions={group.optionsReusable === false ? usedMatchingOptions(group.questions, answers, q.id) : []}
                   onChange={(v) => onAnswer(q.id, v)}
                   multilevelSkill={skill}
@@ -1648,7 +1848,7 @@ function GroupBlock({
               </div>
             ))}
           </div>
-        )}
+        </div>}
       </div>
     </Card>
   );
@@ -1697,11 +1897,13 @@ export function EssayQuestionEditor({
     if (typeof window !== "undefined") {
       try {
         localStorage.setItem(draftKey, text);
-      } catch {}
+        setLocalDraft(text);
+      } catch { setLocalDraft(null); }
     }
   };
 
   const [writingMode, setWritingMode] = React.useState<"type" | "image">("type");
+  const [localDraft, setLocalDraft] = React.useState<string | null>(browserDraft);
 
   return (
     <div className="space-y-3">
@@ -1755,7 +1957,7 @@ export function EssayQuestionEditor({
             <Camera className="size-3.5" aria-hidden /> {tx("writingModeOcr")}
           </button>
         </div>
-        {value.trim() && (
+        {value.trim() && localDraft === value && (
           <span className="flex items-center gap-1 text-sm font-medium text-brand-subtle-fg">
             <CheckCircle2 className="size-3" aria-hidden /> {tx("writingDraftKept")}
           </span>
@@ -1827,6 +2029,7 @@ function QuestionInput({
   timed,
   onChange,
   unavailableOptions,
+  sharedBank,
   multilevelSkill,
   groupTitle,
   isFlagged,
@@ -1843,6 +2046,7 @@ function QuestionInput({
   timed: boolean;
   onChange: (v: string) => void;
   unavailableOptions?: string[];
+  sharedBank?: boolean;
   multilevelSkill?: MockSkill;
   groupTitle?: string;
   isFlagged?: boolean;
@@ -1914,6 +2118,7 @@ function QuestionInput({
         value={value}
         onChange={onChange}
         unavailableOptions={unavailableOptions}
+        sharedBank={sharedBank}
         headerAction={flagButton}
         // Listening question text can be highlighted and annotated like a Reading passage (kept with the attempt).
         renderPrompt={multilevelSkill === "listening" ? (text) => <CbtAnnotatedText text={text} storageKey={`${attemptId}.${q.id}.prompt`} /> : undefined}

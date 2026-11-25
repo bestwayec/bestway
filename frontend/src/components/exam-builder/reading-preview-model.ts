@@ -1,41 +1,9 @@
 import { sanitizeGappedContent } from "@/components/mock/gapped-content";
 import { usedMatchingOptions } from "@/lib/objective-question";
 import type { PreviewGroup, PreviewQuestion } from "./StudentPreview";
-import { clusterReadingPassages } from "./reading-passage-clusters";
+import { examContentUnits } from "@/lib/exam-content-units";
 
-/**
- * UI-only presentation model for the whole-exam Reading preview.
- *
- * Persisted model (never changed here): one backend question group IS one
- * Reading passage — it owns passageText, title, image, instructions and ALL
- * its questions. Consecutive same-type runs inside it are visual task groups.
- *
- * Panel rule (absolute): the left panel shows passage source content only;
- * the right panel shows every question, task instruction and answer control.
- * `passageText` is the source reading passage and always belongs on the left.
- * `contentHtml` documents (notes, summaries, tables, gap-fill content) are
- * question-task content and always belong on the right. `contentHtml` never
- * replaces or hides `passageText`, and interactive gap inputs are rendered
- * only on the right.
- *
- * Three presentation problems are solved here without touching persisted data:
- *
- * 1. Imports may repeat the same passageText across consecutive groups (one
- *    task per group). Those continuations are clustered into ONE display
- *    passage by identical passage text. Genuinely separate passages have
- *    different passage text and are never merged. Passages are never derived
- *    from question type, range, or instructions.
- * 2. Within one display passage, contiguous runs (same question type and same
- *    task instructions) become visual task blocks headed "Questions X–Y".
- *    Original order and numbers are preserved; nothing is renumbered. A
- *    question rendered inside a gap-fill document is excluded from the
- *    generic control loop, so every question and every input appears exactly
- *    once.
- * 3. Legacy `contentHtml` without gap tokens carries no inputs or question
- *    mapping, so it is separated out as static markup (`staticDocs`) instead
- *    of being treated as an interactive task document.
- */
-
+/** Candidate-safe model separating a passage source from its task documents. */
 export interface PreviewBlockDoc {
   groupId: string;
   contentHtml: string;
@@ -156,7 +124,7 @@ function toBlock(run: RunAcc): PreviewTaskBlock {
     key: run.key,
     type: run.type,
     instructions: run.instructions,
-    questions: run.gapped ? [] : run.questions,
+    questions: run.questions,
     docs: run.docs,
     matchingGroups: run.matchingGroups,
     min: run.min,
@@ -200,6 +168,7 @@ function buildBlocks(groups: PreviewGroup[]): {
   for (const g of groups) {
     const split = splitPreviewDocument(g.contentHtml);
     const gapped = split.hasGaps;
+    const slots = new Set(gapNumbersIn(sanitizeGappedContent(g.contentHtml ?? "")));
     const instructions = g.instructions ?? null;
     if (g.questions.length === 0 && gapped && g.contentHtml) {
       // Degenerate but possible: a gap document with no question rows yet.
@@ -224,35 +193,42 @@ function buildBlocks(groups: PreviewGroup[]): {
     }
     for (const q of g.questions) {
       questions.push(q);
+      const type = gapped ? g.questions[0].type : q.type;
       const current = run;
       const same =
         current !== null &&
-        current.type === q.type &&
+        current.type === type &&
         current.gapped === gapped &&
         normText(current.instructions) === normText(instructions);
       if (current !== null && same) {
         includeMatchingGroup(current, g);
-        if (gapped) docFor(current, g).questions.push(q);
-        else current.questions.push(q);
-        current.min = Math.min(current.min, q.number);
-        current.max = Math.max(current.max, q.number);
+        if (gapped) {
+          const doc = docFor(current, g);
+          if (slots.has(q.number)) doc.questions.push(q);
+          else current.questions.push(q);
+        } else current.questions.push(q);
+        current.min = Math.min(current.min, q.displayNumber ?? q.number);
+        current.max = Math.max(current.max, q.displayNumberEnd ?? q.displayNumber ?? q.number);
       } else {
         if (run) blocks.push(toBlock(run));
         const started: RunAcc = {
           key: `${g.id}:${q.type}:${q.number}`,
-          type: q.type,
+          type,
           instructions,
           gapped,
           questions: [],
           docs: [],
           matchingGroups: [],
-          min: q.number,
-          max: q.number,
+          min: q.displayNumber ?? q.number,
+          max: q.displayNumberEnd ?? q.displayNumber ?? q.number,
         };
         run = started;
         includeMatchingGroup(started, g);
-        if (gapped) docFor(started, g).questions.push(q);
-        else started.questions.push(q);
+        if (gapped) {
+          const doc = docFor(started, g);
+          if (slots.has(q.number)) doc.questions.push(q);
+          else started.questions.push(q);
+        } else started.questions.push(q);
       }
     }
   }
@@ -261,16 +237,12 @@ function buildBlocks(groups: PreviewGroup[]): {
 }
 
 /**
- * Cluster consecutive groups that repeat the same passage text into one
- * display passage. Order is preserved; question numbers are never changed.
+ * Build preview content from the same units as the runner. Question IDs and numbers are preserved.
  */
-export function clusterDisplayPassages(groups: PreviewGroup[]): DisplayPassage[] {
-  const clusters = clusterReadingPassages(groups).map((passage) => passage.groups);
-
-  return clusters.map((members, index) => {
-    const first = members[0];
-    const title = members.map((m) => m.title?.trim()).find((v) => v) ?? null;
-    const passageText = members.map((m) => m.passageText).find((v) => v?.trim()) ?? null;
+export function clusterDisplayPassages(groups: PreviewGroup[], skill = "reading"): DisplayPassage[] {
+  return examContentUnits(groups, skill).map(({ key, groups: members, source, number }) => {
+    const title = source.title?.trim() || null;
+    const passageText = source.passageText?.trim() ? source.passageText : null;
     const imageMember = members.find((m) => m.imageUrl);
     const audioMember = members.find((m) => m.hasAudio);
     const staticDocs: PreviewStaticDoc[] = [];
@@ -281,12 +253,12 @@ export function clusterDisplayPassages(groups: PreviewGroup[]): DisplayPassage[]
       }
     }
     const { blocks, questions } = buildBlocks(members);
-    const numbers = questions.map((q) => q.number);
+    const numbers = questions.flatMap((q) => [q.displayNumber ?? q.number, q.displayNumberEnd ?? q.displayNumber ?? q.number]);
     const min = numbers.length ? Math.min(...numbers) : null;
     const max = numbers.length ? Math.max(...numbers) : null;
     return {
-      key: first.id,
-      ordinal: index + 1,
+      key,
+      ordinal: number,
       title,
       passageText,
       imageUrl: imageMember?.imageUrl ?? null,

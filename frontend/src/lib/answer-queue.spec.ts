@@ -1,45 +1,51 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from "vitest";
-import { clearQueue, confirm, enqueue, inOrder, loadQueue } from "./answer-queue";
+import { loadQueue, persistEdit, removeEdit } from "./answer-queue";
 
-describe("answer queue", () => {
+const entry = (response: string, editedAt: number, writer = "page-1") => ({ response, editedAt, writer, baseRevision: null });
+
+describe("answer journal", () => {
   beforeEach(() => localStorage.clear());
 
-  it("keeps the latest edit per question across a reload", () => {
-    enqueue("a1", "q1", "first", 100);
-    enqueue("a1", "q1", "second", 200);
-    enqueue("a1", "q2", "other", 150);
-    expect(loadQueue("a1")).toEqual({ q1: { response: "second", editedAt: 200 }, q2: { response: "other", editedAt: 150 } });
+  it("keeps the latest edit and scopes it to the attempt", () => {
+    persistEdit("a1", "q1", entry("first", 100));
+    persistEdit("a1", "q1", entry("second", 200));
+    persistEdit("a1", "q2", entry("other", 150));
+    expect(loadQueue("a1")).toEqual({ q1: entry("second", 200), q2: entry("other", 150) });
     expect(loadQueue("a2")).toEqual({});
   });
 
-  it("never lets an older edit replace a newer one", () => {
-    enqueue("a1", "q1", "new", 200);
-    enqueue("a1", "q1", "old", 100);
-    expect(loadQueue("a1").q1.response).toBe("new");
+  it("keeps a later edit when a response acknowledges the previous version", () => {
+    const sent = entry("sent", 100);
+    persistEdit("a1", "q1", sent);
+    const latest = entry("newer", 101);
+    persistEdit("a1", "q1", latest);
+    removeEdit("a1", "q1", sent);
+    expect(loadQueue("a1").q1).toEqual(latest);
   });
 
-  it("confirm removes what the server saved but keeps a later edit", () => {
-    enqueue("a1", "q1", "sent", 100);
-    enqueue("a1", "q2", "sent too", 110);
-    enqueue("a1", "q1", "typed while sending", 120);
-    confirm("a1", [{ questionId: "q1", editedAt: 100 }, { questionId: "q2", editedAt: 110 }]);
-    expect(loadQueue("a1")).toEqual({ q1: { response: "typed while sending", editedAt: 120 } });
+  it("keeps each writer's edit when the other tab saves or clears its own entry", () => {
+    const first = entry("first writer", 100);
+    const second = entry("second writer", 200, "page-2");
+    persistEdit("a1", "q1", first);
+    persistEdit("a1", "q1", second);
+    expect(loadQueue("a1").q1).toEqual(second);
+    removeEdit("a1", "q1", second);
+    expect(loadQueue("a1").q1).toEqual(first);
   });
 
-  it("sends in the order the edits were made", () => {
-    enqueue("a1", "q3", "c", 300);
-    enqueue("a1", "q1", "a", 100);
-    enqueue("a1", "q2", "b", 200);
-    expect(inOrder(loadQueue("a1")).map((e) => e.questionId)).toEqual(["q1", "q2", "q3"]);
-  });
-
-  it("ignores damaged storage and clears cleanly", () => {
+  it("recovers legacy edits and ignores malformed entries independently", () => {
+    localStorage.setItem("bw_answer_queue_a1", JSON.stringify({
+      q1: { response: 5, editedAt: "invalid" }, q2: { response: "old queue", editedAt: 1 },
+    }));
+    persistEdit("a1", "q3", entry("journal", 2));
+    const queue = loadQueue("a1");
+    expect(queue.q1).toBeUndefined();
+    expect(queue.q2.response).toBe("old queue");
+    expect(queue.q3.response).toBe("journal");
+    removeEdit("a1", "q2", queue.q2);
+    expect(loadQueue("a1").q2).toBeUndefined();
     localStorage.setItem("bw_answer_queue_a1", "{not json");
-    expect(loadQueue("a1")).toEqual({});
-    localStorage.setItem("bw_answer_queue_a1", JSON.stringify({ q1: { response: 5, editedAt: "x" }, q2: { response: "ok", editedAt: 1 } }));
-    expect(loadQueue("a1")).toEqual({ q2: { response: "ok", editedAt: 1 } });
-    clearQueue("a1");
-    expect(localStorage.getItem("bw_answer_queue_a1")).toBeNull();
+    expect(loadQueue("a1").q3.response).toBe("journal");
   });
 });

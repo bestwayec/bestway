@@ -76,13 +76,13 @@ describe("reading matching preview scope", () => {
     const html = renderToStaticMarkup(React.createElement(ReadingTaskGroup, {
       block: passage.blocks[0], answers: { q1: "River" }, onAnswer: () => {},
     }));
-    const inputs = html.match(/<input\b[^>]*>/g) ?? [];
-    const selected = inputs.find((tag) => tag.includes('name="objective-answer-q1"') && tag.includes('value="River"'));
-    const unavailable = inputs.find((tag) => tag.includes('name="objective-answer-q2"') && tag.includes('value="River"'));
-    expect(selected).toContain('checked=""');
-    expect(selected).not.toContain('disabled=""');
-    expect(unavailable).toContain('disabled=""');
-    expect(html).toContain("Already used");
+    const selects = html.match(/<select\b[^]*?<\/select>/g) ?? [];
+    expect(selects).toHaveLength(2);
+    const river = (select = "") => select.match(/<option\b[^>]*value="River"[^>]*>/)?.[0];
+    expect(river(selects[0])).toContain('selected=""');
+    expect(river(selects[0])).not.toContain('disabled=""');
+    expect(river(selects[1])).toContain('disabled=""');
+    expect(html.match(/aria-label="matchingOptionBank"/g) ?? []).toHaveLength(1);
   });
 });
 

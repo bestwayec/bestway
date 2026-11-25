@@ -98,35 +98,13 @@ class AdaptiveStudyPlanServiceTests(SimpleTestCase):
 
 
 class TeacherAnalyticsAndReportTests(SimpleTestCase):
-    @patch("apps.core.teacher_analytics.get_group")
-    @patch("apps.core.teacher_analytics.StudentProfile.objects.filter")
-    @patch("apps.core.teacher_analytics.MockAttempt.objects.filter")
-    @patch("apps.core.teacher_analytics.Attendance.objects.filter")
-    def test_group_analytics_metrics(self, mock_att, mock_attempts, mock_profiles, mock_group):
-        teacher = SimpleNamespace(id="t-1", name="Ustoz Nodir", role="teacher")
-        group = SimpleNamespace(id="g-101", name="IELTS Morning", teacher_id="t-1", teacher=teacher)
-        mock_group.return_value = group
-
-        st_user = SimpleNamespace(id="st-1", name="Azizbek", phone="+998901112233", is_active=True)
-        st_profile = SimpleNamespace(user_id="st-1", user=st_user, current_points=120)
-        mock_profiles.return_value.select_related.return_value.order_by.return_value = [st_profile]
-
-        attempt_mock = SimpleNamespace(
-            student_id="st-1",
-            overall_band=7.0,
-            overall_score=None,
-            finished_at=datetime(2026, 10, 18, 14, 30),
-            current_skill="writing",
-            submitted_sections=["writing"],
-        )
-        mock_attempts.return_value.select_related.return_value.order_by.return_value = [attempt_mock]
-        mock_att.return_value = []
-
-        analytics = teacher_analytics.get_group_analytics(teacher, "g-101")
-        self.assertEqual(analytics["groupName"], "IELTS Morning")
-        self.assertEqual(analytics["totalStudents"], 1)
-        self.assertEqual(analytics["students"][0]["averageScore"], 7.0)
-        self.assertTrue(len(analytics["weakTopicsHeatmap"]) >= 3)
+    def test_group_analytics_rejects_unassigned_teacher(self):
+        teacher = SimpleNamespace(id="t-1", role="teacher")
+        with patch.object(teacher_analytics, "get_group", return_value=SimpleNamespace(teacher_id="t-2")):
+            from common.api.exceptions import ContractAPIException
+            with self.assertRaises(ContractAPIException) as rejected:
+                teacher_analytics.get_group_analytics(teacher, "g-101")
+            self.assertEqual(rejected.exception.status_code, 403)
 
     @patch("apps.core.group_report.get_group_analytics")
     def test_monthly_pdf_and_csv_generation(self, mock_analytics):
@@ -169,4 +147,9 @@ class TeacherAnalyticsAndReportTests(SimpleTestCase):
         csv_text = group_report.generate_group_monthly_csv(teacher, "g-101", "2026-10")
         self.assertIn("Azizbek", csv_text)
         self.assertIn("IELTS Morning", csv_text)
-        self.assertIn("95%", csv_text)
+        self.assertIn("Azizbek,95,5,", csv_text)
+        self.assertNotIn("+998901112233", csv_text)
+        from io import BytesIO
+        from openpyxl import load_workbook
+        book = load_workbook(BytesIO(group_report.generate_group_workbook(teacher, "g-101", "2026-10")))
+        self.assertEqual(book["O'quvchilar"]["B2"].value, 95)

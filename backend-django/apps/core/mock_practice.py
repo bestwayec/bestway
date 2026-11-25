@@ -8,6 +8,7 @@ from types import SimpleNamespace
 
 from common.api.exceptions import ContractAPIException
 
+from .mock_content import exam_content_units
 from .mock_rules import MANUAL_TYPES, QUESTION_TYPES, objective_question_issues
 from .multilevel import SPECS, authored
 
@@ -76,7 +77,14 @@ def task_scope(tree, media_exists):
         skill = section.get('skill')
         if skill not in selected:
             continue
-        for index, group in enumerate(authored(section.get('groups') or [])):
+        groups = authored(section.get('groups') or [])
+        part_audio = {}
+        if skill == 'listening' and exam_type != 'multilevel':
+            for unit in exam_content_units(groups, skill):
+                owners = [g['audioKey'] for g in unit if g.get('audioKey')]
+                if len(owners) == 1:
+                    part_audio.update((id(group), owners[0]) for group in unit)
+        for index, group in enumerate(groups):
             if exam_type == 'multilevel':
                 if index >= len(spec[skill]['parts']):
                     continue
@@ -88,10 +96,11 @@ def task_scope(tree, media_exists):
             else:
                 types = None
 
-            if skill == 'listening' and not group.get('audioKey'):
+            audio = part_audio.get(id(group)) if skill == 'listening' and exam_type != 'multilevel' else group.get('audioKey')
+            if skill == 'listening' and not audio:
                 continue
 
-            keys = [group.get('audioKey'), group.get('imageKey')]
+            keys = [audio, group.get('imageKey')]
             if any(key and not media_exists(key) for key in keys):
                 continue
             text = [group.get(k) for k in ('title', 'instructions', 'passageText', 'contentHtml')]

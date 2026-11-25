@@ -6,10 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Check, CheckCircle2, RotateCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import { answerRuleHint, isObjectiveChoice, MATCHING_TYPES, objectiveOptions, selectedObjectiveOptions, toggleObjectiveOption, type ObjectiveQuestion } from "@/lib/objective-question";
+import { answerRuleHint, isObjectiveChoice, MATCHING_TYPES, objectiveNumberLabel, objectiveOptions, selectedObjectiveOptions, toggleObjectiveOption, type ObjectiveQuestion } from "@/lib/objective-question";
 
 /** Shared objective controls for active attempts and author student previews. */
-export function ObjectiveQuestionInput({ question: q, value, onChange, unavailableOptions = [], disabled = false, renderPrompt, headerAction }: {
+export function ObjectiveQuestionInput({ question: q, value, onChange, unavailableOptions = [], disabled = false, renderPrompt, headerAction, sharedBank = false }: {
   question: ObjectiveQuestion;
   value: string;
   onChange: (value: string) => void;
@@ -19,11 +19,13 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
   renderPrompt?: (text: string) => React.ReactNode;
   /** Beside the question number, at the end of the first row (the exam window's Flag). */
   headerAction?: React.ReactNode;
+  sharedBank?: boolean;
 }) {
   const t = useTranslations("mock.runnerUx");
+  const numberLabel = objectiveNumberLabel(q);
   const multiple = q.type === "multi_select";
   const options = objectiveOptions(q);
-  const selected = multiple ? selectedObjectiveOptions(value, options) : [value];
+  const selected = multiple || sharedBank ? selectedObjectiveOptions(value, options) : [value];
   const hint = answerRuleHint(q);
   const hasResponse = multiple ? selected.length > 0 : !!value.trim();
   const isShortOptions = options.length >= 4 && options.every((o) => o.trim().length <= 3);
@@ -31,7 +33,7 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
   return (
     <div className={cn("space-y-2 rounded-card border p-3 transition-colors duration-fast sm:p-4", hasResponse ? "border-brand/35 bg-brand-subtle/30" : "border-border bg-surface")}>
       <div className="flex items-start gap-3">
-        <span aria-hidden className={cn("grid size-7 shrink-0 place-items-center rounded-field text-sm font-bold tabular-nums", hasResponse ? "bg-brand text-brand-fg" : "border border-border-strong bg-bg-subtle text-fg")}>{q.displayNumber ?? q.number}</span>
+        <span aria-hidden className={cn("grid size-7 shrink-0 place-items-center rounded-field text-sm font-bold tabular-nums", hasResponse ? "bg-brand text-brand-fg" : "border border-border-strong bg-bg-subtle text-fg")}>{numberLabel}</span>
         {q.prompt && q.prompt.trim() ? (
           renderPrompt ? <div className="min-w-0 flex-1 whitespace-pre-line pt-0.5 text-base leading-relaxed text-fg">{renderPrompt(q.prompt)}</div>
             : <p className="min-w-0 flex-1 whitespace-pre-line pt-0.5 text-base leading-relaxed text-fg">{q.prompt}</p>
@@ -39,14 +41,22 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
         {headerAction}
       </div>
       <div className={cn(q.prompt && q.prompt.trim() ? "sm:pl-10" : "pt-1")}>
-        {isObjectiveChoice(q) ? (
+        {sharedBank ? (
+          <select aria-label={t("questionOptions", { number: numberLabel })}
+            className="h-10 w-full max-w-md rounded-field border border-border bg-surface px-2 text-sm"
+            value={selected[0] ?? ""} onChange={(event) => onChange(event.target.value)} disabled={disabled}>
+            <option value="">{t("chooseMatchingOption")}</option>
+            {options.map((option) => <option key={option} value={option}
+              disabled={option !== selected[0] && unavailableOptions.includes(option)}>{option}</option>)}
+          </select>
+        ) : isObjectiveChoice(q) ? (
           <fieldset>
-            <legend className="sr-only">{t("questionNumber", { number: q.displayNumber ?? q.number })}</legend>
+            <legend className="sr-only">{t("questionNumber", { number: numberLabel })}</legend>
             {isShortOptions ? (
               <div
                 className="flex flex-wrap gap-2 pt-1"
                 role={multiple ? "group" : "radiogroup"}
-                aria-label={t("questionOptions", { number: q.displayNumber ?? q.number })}
+                aria-label={t("questionOptions", { number: numberLabel })}
               >
                 {options.map((option) => {
                   const checked = selected.includes(option);
@@ -99,7 +109,7 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
             )}
           </fieldset>
         ) : (
-          <Input value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} aria-label={t("answerFor", { number: q.displayNumber ?? q.number })} autoComplete="off" spellCheck={false} className="min-h-10" />
+          <Input value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} aria-label={t("answerFor", { number: numberLabel })} autoComplete="off" spellCheck={false} className="min-h-10" />
         )}
         {hint && <p className="mt-1 text-xs text-fg-muted">{hint}</p>}
         {hasResponse && <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">
@@ -109,4 +119,15 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
       </div>
     </div>
   );
+}
+
+export function MatchingOptionBank({ options }: { options: string[] }) {
+  const t = useTranslations("mock.runnerUx");
+  if (!options.length) return null;
+  return <section aria-label={t("matchingOptionBank")} className="rounded-field border border-border bg-bg-subtle p-3">
+    <p className="text-sm font-semibold">{t("matchingOptionBank")}</p>
+    <ul className="mt-1 list-inside list-disc space-y-1 text-sm">
+      {options.map((option) => <li key={option}>{option}</li>)}
+    </ul>
+  </section>;
 }

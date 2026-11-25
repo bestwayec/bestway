@@ -13,6 +13,7 @@ import {
 import { ErrorState, Skeleton } from "@/components/ui/feedback";
 import { useMockPreview } from "@/hooks/use-mock";
 import type { MockSkill } from "@/lib/types";
+import { examContentUnits } from "@/lib/exam-content-units";
 import { cn } from "@/lib/utils";
 import { StudentPreview } from "./StudentPreview";
 import { ReadingPreviewShell } from "./reading-preview-shell";
@@ -35,12 +36,16 @@ export function PreviewDialog({ examId, onClose }: { examId: string; onClose: ()
   const t = useTranslations("examBuilder");
   const tc = useTranslations("common");
   const q = useMockPreview(examId, true);
-  const data = q.data as unknown as { title?: string; sections?: PreviewSection[] } | undefined;
+  const data = q.data as unknown as { title?: string; type?: string; sections?: PreviewSection[] } | undefined;
   const sections = data?.sections ?? [];
   const [activeSection, setActiveSection] = React.useState(0);
+  const [activePart, setActivePart] = React.useState(0);
   const clampedSection = Math.min(activeSection, Math.max(0, sections.length - 1));
   const section = sections[clampedSection];
   const sectionGroups = React.useMemo(() => (section?.groups ?? []).map(toPreviewGroup), [section]);
+  const parts = section?.skill === "listening" ? examContentUnits(sectionGroups, "listening", data?.type !== "multilevel") : [];
+  const partIndex = Math.min(activePart, Math.max(0, parts.length - 1));
+
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -77,7 +82,7 @@ export function PreviewDialog({ examId, onClose }: { examId: string; onClose: ()
                 type="button"
                 role="tab"
                 aria-selected={i === clampedSection}
-                onClick={() => setActiveSection(i)}
+                onClick={() => { setActiveSection(i); setActivePart(0); }}
                 className={cn(
                   "h-8 shrink-0 rounded-chip border px-2.5 text-xs font-medium capitalize transition-colors",
                   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
@@ -135,8 +140,16 @@ export function PreviewDialog({ examId, onClose }: { examId: string; onClose: ()
                   {section.instructions?.trim() && (
                     <p className="mb-2 text-sm text-fg-muted">{section.instructions}</p>
                   )}
+                  {parts.length > 0 && <div className="my-3 flex flex-wrap gap-2" role="tablist">
+                    {parts.map((part, index) => (
+                      <Button key={part.key} size="sm" variant={index === partIndex ? "primary" : "outline"}
+                        role="tab" aria-selected={index === partIndex} onClick={() => setActivePart(index)}>
+                        {tx(t, "partShort", "Part")} {part.number}
+                      </Button>
+                    ))}
+                  </div>}
                   <div className="space-y-3 pb-2">
-                    {sectionGroups.map((pg) => (
+                    {(parts[partIndex]?.groups ?? sectionGroups).map((pg) => (
                       <StudentPreview
                         key={pg.id}
                         group={pg}

@@ -1,5 +1,7 @@
 "use client";
 
+import { examContentUnits } from "@/lib/exam-content-units";
+import { UnitGroupActions } from "./unit-group-actions";
 import * as React from "react";
 import { CheckCircle2, Music, Plus, Save, Trash2, XCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -9,12 +11,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import {
   useCreateMockGroup,
+  useUpdateMockGroup,
   useDeleteMockSection,
   useUpdateMockSection,
 } from "@/hooks/use-mock";
 import { ApiError } from "@/lib/api-client";
+import { objectivePositionCount } from "@/lib/objective-question";
 import type { MockExamDetail } from "@/lib/types";
-import { groupIssueCount } from "./checks";
+import { groupIssueCount, groupSourceStatuses } from "./checks";
 import { ListeningAudioGatePanel } from "./ListeningAudioGatePanel";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { partRangeLabel, partTypeSummary } from "./ListeningPartEditor";
@@ -49,6 +53,7 @@ export function ListeningSectionPanel({
   const update = useUpdateMockSection(examId);
   const delSection = useDeleteMockSection(examId);
   const createGroup = useCreateMockGroup(examId);
+  const updateGroup = useUpdateMockGroup(examId);
 
   const [title, setTitle] = React.useState(section?.title ?? "");
   const [duration, setDuration] = React.useState(
@@ -103,13 +108,10 @@ export function ListeningSectionPanel({
 
   if (!section) return null;
 
-  const parts = [...section.groups].sort((a, b) => {
-    const pa = a.partNumber ?? a.sortOrder + 1;
-    const pb = b.partNumber ?? b.sortOrder + 1;
-    return pa - pb || a.sortOrder - b.sortOrder;
-  });
+  const parts = examContentUnits([...section.groups].sort((a, b) => a.sortOrder - b.sortOrder), "listening", detail.type !== "multilevel");
+  const sources = groupSourceStatuses(section.groups, "listening", detail.type !== "multilevel");
   const questionCount = section.groups.reduce((a, g) => a + g.questions.length, 0);
-  const nextPartNo = parts.reduce((m, g) => Math.max(m, g.partNumber ?? 0), parts.length) + 1;
+  const nextPartNo = parts.reduce((m, g) => Math.max(m, g.number), parts.length) + 1;
   const canAddPart = parts.length < 4 && nextPartNo <= 4;
 
   function handleAddPart() {
@@ -133,6 +135,30 @@ export function ListeningSectionPanel({
       },
     );
   }
+
+  const moveTaskGroup = (groupId: string, parentGroupId: string) => updateGroup.mutate(
+    { groupId, input: { parentGroupId } },
+    { onError: (e) => toast.error(e instanceof ApiError ? e.message : tc("unknownError")) },
+  );
+  const reorderTaskGroup = (groupId: string, siblingId: string, before: boolean) => updateGroup.mutate(
+    { groupId, input: { groupPlacement: { siblingId, before } } },
+    { onError: (e) => toast.error(e instanceof ApiError ? e.message : tc("unknownError")) },
+  );
+  const selectGroup = (groupId: string) => onSelect({ kind: "group", groupId });
+  const duplicateTaskGroup = (copyFromGroupId: string) => createGroup.mutate(
+    { sectionId: section.id, input: { copyFromGroupId } },
+    {
+      onSuccess: (g) => selectGroup((g as { id: string }).id),
+      onError: (e) => toast.error(e instanceof ApiError ? e.message : tc("unknownError")),
+    },
+  );
+  const addTaskGroup = (parentGroupId: string) => createGroup.mutate(
+    { sectionId: section.id, input: { parentGroupId, title: t("newUnitTaskGroup") } },
+    {
+      onSuccess: (g) => selectGroup((g as { id: string }).id),
+      onError: (e) => toast.error(e instanceof ApiError ? e.message : tc("unknownError")),
+    },
+  );
 
   return (
     <div className="space-y-4">
@@ -183,12 +209,15 @@ export function ListeningSectionPanel({
         </Card>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
-          {parts.map((g) => {
-            const partNo = g.partNumber ?? parts.findIndex((x) => x.id === g.id) + 1;
-            const issues = groupIssueCount(g, "listening");
-            const n = g.questions.length;
-            const range = partRangeLabel(g.questions.map((q) => q.number));
-            const summary = partTypeSummary(g.questions.map((q) => q.type));
+          {parts.map(({ source: g, groups, number: partNo }) => {
+            const questions = groups.flatMap((group) => group.questions);
+            const issues = groups.reduce((total, group) => total + groupIssueCount(group, "listening", sources.get(group.id)), 0);
+            const n = questions.length;
+            const range = partRangeLabel(questions.flatMap((q) => [
+              q.displayNumber ?? q.number, q.displayNumberEnd ?? q.displayNumber ?? q.number,
+            ]));
+            const scoringPositions = questions.reduce((total, q) => total + objectivePositionCount(q), 0);
+            const summary = partTypeSummary(questions.map((q) => q.type));
             const missing: string[] = [];
             if (!g.hasAudio && n > 0) missing.push(tx(t, "audioMissingShort", "Audio missing"));
             if (n === 0) missing.push(tx(t, "noQuestionsShort", "No questions yet"));
@@ -199,12 +228,12 @@ export function ListeningSectionPanel({
                   : `${issues} ${tx(t, "issues", "issues")}`,
               );
             return (
+              <div key={g.id} className="min-w-0 rounded-card border border-border">
               <button
-                key={g.id}
                 type="button"
                 onClick={() => onSelect({ kind: "group", groupId: g.id })}
                 aria-label={`Part ${partNo}${g.title?.trim() ? ` — ${g.title.trim()}` : ""} — ${missing.length ? missing.join(", ") : tx(t, "ready", "Ready")}`}
-                className="rounded-card border border-border bg-surface p-4 text-left transition hover:border-fg-subtle focus-visible:outline-2 focus-visible:outline-brand"
+                className="w-full rounded-card bg-surface p-4 text-left transition hover:bg-bg-subtle focus-visible:outline-2 focus-visible:outline-brand"
               >
                 <div className="flex items-center gap-2">
                   {missing.length > 0 ? (
@@ -222,6 +251,7 @@ export function ListeningSectionPanel({
                     {range ? `Q${range}` : "—"}
                     {" · "}
                     {n} {n === 1 ? tx(t, "questionOne", "question") : tx(t, "questions", "questions")}
+                    {scoringPositions !== n && ` · ${t("scoringPositions", { count: scoringPositions })}`}
                   </span>
                 </div>
                 {summary && <p className="mt-1 text-xs text-fg-muted">{summary}</p>}
@@ -238,6 +268,15 @@ export function ListeningSectionPanel({
                   </span>
                 </p>
               </button>
+              <UnitGroupActions groups={groups} select={selectGroup} add={g.partNumber && detail.type !== "multilevel" ? () => addTaskGroup(g.id) : undefined}
+                duplicate={g.partNumber && detail.type !== "multilevel" ? duplicateTaskGroup : undefined}
+                move={detail.type !== "multilevel" ? moveTaskGroup : undefined}
+                reorder={detail.type !== "multilevel" ? reorderTaskGroup : undefined}
+                busy={createGroup.isPending || updateGroup.isPending}
+                targets={parts.filter((part) => part.source.id !== g.id && part.source.partNumber).map((part) => ({
+                  id: part.source.id, label: part.source.title ?? `${t("partShort")} ${part.number}`,
+                }))} />
+              </div>
             );
           })}
         </div>

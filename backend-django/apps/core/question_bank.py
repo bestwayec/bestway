@@ -148,7 +148,7 @@ def insert_groups(actor, exam_id: str, group_ids) -> dict:
                     id=new_id(), group_id=copy.id, number=mapping[q.number], sort_order=q.sort_order, type=q.type, prompt=q.prompt,
                     options=q.options, correct_answers=q.correct_answers, accepted_variants=q.accepted_variants, points=q.points,
                     word_limit=q.word_limit, answer_rule=q.answer_rule, cefr_level=q.cefr_level, skill_tags=q.skill_tags,
-                    evidence_text=q.evidence_text, evidence_offset=q.evidence_offset, audio_start_sec=q.audio_start_sec,
+                    evidence_text=q.evidence_text, evidence_offset=q.evidence_offset, audio_start_sec=q.audio_start_sec, review_explanation=getattr(q, "review_explanation", None),
                     created_at=stamp)
             created.append(dict(sourceGroupId=src.id, groupId=copy.id, skill=skill, numbers=[mapping[q.number] for q in src_questions],
                                 partNumber=part, partNumberDropped=skill == 'listening' and src.part_number is not None and part is None))

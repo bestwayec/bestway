@@ -67,7 +67,10 @@ jobs:
       - name: Deploy Prisma database schema
         working-directory: backend
         run: |
+          npx --yes prisma@5.22.0 validate
           npx --yes prisma@5.22.0 migrate deploy
+          npx --yes prisma@5.22.0 migrate deploy
+          npx --yes prisma@5.22.0 migrate status
       - name: Install Django dependencies
         run: python -m pip install -r requirements/dev.txt -r requirements/prod.txt
       - name: Apply Django core migrations

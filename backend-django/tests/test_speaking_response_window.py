@@ -74,6 +74,8 @@ class SpeakingWindowTests(SimpleTestCase):
         item=attempt();item.media_state={}
         first=grant(item,AT);repeat=grant(item,AT+timedelta(seconds=1))
         self.assertEqual(first['expiresAt'],repeat['expiresAt'])
+        self.assertEqual(first['captureEndsAt'],mock_attempts.iso(AT+timedelta(seconds=33)))
+        self.assertEqual(first['captureEndsAt'],repeat['captureEndsAt'])
         self.assertEqual(first['startedAt'],repeat['startedAt'])
         self.assertEqual(first['responseSeconds'],30)
         self.assertEqual(first['minDurationMs'],29000)
@@ -81,6 +83,14 @@ class SpeakingWindowTests(SimpleTestCase):
         timed=attempt();timed.mode='timed';timed.media_state={};timed.overall_deadline_at=AT+timedelta(seconds=20)
         with self.assertRaises(ContractAPIException) as caught:grant(timed,AT)
         self.assertEqual(caught.exception.contract_code,'SPEAKING_TIME_INSUFFICIENT')
+        timed.overall_deadline_at=AT+timedelta(seconds=32)
+        timed.section_deadlines={'speaking':mock_attempts.iso(AT+timedelta(seconds=31))}
+        bounded=grant(timed,AT)
+        self.assertEqual(bounded['expiresAt'],mock_attempts.iso(AT+timedelta(seconds=30)))
+        self.assertEqual(bounded['captureEndsAt'],timed.section_deadlines['speaking'])
+        with self.assertRaises(ContractAPIException) as caught:
+            policy.phase_window(timed,'q',30,at=AT+timedelta(seconds=331))
+        self.assertEqual(caught.exception.contract_code,'UPLOAD_WINDOW_EXPIRED')
         damaged=attempt();damaged.media_state['q']['expiresAt']='invalid'
         with self.assertRaises(ContractAPIException) as caught:grant(damaged,AT)
         self.assertEqual(caught.exception.contract_code,'RECORDING_NOT_STARTED')

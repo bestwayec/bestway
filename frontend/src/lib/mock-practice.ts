@@ -1,4 +1,5 @@
-import type { MockAttemptDetail, MockExamDetail, MockExamListItem, MockPracticeSkill, MockSkill } from "./types";
+import { examContentUnits } from "./exam-content-units";
+import type { MockAttemptDetail, MockExamDetail, MockExamListItem, MockPracticeSkill, MockSection, MockSkill } from "./types";
 
 const ALL_SKILLS: MockPracticeSkill[] = ["listening", "reading", "writing", "speaking"];
 
@@ -36,6 +37,17 @@ export function isPartialPractice(
   );
 }
 
+function scopedGroups(section: MockSection, ids: Set<string>, canonicalListening: boolean) {
+  return examContentUnits(section.groups ?? (section as MockSection & { parts?: MockSection["groups"] }).parts ?? [], section.skill, canonicalListening).flatMap((unit) => {
+    const selected = unit.groups.map((group) => ({
+      ...group,
+      questions: (group.questions ?? []).filter((question) => !ids.size || ids.has(question.id)),
+    }));
+    if (!selected.some((group) => group.questions.length)) return [];
+    return selected.filter((group) => group.questions.length || group.id === unit.source.id);
+  });
+}
+
 /** An explicit practice attempt never renders or submits tasks outside its frozen scope. */
 export function practiceExam(
   exam: MockExamDetail | undefined,
@@ -65,18 +77,7 @@ export function practiceExam(
     const ids = new Set(attempt.practiceScope?.questionIds ?? []);
     const sections = (exam.sections || [])
       .filter((section) => section?.skill === targetSkill)
-      .map((section) => {
-        const rawGroups = section?.groups || (section as any)?.parts || [];
-        return {
-          ...section,
-          groups: rawGroups
-            .map((group: any) => ({
-              ...group,
-              questions: ids.size > 0 ? (group?.questions || []).filter((q: any) => ids.has(q.id)) : (group?.questions || []),
-            }))
-            .filter((group: any) => (group?.questions || []).length > 0),
-        };
-      })
+      .map((section) => ({ ...section, groups: scopedGroups(section, ids, exam.type !== "multilevel") }))
       .filter((section) => (section?.groups || []).length > 0);
 
     return {
@@ -93,18 +94,7 @@ export function practiceExam(
   const ids = new Set(attempt.practiceScope?.questionIds ?? []);
   const sections = (exam.sections || [])
     .filter((section) => skills.has(section?.skill as MockPracticeSkill))
-    .map((section) => {
-      const rawGroups = section?.groups || (section as any)?.parts || [];
-      return {
-        ...section,
-        groups: rawGroups
-          .map((group: any) => ({
-            ...group,
-            questions: ids.size > 0 ? (group?.questions || []).filter((question: any) => ids.has(question.id)) : (group?.questions || []),
-          }))
-          .filter((group: any) => (group?.questions || []).length > 0),
-      };
-    })
+    .map((section) => ({ ...section, groups: scopedGroups(section, ids, exam.type !== "multilevel") }))
     .filter((section) => (section?.groups || []).length > 0);
   return {
     ...exam,

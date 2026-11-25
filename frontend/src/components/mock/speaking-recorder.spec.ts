@@ -19,28 +19,41 @@ vi.mock('@/lib/durable-recordings', () => ({
 import { SpeakingRecorder } from './speaking-recorder';
 import { MultilevelRecorder, type MediaPhase } from './multilevel-media';
 import { ApiError } from '@/lib/api-client';
+import { requestSpeakingAutoStart } from '@/lib/speaking-sequence';
 
 class FakeRecorder {
   static instances: FakeRecorder[] = [];
   static formats = new Set(['audio/mp4']);
   static constructorFailure: Error | null = null;
   static startFailure: Error | null = null;
+  static startDelay = 0;
+  static stopDelay = 0;
   static empty = false;
   static isTypeSupported(type: string) { return this.formats.has(type); }
   state: RecordingState = 'inactive';
   mimeType: string;
   ondataavailable: ((event: { data: Blob }) => void) | null = null;
+  onstart: (() => void) | null = null;
   onstop: (() => void) | null = null;
   onerror: (() => void) | null = null;
   constructor(_stream: MediaStream, options?: MediaRecorderOptions) {
     if (FakeRecorder.constructorFailure) throw FakeRecorder.constructorFailure;
     this.mimeType = options?.mimeType ?? 'audio/ogg'; FakeRecorder.instances.push(this);
   }
-  start() { if (FakeRecorder.startFailure) throw FakeRecorder.startFailure; this.state = 'recording'; }
+  start() {
+    if (FakeRecorder.startFailure) throw FakeRecorder.startFailure;
+    this.state = 'recording';
+    if (FakeRecorder.startDelay) setTimeout(() => this.onstart?.(), FakeRecorder.startDelay);
+    else this.onstart?.();
+  }
   stop() {
     this.state = 'inactive';
-    this.ondataavailable?.({ data: new Blob(FakeRecorder.empty ? [] : ['recorded audio'], { type: this.mimeType }) });
-    this.onstop?.();
+    const finish = () => {
+      this.ondataavailable?.({ data: new Blob(FakeRecorder.empty ? [] : ['recorded audio'], { type: this.mimeType }) });
+      this.onstop?.();
+    };
+    if (FakeRecorder.stopDelay) setTimeout(finish, FakeRecorder.stopDelay);
+    else finish();
   }
 }
 
@@ -74,6 +87,7 @@ beforeEach(() => {
   services.retain.mockResolvedValue(undefined); services.release.mockResolvedValue(undefined);
   FakeRecorder.instances = []; FakeRecorder.formats = new Set(['audio/mp4']);
   FakeRecorder.constructorFailure = null; FakeRecorder.startFailure = null; FakeRecorder.empty = false;
+  FakeRecorder.startDelay = 0; FakeRecorder.stopDelay = 0;
   stopTrack = vi.fn(); input = { getTracks: () => [{ stop: stopTrack }] } as unknown as MediaStream;
   getUserMedia = vi.fn().mockResolvedValue(input);
   vi.stubGlobal('navigator', { mediaDevices: { getUserMedia } }); vi.stubGlobal('MediaRecorder', FakeRecorder);
@@ -155,6 +169,17 @@ describe('legacy speaking recording lifecycle', () => {
 });
 
 describe('Multilevel microphone preflight and server timing', () => {
+  it('keeps the recording when a successful HTTP response has no upload receipt', async () => {
+    services.upload.mockResolvedValueOnce({ saved: false });
+    await render('multilevel'); await click('Test microphone'); await click('Start response'); await finishResponse();
+    expect(services.release).not.toHaveBeenCalled();
+    expect(host.querySelector('audio')).toBeNull();
+    expect(host.textContent).toContain('Retry upload of saved recording');
+    await click('Retry upload');
+    expect(services.release).toHaveBeenCalledOnce();
+    expect(host.querySelector('audio')).not.toBeNull();
+  });
+
   it('keeps a completed take on transport failure and, after a verified duration rejection, permits a fresh take without deleting the old one', async () => {
     services.upload.mockRejectedValueOnce(new Error('offline'));
     await render('multilevel'); await click('Test microphone'); await click('Start response'); await finishResponse();
@@ -207,6 +232,41 @@ describe('Multilevel microphone preflight and server timing', () => {
     await render('multilevel'); await click('Test microphone'); await click('Start response');
     await finishResponse(29999); expect(services.upload).not.toHaveBeenCalled();
     await finishResponse(1); expect(services.upload).toHaveBeenCalledTimes(1);
+  });
+
+  it('starts the countdown on native readiness and waits for the final chunk', async () => {
+    FakeRecorder.startDelay = 1500;
+    FakeRecorder.stopDelay = 750;
+    startPhase.mockResolvedValue({
+      ...await startPhase(), responseSeconds: 30, minDurationMs: 29000, timingPolicy: 'FULL_RESPONSE_WINDOW_V1',
+      expiresAt: new Date(Date.now() + 30000).toISOString(), captureEndsAt: new Date(Date.now() + 33000).toISOString(),
+    });
+    await render('multilevel', true); await click('Test microphone'); await click('Start response');
+    expect(host.querySelector('[data-testid="countdown-ring"]')).toBeNull();
+    await finishResponse(1500);
+    expect(host.querySelector('[data-testid="countdown-ring"]')?.getAttribute('data-left')).toBe('30');
+    await finishResponse(29999);
+    expect(FakeRecorder.instances[0].state).toBe('recording');
+    await finishResponse(1);
+    expect(FakeRecorder.instances[0].state).toBe('inactive');
+    expect(services.retain).not.toHaveBeenCalled();
+    await finishResponse(750);
+    expect(services.retain).toHaveBeenCalledOnce();
+    expect(services.upload).toHaveBeenCalledOnce();
+  });
+
+  it('does not restart a full timer if startup misses the server deadline', async () => {
+    FakeRecorder.startDelay = 4500;
+    startPhase.mockResolvedValue({
+      ...await startPhase(), responseSeconds: 30, minDurationMs: 29000, timingPolicy: 'FULL_RESPONSE_WINDOW_V1',
+      expiresAt: new Date(Date.now() + 30000).toISOString(), captureEndsAt: new Date(Date.now() + 33000).toISOString(),
+    });
+    await render('multilevel', true); await click('Test microphone'); await click('Start response');
+    await finishResponse(4500);
+    expect(FakeRecorder.instances[0].state).toBe('inactive');
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe('recTimedIncomplete');
+    expect(services.retain).not.toHaveBeenCalled();
+    expect(services.upload).not.toHaveBeenCalled();
   });
   it('offers playback only after the server acknowledges upload', async () => {
     let acknowledge!: (value: unknown) => void;
@@ -302,5 +362,29 @@ describe('Multilevel microphone preflight and server timing', () => {
     await act(async () => vi.advanceTimersByTimeAsync(2000)); expect(FakeRecorder.instances[0].state).toBe('recording');
     await act(async () => vi.advanceTimersByTimeAsync(2000)); expect(FakeRecorder.instances[0].state).toBe('inactive');
     expect(services.upload).toHaveBeenCalledTimes(1); expect(host.textContent).toContain('Uploaded');
+  });
+
+  it('starts the next timed response without fullscreen or Web Audio activation', async () => {
+    const createMeter = vi.fn();
+    vi.stubGlobal('AudioContext', class { constructor() { createMeter(); } });
+    const exitFullscreen = vi.fn(() => new Promise<void>(() => {}));
+    Object.defineProperties(document, {
+      fullscreenElement: { configurable: true, value: document.documentElement },
+      exitFullscreen: { configurable: true, value: exitFullscreen },
+    });
+    try {
+      requestSpeakingAutoStart('attempt', 'question');
+      await render('multilevel', true);
+      await finishResponse(0);
+      expect(startPhase).toHaveBeenCalledTimes(1);
+      expect(FakeRecorder.instances[0].state).toBe('recording');
+      expect(exitFullscreen).not.toHaveBeenCalled();
+      expect(createMeter).not.toHaveBeenCalled();
+      await finishResponse();
+      expect(services.upload).toHaveBeenCalledTimes(1);
+    } finally {
+      Reflect.deleteProperty(document, 'fullscreenElement');
+      Reflect.deleteProperty(document, 'exitFullscreen');
+    }
   });
 });

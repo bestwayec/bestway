@@ -47,8 +47,9 @@ import {
   useExamLifecycle,
 } from "@/hooks/use-mock";
 import { ApiError } from "@/lib/api-client";
+import { examContentUnits } from "@/lib/exam-content-units";
 import type { MockExamDetail } from "@/lib/types";
-import { examClientChecks, groupIssueCount } from "./checks";
+import { examClientChecks, groupIssueCount, groupSourceStatuses } from "./checks";
 import { GroupEditor } from "./GroupEditor";
 import { ListeningPartEditor } from "./ListeningPartEditor";
 import { ListeningSectionPanel } from "./ListeningSectionPanel";
@@ -129,13 +130,15 @@ function EditorContextBar({ detail, selection }: { detail: MockExamDetail; selec
     const s = detail.sections.find((x) => x.id === selection.sectionId);
     if (!s) return null;
     const meta = SKILL_META[s.skill];
+    const units = examContentUnits(s.groups, s.skill, detail.type !== "multilevel");
+    const sources = groupSourceStatuses(s.groups, s.skill, detail.type !== "multilevel");
     const qs = s.groups.reduce((a, g) => a + g.questions.length, 0);
-    const issues = s.groups.reduce((a, g) => a + groupIssueCount(g, s.skill), 0);
+    const issues = s.groups.reduce((a, g) => a + groupIssueCount(g, s.skill, sources.get(g.id)), 0);
     const status: ItemStatus = s.groups.length === 0 ? "empty" : groupStatus(issues, qs);
     return (
       <ContextShell
         primary={<span className="capitalize">{s.skill}</span>}
-        secondary={`${s.groups.length} ${meta.units.toLowerCase()} · ${qs} ${tx(t, "questions", "questions")}`}
+        secondary={`${units.length} ${(units.length === 1 ? meta.unit : meta.units).toLowerCase()} · ${qs} ${tx(t, qs === 1 ? "questionOne" : "questions", qs === 1 ? "question" : "questions")}`}
         trailing={<StatusChip status={status} issueCount={issues} />}
       />
     );
@@ -146,9 +149,14 @@ function EditorContextBar({ detail, selection }: { detail: MockExamDetail; selec
     if (gi < 0) continue;
     const g = s.groups[gi];
     const meta = SKILL_META[s.skill];
-    const label = g.title?.trim() || `${meta.unit} ${gi + 1}`;
-    const issues = groupIssueCount(g, s.skill);
-    const nums = g.questions.map((q) => q.number).sort((a, b) => a - b);
+    const unit = examContentUnits(s.groups, s.skill, detail.type !== "multilevel")
+      .find((item) => item.groups.some((group) => group.id === g.id));
+    const label = g.title?.trim() || `${meta.unit} ${unit?.number ?? gi + 1}`;
+    const source = groupSourceStatuses(s.groups, s.skill, detail.type !== "multilevel").get(g.id);
+    const issues = groupIssueCount(g, s.skill, source);
+    const nums = [...new Set(g.questions.flatMap((q) => [
+      q.displayNumber ?? q.number, q.displayNumberEnd ?? q.displayNumber ?? q.number,
+    ]))].sort((a, b) => a - b);
     const range =
       nums.length > 1
         ? `${tx(t, "questionsTitle", "Questions")} ${nums[0]}–${nums[nums.length - 1]}`

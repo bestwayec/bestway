@@ -1,5 +1,5 @@
 import type { MockExamDetail, MockGroup, MockSection } from "@/lib/types";
-import { questionIssues } from "./checks";
+import { groupSourceStatuses, questionIssues, type GroupSourceStatus } from "./checks";
 import type { Selection } from "./types";
 
 /**
@@ -33,13 +33,11 @@ const KEY_ISSUE = /answer key is missing|choice questions need|word limit/;
 const TEXT_ISSUE = /question text is empty/;
 
 /** Problems per concern, derived from the same per-question rules the Review panel uses. */
-export function groupConcerns(section: MockSection, group: MockGroup) {
+export function groupConcerns(section: MockSection, group: MockGroup, source?: GroupSourceStatus) {
   const issues = group.questions.flatMap((q) => questionIssues(q, section.skill));
   return {
-    questions: (group.questions.length === 0 ? 1 : 0) + issues.filter((i) => TEXT_ISSUE.test(i)).length,
-    material:
-      (section.skill === "listening" && group.questions.length > 0 && !group.hasAudio ? 1 : 0) +
-      (section.skill === "reading" && group.questions.length > 0 && !group.passageText?.trim() ? 1 : 0),
+    questions: (group.questions.length === 0 && !source?.sourceOnly ? 1 : 0) + issues.filter((i) => TEXT_ISSUE.test(i)).length,
+    material: group.questions.length > 0 && source?.missingSource ? 1 : 0,
     keys: issues.filter((i) => KEY_ISSUE.test(i)).length,
   };
 }
@@ -54,7 +52,12 @@ const groupTarget = (found: Located | undefined, fallback: Selection): StepTarge
  */
 export function builderSteps(detail: MockExamDetail, opts: { previewed: boolean; blockers: number }): BuilderStep[] {
   const located = groupsOf(detail);
-  const concerns = located.map((item) => ({ item, ...groupConcerns(item.section, item.group) }));
+  const sources = new Map(detail.sections.map((section) => [
+    section.id, groupSourceStatuses(section.groups ?? [], section.skill, detail.type !== "multilevel"),
+  ]));
+  const concerns = located.map((item) => ({
+    item, ...groupConcerns(item.section, item.group, sources.get(item.section.id)?.get(item.group.id)),
+  }));
   const total = (key: "questions" | "material" | "keys") => concerns.reduce((sum, c) => sum + c[key], 0);
   const firstWith = (key: "questions" | "material" | "keys") => concerns.find((c) => c[key] > 0)?.item;
   const first = located[0];

@@ -5,13 +5,19 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MockAttemptDetail, MockExamDetail } from '@/lib/types';
 
-type Answer = { questionId: string; response: string };
+type Answer = { questionId: string; response: string; editedAt: number };
+const acknowledged = (answers: Answer[]) => ({
+  saved: answers.length,
+  receipts: Object.fromEntries(answers.map((item) => [item.questionId, {
+    editedAt: item.editedAt, status: 'saved', revision: '2026-10-08T10:00:00.000Z',
+  }])),
+});
 const hooks = vi.hoisted(() => {
   const save = vi.fn<(answers: Answer[]) => Promise<unknown>>();
   const mutate = vi.fn((answers: Answer[], options?: { onSuccess?: () => void; onError?: () => void }) => {
     void save(answers).then(() => options?.onSuccess?.(), () => options?.onError?.());
   });
-  const other = vi.fn(async () => ({}));
+  const other = vi.fn(async () => ({ status: "completed" }));
   const translate = (key: string) => key;
   return { save, mutate, other, translate, activeRecording: false, pendingRecording: false, exam: undefined as MockExamDetail | undefined };
 });
@@ -62,7 +68,7 @@ async function mount(versioned = false, initialResponse = '') {
 
 beforeEach(() => {
   vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-08T10:00:00Z'));
-  hooks.save.mockReset().mockResolvedValue({ saved: 1 }); hooks.mutate.mockClear(); hooks.other.mockClear();
+  hooks.save.mockReset().mockImplementation(async (answers) => acknowledged(answers)); hooks.mutate.mockClear(); hooks.other.mockClear();
   hooks.activeRecording = false; hooks.pendingRecording = false; localStorage.clear();
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   host = document.createElement('div'); document.body.appendChild(host); root = createRoot(host);
@@ -109,7 +115,7 @@ describe('timed runner autosave with unstable mutation wrappers', () => {
     expect(hooks.save).toHaveBeenCalledTimes(1);
     await answer('latest'); await tick(1000); await tick(500);
     expect(hooks.save).toHaveBeenCalledTimes(1);
-    await act(async () => resolve({ saved: 1 }));
+    await act(async () => resolve(acknowledged(hooks.save.mock.calls[0][0])));
     for (let i = 0; i < 10; i++) await tick(1000);
     expect(hooks.save.mock.calls.map(([answers]) => answers[0].response)).toEqual(['first', 'latest']);
   });
@@ -147,7 +153,7 @@ describe('timed runner autosave with unstable mutation wrappers', () => {
       await act(async () => confirmSubmission.click());
     }
     expect(hooks.save).toHaveBeenCalledTimes(1); expect(hooks.other).not.toHaveBeenCalled();
-    await act(async () => resolve({ saved: 1 }));
+    await act(async () => resolve(acknowledged(hooks.save.mock.calls[0][0])));
     expect(hooks.save.mock.calls.map(([answers]) => answers[0].response)).toEqual(['first', 'latest']);
     expect(hooks.other).toHaveBeenCalledTimes(1);
     for (let i = 0; i < 12; i++) await tick(1000);
@@ -194,7 +200,7 @@ describe('timed runner autosave with unstable mutation wrappers', () => {
     await act(async () => { finish.click(); finish.click(); });
     expect(hooks.save).toHaveBeenCalledTimes(1);
     expect(hooks.other).not.toHaveBeenCalled();
-    await act(async () => resolve({saved:1}));
+    await act(async () => resolve(acknowledged(hooks.save.mock.calls[0][0])));
     expect(hooks.other).toHaveBeenCalledTimes(1);
   });
 

@@ -5,6 +5,7 @@ import { api } from "@/lib/api-client";
 import type { ExamGate } from "@/lib/listening-audio";
 import { HISTORY_PAGE_SIZE, loadAttemptHistory } from "@/lib/attempt-history";
 import { useStudentProgramScope } from './use-exam-programs';
+import type { AnswerEdit, AnswerSaveResult } from "@/lib/answer-queue";
 import type {
   CreateMockExamInput,
   CreateMockSectionInput,
@@ -127,6 +128,7 @@ export function useStartMock() {
   return useMutation({
     mutationFn: (v: {
       examId: string;
+      assignmentId?: string;
       mode?: "practice" | "timed";
       flow?: "full_test" | "single_skill" | "partial_practice";
       skills?: import("@/lib/types").MockPracticeSkill[];
@@ -138,6 +140,7 @@ export function useStartMock() {
     }) =>
       api.post<StartMockResult>(`/mock/exams/${v.examId}/start`, {
         mode: v.mode ?? "practice",
+        ...(v.assignmentId ? { assignmentId: v.assignmentId } : {}),
         ...(v.flow ? { flow: v.flow } : {}),
         ...(v.skills ? { skills: v.skills } : {}),
         ...(v.retake ? { retake: true } : {}),
@@ -148,17 +151,18 @@ export function useStartMock() {
   });
 }
 
-function useMyAttemptHistoryQuery(status?: MockAttemptStatus) {
+function useMyAttemptHistoryQuery(status?: MockAttemptStatus, acrossPrograms = false) {
   const scope = useStudentProgramScope();
+  const program = acrossPrograms ? undefined : scope.program;
   return {
     scope,
     options: {
-      queryKey: ["mock-attempts-mine", scope.owner, scope.program, status ?? "all"],
+      queryKey: ["mock-attempts-mine", scope.owner, acrossPrograms ? "all-programs" : program, status ?? "all"],
       queryFn: () =>
         loadAttemptHistory(async (cursor) =>
           api.getPaged<MockAttemptSummary[]>("/mock/attempts/mine", {
             status,
-            program: scope.program,
+            program,
             limit: HISTORY_PAGE_SIZE,
             cursor,
           }),
@@ -169,8 +173,8 @@ function useMyAttemptHistoryQuery(status?: MockAttemptStatus) {
 }
 
 /** The student's whole authorised exam history (newest first), loaded through the cursor API. */
-export function useMyMockAttempts(status?: MockAttemptStatus) {
-  const { options } = useMyAttemptHistoryQuery(status);
+export function useMyMockAttempts(status?: MockAttemptStatus, acrossPrograms = false) {
+  const { options } = useMyAttemptHistoryQuery(status, acrossPrograms);
   return useQuery({ ...options, select: (history) => history.items });
 }
 
@@ -206,10 +210,8 @@ export function useSaveMockAnswer(attemptId: string) {
 
 export function useBulkMockAnswers(attemptId: string) {
   return useMutation({
-    // `editedAt`: edit time on the server clock (ms); the server keeps the newer edit and
-    // returns the newer value in `stale` when a sent edit was older.
-    mutationFn: (answers: { questionId: string; response: string; editedAt?: number }[]) =>
-      api.post<{ saved: number; stale?: Record<string, string> }>(`/mock/attempts/${attemptId}/answers`, { answers }),
+    mutationFn: (answers: AnswerEdit[]) =>
+      api.post<AnswerSaveResult>(`/mock/attempts/${attemptId}/answers`, { answers }),
   });
 }
 
@@ -229,7 +231,7 @@ export function useSaveMockAnnotations(attemptId: string) {
 export function useSubmitMock(attemptId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload?: { confirm?: boolean; confirmed?: boolean; force?: boolean; skills?: string[] }) =>
+    mutationFn: (payload?: { confirm?: boolean; confirmed?: boolean; force?: boolean; skills?: string[]; requireExpired?: boolean }) =>
       api.post<{ status: MockAttemptStatus }>(
         `/mock/attempts/${attemptId}/submit`,
         payload ?? { confirm: true },
@@ -245,13 +247,13 @@ export function useSubmitMock(attemptId: string) {
 export function useAdvanceMockSection(attemptId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () =>
+    mutationFn: (payload: { expectedSkill: string; requireExpired?: boolean }) =>
       api.post<{
         saved: boolean;
         currentSkill: string | null;
         submittedSections: string[];
         serverTime: string;
-      }>(`/mock/attempts/${attemptId}/advance`),
+      }>(`/mock/attempts/${attemptId}/advance`, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["mock-attempt", attemptId] });
     },
@@ -263,7 +265,7 @@ export function useUploadMockSpeaking(attemptId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (v: { questionId: string; form: FormData }) =>
-      api.post<{ saved: boolean; audioUrl: string }>(
+      api.post<{ saved: boolean; audioUrl: string; audioDurationMs?: number }>(
         `/mock/attempts/${attemptId}/speaking/${v.questionId}`,
         v.form,
       ),
@@ -379,7 +381,7 @@ export function useDeleteMockSection(examId: string) {
 export function useCreateMockGroup(examId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (v: { sectionId: string; input?: MockGroupInput }) =>
+    mutationFn: (v: { sectionId: string; input?: MockGroupInput | { copyFromGroupId: string } }) =>
       api.post(`/mock/sections/${v.sectionId}/groups`, v.input ?? {}),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam"] }),
   });
@@ -388,7 +390,7 @@ export function useCreateMockGroup(examId: string) {
 export function useUpdateMockGroup(examId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (v: { groupId: string; input: MockGroupInput }) =>
+    mutationFn: (v: { groupId: string; input: MockGroupInput | { groupPlacement: { siblingId: string; before: boolean } } }) =>
       api.patch(`/mock/groups/${v.groupId}`, v.input),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam"] }),
   });
@@ -1062,10 +1064,10 @@ export function useTargetedPractice(categoryId?: string, enabled = true) {
 
 /* ── Teacher Hub Group Analytics & Attendance Hooks ──────────────────── */
 
-export function useGroupAnalytics(groupId?: string, enabled = true) {
+export function useGroupAnalytics(groupId?: string, enabled = true, filters: Record<string, string> = {}) {
   return useQuery({
-    queryKey: ["group-analytics", groupId],
-    queryFn: () => api.get<import("@/lib/types").GroupAnalyticsResponse>(`/groups/${groupId}/analytics`),
+    queryKey: ["group-exam-analytics", groupId, filters],
+    queryFn: () => api.get<import("@/lib/types").GroupAnalyticsResponse>(`/groups/${groupId}/analytics`, filters),
     enabled: !!groupId && enabled,
     retry: false,
   });

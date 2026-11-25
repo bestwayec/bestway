@@ -1,19 +1,26 @@
-"""Question numbers as the student sees them.
+"""Build candidate-facing positions while preserving stored numbers, IDs and gap tokens."""
+from .mock_content import exam_content_units
 
-IELTS papers number each section from 1 (Listening 1–40, Reading 1–40) — owner decision
-2026-11-14. Stored `number` values (exam-wide in older IELTS exams, e.g. Reading 41–80), question
-ids, answer mapping, gap markers and scoring are untouched: this only adds `displayNumber`.
-Multilevel keeps its stored numbers.
-"""
 IELTS_TYPES = {'ielts_academic', 'ielts_general'}
 
 
 def apply_display_numbers(exam_type, sections):
-    """Set `displayNumber` on every question dict in shaped sections (in their display order)."""
     for section in sections or []:
-        position = 0
-        for group in section.get('groups') or []:
+        position = 1
+        groups = section.get('groups') or []
+        skill = section.get('skill')
+        objective = exam_type in IELTS_TYPES and skill in ('reading', 'listening')
+        if objective:
+            units = exam_content_units(groups, skill)
+            if skill == 'listening' and all(unit[0].get('partNumber') for unit in units):
+                units.sort(key=lambda unit: unit[0]['partNumber'])
+            groups = [group for unit in units for group in unit]
+        for group in groups:
             for question in group.get('questions') or []:
-                position += 1
                 question['displayNumber'] = position if exam_type in IELTS_TYPES else question.get('number')
+                points = question.get('points')
+                slots = points if objective and question.get('type') == 'multi_select' and type(points) is int and points > 1 else 1
+                if slots > 1:
+                    question['displayNumberEnd'] = position + slots - 1
+                position += slots
     return sections

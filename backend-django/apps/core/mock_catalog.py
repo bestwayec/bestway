@@ -164,7 +164,7 @@ def shape_exam(exam, answers: bool, include_sections: bool = True):
             result["questionCount"] += len(questions)
             shaped["groups"].append({
                 "id": group.id, "sortOrder": group.sort_order, "title": group.title, "instructions": group.instructions,
-                "passageText": None if specification and not answers and section.skill == 'listening' else group.passage_text, "contentHtml": group.content_html, "contentLayout": group.content_layout,
+                "passageText": None if not answers and section.skill == 'listening' else group.passage_text, "contentHtml": group.content_html, "contentLayout": group.content_layout,
                 "optionsReusable": group.options_reusable, "hasAudio": bool(group.audio_key),
                 "audioUrl": media_url(group.id, 'audio') if group.audio_key else None,
                 "imageUrl": media_url(group.id, 'image') if group.image_key else None,
@@ -172,6 +172,7 @@ def shape_exam(exam, answers: bool, include_sections: bool = True):
                 "audioPlayLimit": 2 if specification and section.skill == 'listening' else group.audio_play_limit,
                 "questions": questions,
                 "items": questions,
+                **({"stimulusRef": group.stimulus_ref} if section.skill == "reading" else {}),
                 **({"audioScript": group.audio_script, "maxScore": group.max_score, "stimulusRef": group.stimulus_ref} if answers else {}),
             })
         shaped["parts"] = shaped["groups"]
