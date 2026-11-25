@@ -64,8 +64,7 @@ const PICTURE = pngFile("ml-speaking.png");
 // Fake microphone: Speaking records Chromium's synthetic tone, never a person.
 const browser = await chromium.launch({
   ...(process.env.BW_CHROMIUM ? { executablePath: process.env.BW_CHROMIUM } : {}),
-  args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream",
-    ...(process.env.BW_SYNTHETIC_AUDIO_CONTEXT ? ["--autoplay-policy=no-user-gesture-required"] : [])],
+  args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream", "--autoplay-policy=no-user-gesture-required"],
 });
 
 async function session(phone, viewport = { width: 1440, height: 900 }) {
@@ -435,6 +434,7 @@ async function student() {
     const mic = page.getByRole("button", { name: "Start the test (5 seconds)" });
     if (await mic.count()) { await mic.click(); await page.getByRole("button", { name: /I can hear it/ }).click({ timeout: 20000 }); }
     const uploads = [];
+    const receipts = new Map();
     let rejectedRecording;
     if (process.env.BW_CAPTURE_SPEAKING) {
       await page.exposeFunction("saveRejectedSyntheticRecording", (questionId, bytes) => {
@@ -458,10 +458,13 @@ async function student() {
       });
     }
     page.on("response", async (r) => {
-      if (r.request().method() !== "POST" || !/\/speaking\/[^/]+$/.test(new URL(r.url()).pathname)) return;
+      const match = new URL(r.url()).pathname.match(/\/speaking\/([^/]+)$/);
+      if (r.request().method() !== "POST" || !match) return;
       // A rejected upload is reported with its error code (the take must never be lost).
       if (r.ok()) {
         uploads.push(r.status());
+        const { data } = await r.json().catch(() => ({}));
+        if (data?.saved) receipts.set(match[1], data.audioDurationMs);
         return;
       }
       const { error } = await r.json().catch(() => ({}));
@@ -484,13 +487,21 @@ async function student() {
     await page.context().setOffline(false);
     // The remaining 7 answers start on their own (server timing: up to 60 s preparation + 120 s).
     const deadline = Date.now() + 15 * 60 * 1000;
-    while ((await answeredCount(page)) < 81) {
+    while ((await answeredCount(page)) < 81 || receipts.size < 8) {
       if (rejectedRecording) throw new Error(`Speaking recording rejected at ${await answeredCount(page)}/81: ${rejectedRecording}`);
       if (Date.now() > deadline) throw new Error(`speaking stalled at ${await answeredCount(page)}/81; uploads ${uploads.join(",")}`);
       await page.waitForTimeout(5000);
     }
+    const expectedSeconds = [30, 30, 30, 45, 30, 30, 120, 120];
+    const durations = by.speaking.groups.flatMap((group) => group.questions).map((question, index) => {
+      const duration = receipts.get(question.id);
+      const expected = expectedSeconds[index] * 1000;
+      expect(Number.isFinite(duration) && duration >= expected - 1000 && duration <= expected + 500,
+        `Speaking response ${index + 1}: server receipt measured ${duration}ms, expected ${expected}ms`);
+      return duration;
+    });
     expect(await page.getByRole("button", { name: "Previous", exact: true }).isDisabled(), "Previous is enabled in timed Speaking");
-    return `8/8 answers uploaded one by one (${uploads.filter((s) => s === 201).length}×201), one retried after a network drop, no way back`;
+    return `8 native takes, confirmed durations ${durations.join(", ")} ms; one retried after a network drop, no way back`;
   });
 
   await page.context().close();
@@ -550,8 +561,14 @@ async function grade() {
     expect((await fields.count()) === 11, `grade fields: ${await fields.count()}`);
     const max = await fields.evaluateAll((els) => els.map((e) => Number(e.max)));
     expect(JSON.stringify(max) === JSON.stringify(maxima), `rubric maxima ${max}`);
-    const players = await teacher.locator("main audio").count();
-    expect(players >= 8, `audio players: ${players}`);
+    const players = teacher.locator("main audio");
+    expect(await players.count() >= 8, `audio players: ${await players.count()}`);
+    for (const player of (await players.all()).slice(0, 8)) {
+      await player.evaluate((audio) => audio.play());
+      const element = await player.elementHandle();
+      await teacher.waitForFunction((audio) => audio.currentTime > 0.1, element, { timeout: 5000 });
+      await player.evaluate((audio) => audio.pause());
+    }
     for (const [i, value] of scores.entries()) {
       const field = fields.nth(i);
       await field.fill(String(value));

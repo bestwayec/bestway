@@ -14,9 +14,10 @@ import { CountdownRing, InputLevelBars, ReadPromptButton } from './speaking-visu
 
 export interface MediaPhase { startedAt: string; prepEndsAt: string; expiresAt: string; captureEndsAt?: string; plays: number; serverTime: string; playLimit: number; responseSeconds?: number; minDurationMs?: number; maxDurationMs?: number; timingPolicy?: 'FULL_RESPONSE_WINDOW_V1' }
 function seconds(iso: string, offset: number) { return Math.max(0, Math.ceil((Date.parse(iso) - Date.now() - offset)/1000)); }
-function setRecorderHandlers(recorder: MediaRecorder, handlers: { data: (event: BlobEvent) => void; error: () => void; stop: () => void }) {
+function setRecorderHandlers(recorder: MediaRecorder, handlers: { data: (event: BlobEvent) => void; error: () => void; start: () => void; stop: () => void }) {
   recorder.ondataavailable = handlers.data;
   recorder.onerror = handlers.error;
+  recorder.onstart = handlers.start;
   recorder.onstop = handlers.stop;
 }
 function recorderStatus(status: string, recorded: boolean, translate: (key: string) => string) {
@@ -344,6 +345,19 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
       setRecorderHandlers(mr, {
         data: (e) => { if (e.data.size) chunks.push(e.data); },
         error: interrupt,
+        start: () => {
+          if (!aliveRef.current || capture.interrupted || mr.state !== 'recording') return;
+          clearCaptureTimers();
+          const started = performance.now();
+          capture.deadline = Math.min(started + durationMs, captureEnds);
+          const available = capture.deadline - started;
+          if (available < minimum) { interrupt(); return; }
+          setLeft(Math.ceil(available / 1000)); setResponseTotal(duration); stage('recording');
+          responseTimer.current = setTimeout(() => {
+            if (mr.state !== 'recording') return;
+            capture.complete = true; stage('finalizing'); mr.stop();
+          }, available);
+        },
         stop: () => {
           clearCaptureTimers(); closeMicrophone(); recorder.current = null;
           if (!capture.complete || capture.interrupted) {
@@ -361,19 +375,6 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
           void retainRecording(key, blob).then(() => sendRef.current(blob)).catch(() => { stage('retry'); setError(t('recPersistFailed')); });
         },
       });
-      mr.onstart = () => {
-        if (!aliveRef.current || capture.interrupted || mr.state !== 'recording') return;
-        clearCaptureTimers();
-        const started = performance.now();
-        capture.deadline = Math.min(started + durationMs, captureEnds);
-        const available = capture.deadline - started;
-        if (available < minimum) { interrupt(); return; }
-        setLeft(Math.ceil(available / 1000)); setResponseTotal(duration); stage('recording');
-        responseTimer.current = setTimeout(() => {
-          if (mr.state !== 'recording') return;
-          capture.complete = true; stage('finalizing'); mr.stop();
-        }, available);
-      };
       // A missing start event must not leave the microphone or the exam busy.
       // Do not start a take if the server window cannot still fit it.
       const startupBudget = Math.min(5000, captureEnds - performance.now() - minimum);
