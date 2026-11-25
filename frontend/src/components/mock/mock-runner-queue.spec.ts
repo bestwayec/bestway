@@ -152,6 +152,26 @@ describe('exam answer queue', () => {
     await act(async () => window.dispatchEvent(new Event('online')));
     expect(loadQueue('attempt')).toEqual({});
   });
+
+  it.each([
+    [403, 'SECTION_LOCKED'],
+    [408, 'TIMEOUT'],
+    [409, 'EXAM_SESSION_ELSEWHERE'],
+    [429, 'TOO_MANY_REQUESTS'],
+    [500, 'INTERNAL_ERROR'],
+    [502, 'BACKEND_PROXY_ERROR'],
+    [503, 'SERVICE_UNAVAILABLE'],
+  ])('keeps a pending edit and never records a receipt after HTTP %s', async (status, code) => {
+    hooks.save.mockRejectedValueOnce(new ApiError(code, 'Synthetic save rejection', status));
+    await mount(); await answer('still on this device'); await tick(1500);
+    expect(loadQueue('attempt').question.response).toBe('still on this device');
+    const notice = host.querySelector('[data-testid="answer-queue-banner"]');
+    // Session takeover has its own gate. Other failures announce the queued edit.
+    if (status === 409) expect(notice).toBeNull();
+    else expect(notice?.textContent).toContain('queueWaiting');
+    expect(host.textContent).not.toContain('saveSaved');
+    expect(hooks.submit).not.toHaveBeenCalled();
+  });
 });
 
 describe('finish when the hand-in cannot be confirmed', () => {
