@@ -296,6 +296,11 @@ class GroupExamExportServiceTests(SimpleTestCase):
         self.assertEqual(ws["B8"].value, "Olimjon Shokirov")
         self.assertEqual(ws["B9"].value, "Zuhra Aliyeva")
 
+        sample_data["exam"]["title"] = "=Literal title"
+        workbook = openpyxl.load_workbook(io.BytesIO(group_exam_export.generate_group_exam_excel(sample_data)))
+        self.assertEqual(workbook.active["E4"].value, "=Literal title")
+        self.assertEqual(workbook.active["E4"].data_type, "s")
+
     def test_generate_group_exam_pdf_output(self):
         sample_data = {
             "group": {"id": "group-1", "name": "B2 Exam Group", "teacherName": "Komiljon Roziyev"},
@@ -330,6 +335,15 @@ class GroupExamExportServiceTests(SimpleTestCase):
         pdf_bytes = group_exam_export.generate_group_exam_pdf(sample_data)
         self.assertTrue(pdf_bytes.startswith(b"%PDF"))
         self.assertGreater(len(pdf_bytes), 1000)
+
+        from pypdf import PdfReader
+
+        row = sample_data["students"][0]
+        sample_data["students"] = [dict(row, number=i, name=f"Learner {i:02}") for i in range(1, 22)]
+        pages = PdfReader(io.BytesIO(group_exam_export.generate_group_exam_pdf(sample_data))).pages
+        self.assertEqual(len(pages), 2)
+        self.assertIn("Learner 20", pages[0].extract_text())
+        self.assertIn("Learner 21", pages[1].extract_text())
 
 
 class GroupExamExportApiEndpointTests(SimpleTestCase):

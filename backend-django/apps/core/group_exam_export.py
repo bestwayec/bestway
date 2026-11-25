@@ -440,6 +440,12 @@ def generate_group_exam_excel(data: Dict[str, Any]) -> bytes:
     cefr_cell = ws.cell(row=current_row, column=2, value=dist_str)
     cefr_cell.font = font_meta
 
+    # This report has no spreadsheet formulas. Keep authored labels and names
+    # literal in the workbook, even when a cell begins with an equals sign.
+    for row in ws.iter_rows():
+        for cell in row:
+            if cell.data_type == "f":
+                cell.data_type = "s"
     output = BytesIO()
     wb.save(output)
     return output.getvalue()
@@ -505,7 +511,6 @@ def generate_group_exam_pdf(data: Dict[str, Any]) -> bytes:
     draw_text(f"Sana: {data['exportedAt'][:10]}", 430, 142, 8.5, "Helvetica", slate_muted)
 
     # 3. Table Headers
-    y = 180
     headers = [
         ("№", 48),
         ("Talaba F.I.Sh", 68),
@@ -519,18 +524,24 @@ def generate_group_exam_pdf(data: Dict[str, Any]) -> bytes:
         ("Holat", 518),
     ]
 
-    doc.setFillColor(HexColor("#f1f5f9"))
-    doc.rect(44, height - y - 13, width - 88, 17, fill=1, stroke=0)
-    for title, x_pos in headers:
-        draw_text(title, x_pos, y, 8, "Helvetica-Bold", slate_dark)
+    def table_header(y):
+        doc.setFillColor(HexColor("#f1f5f9"))
+        doc.rect(44, height - y - 13, width - 88, 17, fill=1, stroke=0)
+        for title, x_pos in headers:
+            draw_text(title, x_pos, y, 8, "Helvetica-Bold", slate_dark)
+        y += 17
+        doc.setStrokeColor(HexColor(border_color))
+        doc.line(44, height - y + 4, width - 44, height - y + 4)
+        return y
 
-    y += 17
-    doc.setStrokeColor(HexColor(border_color))
-    doc.line(44, height - y + 4, width - 44, height - y + 4)
-
-    # 4. Student Rows (Render up to 20 rows on A4)
-    students = data.get("students", [])[:20]
-    for idx, st in enumerate(students):
+    y = table_header(180)
+    # Keep space for the aggregate and signatures on the last page.
+    for idx, st in enumerate(data.get("students", [])):
+        if idx and idx % 20 == 0:
+            doc.showPage()
+            center_text(exm["title"], 60, 12, True, primary)
+            center_text(grp["name"], 79)
+            y = table_header(105)
         row_bg = "#ffffff" if idx % 2 == 0 else "#f8fafc"
         doc.setFillColor(HexColor(row_bg))
         doc.rect(44, height - y - 10, width - 88, 15, fill=1, stroke=0)
@@ -555,8 +566,6 @@ def generate_group_exam_pdf(data: Dict[str, Any]) -> bytes:
         draw_text(st_label, 518, y, 7, "Helvetica-Bold", st_color)
 
         y += 15
-        if y > 600:
-            break
 
     doc.setStrokeColor(HexColor(border_color))
     doc.line(44, height - y + 4, width - 44, height - y + 4)
