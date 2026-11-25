@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const OUT = join(here, "..", "..", ".local", "e2e");
+const OUT = process.env.BW_OUT || join(here, "..", "..", ".local", "e2e");
 mkdirSync(OUT, { recursive: true });
 const STATE_FILE = join(OUT, "multilevel-full.json");
 

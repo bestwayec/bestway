@@ -41,6 +41,19 @@ def classroom():
                 editor.delete_model(model)
 
 
+def fixture_profile(user, group_id, link_code, created_at):
+    # Use the column's inferred array type on both Prisma's enum schema and
+    # the Django-created test tables.
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """INSERT INTO "StudentProfile" ("userId", "groupId", "availablePrograms", "activeProgram", "isApproved",
+                "currentPoints", "gameQualified", "linkCode", "createdAt")
+                VALUES (%s, %s, '{IELTS}', 'IELTS', true, 0, false, %s, %s)""",
+            [user.id, group_id, link_code, created_at],
+        )
+    return StudentProfile.objects.get(user_id=user.id)
+
+
 def seed_classroom():
     now = timezone.now()
 
@@ -56,9 +69,7 @@ def seed_classroom():
     people = {}
     for name, current in (("Ari", other), ("Beth", group), ("Casey", group), ("Drew", group), ("Ellis", other)):
         learner = user(name, "student")
-        people[name] = StudentProfile.objects.create(user=learner, group=current, available_programs=[],
-                                                     is_approved=True, current_points=0, game_qualified=False,
-                                                     link_code=f"exam4-p3-{name}", created_at=now)
+        people[name] = fixture_profile(learner, current.id, f"exam4-p3-{name}", now)
         if name != "Ellis":
             ClassroomEnrollment.objects.create(
                 group=group, student=learner, started_at=now - timedelta(days=20) if name != "Drew" else None,
@@ -217,9 +228,7 @@ def test_student_benchmark_requires_five_comparable_peers(classroom):
         key = f"exam4-p3-peer-{index}"
         peer = User.objects.create(id=key, name=key, role="student", phone=key,
                                    password_hash="", is_active=True, created_at=now, updated_at=now)
-        profile = StudentProfile.objects.create(user=peer, group_id="exam4-p3-group", available_programs=[],
-                                                is_approved=True, current_points=0, game_qualified=False,
-                                                link_code=key, created_at=now)
+        profile = fixture_profile(peer, "exam4-p3-group", key, now)
         ClassroomEnrollment.objects.create(group_id="exam4-p3-group", student=peer, started_at=now)
         MockAttempt.objects.create(id=key, student=profile, exam=exam, status="completed", started_at=now,
                                    submitted_at=now, flow_mode="full_test", mode="timed", overall_band=score,
