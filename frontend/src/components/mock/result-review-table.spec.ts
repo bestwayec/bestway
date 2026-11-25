@@ -70,7 +70,7 @@ describe("ResultReviewTable", () => {
 
   it("clicking a wrong answer shows where the answer is, highlighted in the passage", async () => {
     expect(host.querySelector('[data-testid="review-explain"]')).toBeNull();
-    expect(rows()[0].querySelector("button[aria-expanded]")).toBeNull();          // nothing marked: no button
+    expect(rows()[0].querySelector("button[aria-expanded]")).not.toBeNull();      // full passage is available
     await act(async () => (rows()[1] as HTMLTableRowElement).click());
     const mark = host.querySelector('[data-testid="review-evidence"]');
     expect(mark?.textContent).toBe("The answer to two is gamma");

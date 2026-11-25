@@ -125,6 +125,9 @@ class PredictionTests(SimpleTestCase):
         done = attempt(overall_band=6.5, cefr_level="B2", raw_scores={"listening": {"score": 30, "max": 40}}, section_bands={"listening": 7.0})
         result = self.predict([done])
         self.assertEqual(result["ielts"]["currentBand"], 6.5)
+        self.assertIsNone(result["ielts"]["predictedBand"])
+        self.assertIsNone(result["multilevel"]["currentScore"])
+        self.assertIsNone(result["history"][0]["multilevelScore"])
         self.assertEqual(len(result["history"]), 1)
         self.assertEqual(result["pendingAttempts"], 0)
 
@@ -152,6 +155,7 @@ class OverviewLegacyTests(SimpleTestCase):
              patch("apps.legacy_schema.models.MockAnswer.objects.filter") as answers, \
              patch.object(auth_service, "fetch_user", return_value=None):
             mocks.return_value.select_related.return_value.order_by.return_value = mock_attempts
+            mocks.return_value.select_related.return_value.__iter__.return_value = mock_attempts
             mocks.return_value.__iter__.return_value = mock_attempts
             mocks.return_value.count.return_value = len(mock_attempts)
             legacy.return_value.select_related.return_value.order_by.return_value = legacy_attempts

@@ -92,6 +92,7 @@ function toBuilderPart(group: MockGroup): BuilderPart {
       wordLimit: q.wordLimit ?? undefined,
       answerRule: q.answerRule ?? null,
       evidenceText: q.evidenceText ?? null,
+      reviewExplanation: q.reviewExplanation ?? null,
       audioStartSec: q.audioStartSec ?? null,
       savedQuestionId: q.id,
     })),
@@ -325,7 +326,7 @@ export function ReadingPassageEditor({
         questions: p.questions.map((q) => ({ id: q.savedQuestionId, number: q.number, type: q.type, prompt: q.prompt,
           options: q.options, correctAnswers: q.correctAnswers, acceptedVariants: q.acceptedVariants,
           points: q.points, wordLimit: q.wordLimit, answerRule: q.answerRule,
-          evidenceText: q.evidenceText, audioStartSec: q.audioStartSec })),
+          evidenceText: q.evidenceText, reviewExplanation: q.reviewExplanation, audioStartSec: q.audioStartSec })),
         deletedQuestionIds: persistedQuestionIds.current.filter((id) => !p.questions.some((local) => local.savedQuestionId === id)),
       });
       persistedQuestionIds.current = saved.questions.map((q) => q.id);
@@ -970,7 +971,7 @@ export function ReadingPassageEditor({
                                 question={q}
                                 skill="reading"
                                 allowedTypes={READING_TYPES}
-                                reviewSource={part.passageText}
+                                reviewSource={sharedSource?.passageText ?? part.passageText}
                                 onChange={(next) =>
                                   update((p) => ({
                                     ...p,

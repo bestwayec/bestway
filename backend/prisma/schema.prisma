@@ -782,6 +782,7 @@ model MockQuestion {
   skillTags        Json? // item bank: string[] of skill tags (e.g. ["inference","detail"]); null = none
   evidenceText     String? // review only: the passage/audioscript words that hold the answer
   evidenceOffset   Int? // review only: where evidenceText starts in that text (computed by the server)
+  reviewExplanation String? // review only: teacher-authored explanation of the correct answer
   audioStartSec    Float? // review only: Listening moment where the answer is heard ("play from here")
   createdAt        DateTime         @default(now())
 

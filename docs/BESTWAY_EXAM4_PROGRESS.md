@@ -23,6 +23,6 @@ The Multilevel production-build journey reached a graded result with all eight t
 
 The cumulative backend, frontend, and browser checks passed for the canonical Reading and Listening fixture, builder publication, and Phase 1 regression. Builder authoring, preview, and the published partial practice shared the same audio markers and question associations. PostgreSQL and the normal Prisma engine download were checked separately. The engine download still returns HTTP 403.
 
-## Phase 3 checkpoint
+## Phase 3 · CBT, result review and classroom analytics
 
-Initial analytics corrections remove placeholder group averages, attendance and topic figures, and separate assessment scales. The full Phase 3 scope remains in progress. See [Phase 3 checkpoint](BESTWAY_EXAM4_PHASE3_REPORT.md).
+Phase 3 continues from Phase 2 commit `16d0ea90a99b81682eed8bb5a19a12f756119e3e`. The current checkpoint includes canonical result review and teacher explanations, separate IELTS and Multilevel charts and predictions, dated classroom participation and comparable rankings, and filtered PDF and Excel reports. PostgreSQL and frontend suites pass at this checkpoint. Final browser reruns, delivery, and any limitations are tracked in the [Phase 3 report](BESTWAY_EXAM4_PHASE3_REPORT.md).

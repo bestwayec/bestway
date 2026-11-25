@@ -183,7 +183,7 @@ class GroupExamExportServiceTests(SimpleTestCase):
         self.assertEqual(group_exam_export.compute_cefr_level(None, "multilevel", existing_cefr="b2"), "B2")
 
     @patch("apps.core.group_exam_export.AssessmentJob.objects")
-    @patch("apps.core.group_exam_export.MockAttempt.objects")
+    @patch("apps.core.group_exam_export.classroom_attempts")
     @patch("apps.core.group_exam_export.StudentProfile.objects")
     @patch("apps.core.group_exam_export.MockExam.objects")
     @patch("apps.core.group_exam_export.Group.objects")
@@ -209,6 +209,8 @@ class GroupExamExportServiceTests(SimpleTestCase):
             status="completed",
             overall_band=7.0,
             overall_score=70.0,
+            exam=mock_exam,
+            flow_mode="full_test",
             section_bands={"writing": 6.5, "speaking": 7.5},
             standard_scores={"writing": 65, "speaking": 75},
             media_state={"is_teacher_reviewed": True, "teacher_score": 7.0, "teacher_comment": "Zo'r"},
@@ -216,7 +218,7 @@ class GroupExamExportServiceTests(SimpleTestCase):
             submitted_at=None,
             started_at=None,
         )
-        mock_attempts_qs.filter.return_value.order_by.return_value = [att]
+        mock_attempts_qs.return_value.filter.return_value.select_related.return_value.order_by.return_value = [att]
 
         job_w = MagicMock(attempt_id="att-1", skill="writing", ai_score=6.0, teacher_score=6.5, final_score=6.5, final_score_source="TEACHER")
         job_s = MagicMock(attempt_id="att-1", skill="speaking", ai_score=7.0, teacher_score=7.5, final_score=7.5, final_score_source="TEACHER")
@@ -228,13 +230,13 @@ class GroupExamExportServiceTests(SimpleTestCase):
         self.assertEqual(data["exam"]["title"], "Multi-Level Practice 1")
         self.assertEqual(data["totalStudents"], 1)
         self.assertEqual(data["submittedCount"], 1)
-        self.assertEqual(data["averageFinalScore"], 7.0)
+        self.assertEqual(data["averageFinalScore"], 70.0)
         self.assertEqual(data["cefrDistribution"]["C1"], 1)
         self.assertEqual(len(data["students"]), 1)
         st_row = data["students"][0]
         self.assertEqual(st_row["name"], "Komiljon Roziyev")
-        self.assertEqual(st_row["writing_score"], 6.5)
-        self.assertEqual(st_row["speaking_score"], 7.5)
+        self.assertEqual(st_row["writing_score"], 65)
+        self.assertEqual(st_row["speaking_score"], 75)
         self.assertEqual(st_row["cefr_level"], "C1")
         self.assertEqual(st_row["status"], "Ko'rib chiqildi")
 

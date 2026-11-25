@@ -161,7 +161,7 @@ export function CbtSectionStepper({
       const element = document.getElementById(`q-${q.id}`);
       if (!element) return;
       const focusQuestion = () => {
-        element.scrollIntoView({ behavior: "smooth", block: "center" });
+        element.scrollIntoView({ behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "auto" : "smooth", block: "center" });
         const target = element.querySelector<HTMLElement>("input:not([type=hidden]):not([disabled]), textarea:not([disabled]), select, [role=radio], button:not([disabled])");
         if (target) target.focus({ preventScroll: true });
         else { element.tabIndex = -1; element.focus({ preventScroll: true }); }

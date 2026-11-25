@@ -169,9 +169,14 @@ class ScorePredictionEngineTests(SimpleTestCase):
             with self.subTest(score=score):
                 self.assertEqual(prediction_service.multilevel_cefr_from_score(score), level)
 
-    def test_dual_scale_conversions(self):
-        self.assertGreaterEqual(prediction_service.multilevel_to_ielts_band(65), 7.0)
-        self.assertGreaterEqual(prediction_service.ielts_band_to_multilevel(7.0), 65.0)
+    def test_multilevel_result_uses_only_the_stored_standard_score(self):
+        attempt = SimpleNamespace(exam=SimpleNamespace(type="multilevel"), status="completed", flow_mode="full_test",
+                                  overall_score=0, overall_band=7.0, section_bands={"reading": 7.0})
+        metrics = prediction_service.extract_attempt_dual_metrics(attempt)
+        self.assertTrue(metrics["hasMultilevelOverall"])
+        self.assertFalse(metrics["hasIeltsOverall"])
+        self.assertEqual(metrics["multilevelScore"], 0)
+        self.assertEqual(metrics["skillsIelts"], {})
 
     @patch("apps.core.prediction_service.StudentProfile")
     @patch("apps.core.prediction_service.User")

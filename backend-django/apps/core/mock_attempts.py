@@ -270,7 +270,23 @@ def start(actor, exam_id, data):
         if data.get('mode') is not None and data['mode'] not in ('practice', 'timed'):
             fail('VALIDATION_ERROR', 'mode must be one of the following values: practice, timed')
     from . import practice_mode
+    from .homework_scoring import ASSIGNMENT_KEY
     practice_options = practice_mode.parse_options(data, partial)
+    assignment_id = data.get('assignmentId')
+    assignment = None
+    if assignment_id is not None:
+        from .classrooms import student_homework_scope
+        from .models import HomeworkAssignment
+
+        if not isinstance(assignment_id, str) or not assignment_id or len(assignment_id) > 255:
+            fail('VALIDATION_ERROR', 'assignmentId must identify an exam assignment')
+        assignment = HomeworkAssignment.objects.filter(
+            student_homework_scope(actor.id), pk=assignment_id, exam_id=exam_id,
+        ).first()
+        if assignment is None:
+            fail('ASSIGNMENT_NOT_FOUND', 'Exam assignment not found', 404)
+        if assignment.deadline < timezone.now():
+            fail('ASSIGNMENT_EXPIRED', 'The assignment deadline has passed', 409)
     if not exam.is_published and not exam.is_demo:
         fail('MOCK_EXAM_NOT_PUBLISHED', 'Bu imtihon hali ochilmagan')
     with connection.cursor() as cursor:
@@ -338,6 +354,12 @@ def start(actor, exam_id, data):
             if partial and practice_options:
                 scope_mismatch = scope_mismatch or existing.mode != 'practice' or practice_mode.options(existing) != {
                     'groupIds': practice_options['groupIds'] or None, 'timer': practice_options['timer']}
+            if assignment:
+                linked = (existing.media_state or {}).get(ASSIGNMENT_KEY)
+                if linked and linked != assignment.id:
+                    fail('MOCK_ASSIGNMENT_ATTEMPT_ACTIVE', 'Finish the active assignment attempt before starting another', 409)
+                if existing.started_at < assignment.created_at:
+                    scope_mismatch = True
             if (exp and aware(exp) <= now) or is_retake or scope_mismatch:
                 from .mock_submissions import submit
                 try:
@@ -347,6 +369,9 @@ def start(actor, exam_id, data):
                     existing.save(update_fields=['status'])
                 existing = None
             else:
+                if assignment and not linked:
+                    existing.media_state = {**(existing.media_state or {}), ASSIGNMENT_KEY: assignment.id}
+                    existing.save(update_fields=['media_state'])
                 return start_response(existing, exam, True)
         practice = (selected_scope(exam, data['skills'], _auto_seed=False) if implicit_practice
                     else selected_scope(exam, data['skills']) if partial else None)
@@ -390,13 +415,16 @@ def start(actor, exam_id, data):
         first_skill = shaped.get('sections', [{}])[0].get('skill', 'listening') if shaped.get('sections') else 'listening'
         if any(s.get('skill') == 'listening' for s in shaped.get('sections', [])):
             first_skill = 'listening'
+        media_state = {SCOPE_KEY: practice} if partial else {}
+        if assignment:
+            media_state[ASSIGNMENT_KEY] = assignment.id
         attempt = MockAttempt.objects.create(id=new_id(), exam_id=exam_id, student_id=actor.id,
             specification_version=exam.specification_version, speaking_profile_version=exam.speaking_profile_version,
             status='in_progress', started_at=at, mode=mode, deadline_at=overall,
             overall_deadline_at=overall, section_deadlines=deadlines,
             flow_mode=flow,
             current_skill=data['skills'][0] if partial else (first_skill if flow == 'full_test' else first_skill),
-            media_state={SCOPE_KEY: practice} if partial else None,
+            media_state=media_state or None,
             anti_cheat_count=0, audio_plays={} if flow == 'full_test' else None,
             submitted_sections=[] if flow == 'full_test' else None)
         duration = int((last-at).total_seconds()/60 + .5) if last else None
@@ -879,9 +907,11 @@ def summary(attempt, *, detail=False):
             # reloaded exam window can show their real state instead of an untouched part.
             result['mediaStarted'] = [key for key, phase in (attempt.media_state or {}).items()
                                       if isinstance(phase, dict) and 'prepEndsAt' in phase]
+    if attempt.exam.type == 'multilevel':
+        result.update(standardScores=getattr(attempt, 'standard_scores', None), overallScore=getattr(attempt, 'overall_score', None))
     if versioned(attempt):
-        result.update(specificationVersion=attempt.specification_version, standardScores=attempt.standard_scores,
-            overallScore=attempt.overall_score, scoreMethod=attempt.score_method, scoreVersion=attempt.score_version, isOfficial=False)
+        result.update(specificationVersion=attempt.specification_version,
+                      scoreMethod=attempt.score_method, scoreVersion=attempt.score_version, isOfficial=False)
     if is_partial(attempt):
         result['practiceScope'] = scope(attempt)
         from .practice_mode import options as practice_options
@@ -958,13 +988,19 @@ def decode_attempts_cursor(cursor):
         fail('VALIDATION_ERROR', 'cursor is not valid')
 
 
+def review_blocked(attempt):
+    return MockAttempt.objects.filter(
+        student_id=attempt.student_id, exam_id=attempt.exam_id, status='in_progress', mode='timed',
+    ).exists()
+
+
 def detail(actor, attempt_id):
     attempt = MockAttempt.objects.select_related('exam', 'student__user').filter(id=attempt_id).first()
     if not attempt:
         fail('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404)
     assert_view(actor, attempt.student_id, started_at=attempt.started_at)
     staff = mock_catalog.is_staff(actor)
-    show = staff or attempt.status == 'completed'
+    show = staff or (attempt.status == 'completed' and not review_blocked(attempt))
     answers = {a.question_id: a for a in MockAnswer.objects.filter(attempt_id=attempt_id)}
     # One query per level instead of one per section and one per group (N+1).
     section_rows = list(MockSection.objects.filter(exam_id=attempt.exam_id).order_by('sort_order'))
@@ -982,14 +1018,18 @@ def detail(actor, attempt_id):
     for section in section_rows:
         raw = (attempt.raw_scores or {}).get(section.skill, {})
         band = (attempt.section_bands or {}).get(section.skill)
+        standard = (getattr(attempt, 'standard_scores', None) or {}).get(section.skill)
         shaped = dict(id=section.id, skill=section.skill, title=section.title,
             durationMinutes=section.duration_minutes, instructions=section.instructions,
             score=raw.get('score'), max=raw.get('max'), band=band,
             bandBelowRange=band_is_below_range(attempt.exam.type, section.skill, band, raw),
-            standardScore=(getattr(attempt, 'standard_scores', None) or {}).get(section.skill, {}).get('estimatedStandardScore'), groups=[])
-        for gi, group in enumerate(groups_by_section.get(section.id, [])):
+            standardScore=standard.get('estimatedStandardScore') if isinstance(standard, dict) else standard, groups=[])
+        section_groups = groups_by_section.get(section.id, [])
+        sources = review_evidence.review_sources(section_groups, section.skill,
+                                                 canonical_listening=attempt.exam.type != 'multilevel') if show else {}
+        for gi, group in enumerate(section_groups):
             shaped_group = dict(id=group.id, title=group.title, instructions=group.instructions,
-                passageText=None if versioned(attempt) and section.skill == 'listening' and not show else group.passage_text,
+                passageText=None if section.skill == 'listening' and not show else group.passage_text,
                 contentHtml=group.content_html, contentLayout=group.content_layout,
                 optionsReusable=group.options_reusable, hasAudio=bool(group.audio_key), questions=[])
             if section.skill == 'reading':
@@ -998,15 +1038,17 @@ def detail(actor, attempt_id):
                 shaped_group['partNumber'] = getattr(group, 'part_number', None)
             # Review only (released result): the Listening audioscript and its recording, so a wrong
             # answer can be read and heard where it is said. Never during the exam.
-            review_source = review_evidence.source_text(group, section.skill) if show else ''
+            review_source, review_recording = sources.get(group.id, ('', None))
+            if review_source and section.skill == 'reading':
+                shaped_group['reviewText'] = review_source
             practice_help = attempt.mode == 'practice' and attempt.status == 'in_progress'
             if (show or practice_help) and section.skill == 'listening':
                 # Practice only (never a timed exam): the audioscript is a study aid while practising.
-                script = review_evidence.plain_text(group.audio_script)
+                script = review_source if show else review_evidence.source_text(group, section.skill)
                 if script:
                     shaped_group['audioScript'] = script
-                if group.audio_key and show:
-                    shaped_group['reviewAudioUrl'] = review_audio_url(attempt_id, group.id)
+                if review_recording is not None:
+                    shaped_group['reviewAudioUrl'] = review_audio_url(attempt_id, review_recording.id)
             for qi, q in enumerate(questions_by_group.get(group.id, [])):
                 a = answers.get(q.id)
                 item = dict(id=q.id, number=q.number, type=q.type, prompt=q.prompt, options=q.options,

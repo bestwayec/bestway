@@ -193,7 +193,7 @@ async function build() {
       await putContent(teacher, group, rows, { instructions: `Synthetic listening part ${i + 1}.`, ...(i === 0 ? { audioScript: "Synthetic recording one. The answer is choice A. Then the tone ends." } : {}) });
     }
     for (const [i, group] of by.reading.groups.entries()) {
-      const rows = i === 0 ? IELTS_READING[i].map((q, k) => (k === 0 ? { ...q, evidenceText: "every   statement is true" } : q)) : IELTS_READING[i];
+      const rows = i === 0 ? IELTS_READING[i].map((q, k) => (k === 0 ? { ...q, evidenceText: "every   statement is true", reviewExplanation: "The statement follows directly from the passage." } : q)) : IELTS_READING[i];
       await putContent(teacher, group, rows, { passageText: `Synthetic passage ${i + 1}. The answer word is alpha and every statement is true.` });
     }
     const authored = (await tree(teacher, state.examId)).sections;
@@ -379,6 +379,7 @@ async function grade() {
     await reading.getByRole("button", { name: "Where is the answer to question 1?" }).click();
     const mark = reading.getByTestId("review-evidence");
     expect((await mark.innerText()) === "every statement is true", "Reading evidence not highlighted");
+    expect((await reading.getByTestId("review-explanation").innerText()) === "The statement follows directly from the passage.", "teacher explanation was not persisted");
     const listening = page.locator('section[aria-label="Listening"]');
     await listening.getByRole("button", { name: "Where is the answer to question 1?" }).click();
     expect((await listening.getByTestId("review-evidence").innerText()) === "The answer is choice A", "Listening evidence not highlighted");

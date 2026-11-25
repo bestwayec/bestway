@@ -192,6 +192,8 @@ def export_package(actor, exam_id: str, skill: str | None = None, *, template: b
                     item['skillTags'] = list(question.skill_tags)
                 if question.evidence_text and not template:
                     item['evidenceText'] = question.evidence_text
+                if getattr(question, 'review_explanation', None) and not template:
+                    item['reviewExplanation'] = question.review_explanation
                 if question.audio_start_sec is not None and not template:
                     item['audioStartSec'] = question.audio_start_sec
                 if template:

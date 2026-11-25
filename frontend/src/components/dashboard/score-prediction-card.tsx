@@ -4,7 +4,6 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
-  Award,
   Check,
   Compass,
   Flame,
@@ -21,7 +20,6 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Link } from "@/i18n/navigation";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/feedback";
 import {
@@ -31,17 +29,10 @@ import {
 } from "@/hooks/use-mock";
 import { ApiError } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
-import type { MockAttemptSummary, ScorePredictionResponse } from "@/lib/types";
+import type { MockAttemptSummary } from "@/lib/types";
 import { MULTILEVEL_CEFR_BANDS, multilevelBandFor, multilevelLevelText } from "@/lib/multilevel-scale";
 
 const DEFAULT_MULTILEVEL_BANDS = MULTILEVEL_CEFR_BANDS.map(({ level, min, max }) => ({ level, min, max }));
-
-// Neutral shape used only while rendering an empty card; every number is null so nothing
-// demo-like is ever displayed as the student's own result.
-const EMPTY_PREDICTION = {
-  ielts: { currentBand: null, predictedBand: null, targetBand: 7.5, targetProgressPercent: 0, cefrLevel: null, skillBreakdown: {} },
-  multilevel: { currentScore: null, predictedScore: null, targetScore: 65, targetProgressPercent: 0, cefrLevel: null, scaleBands: DEFAULT_MULTILEVEL_BANDS, skillBreakdown: {} },
-} as unknown as Pick<ScorePredictionResponse, "ielts" | "multilevel">;
 
 function resolveCategory(moduleName: string): string {
   const lower = moduleName.toLowerCase();
@@ -86,63 +77,33 @@ export function ScorePredictionCard({
     return effectiveAttempts.filter((a) => a.status === "completed" || a.status === "grading").length;
   }, [effectiveAttempts]);
 
-  const latestScored = React.useMemo(() => {
-    return effectiveAttempts?.find(
-      (a) => a.overallBand != null || a.overallScore != null || a.cefrLevel != null
-    );
-  }, [effectiveAttempts]);
-
-  const evidenceCount =
-    (data?.attemptsAnalyzed ?? 0) ||
-    (data?.sectionAttemptsAnalyzed ?? 0) ||
-    completedAttemptsCount;
-  const hasEvidence =
-    evidenceCount > 0 || (data?.history && data.history.length > 0);
-
-  const ielts = React.useMemo(() => {
-    const base = data?.ielts ?? EMPTY_PREDICTION.ielts;
-    if (base.currentBand == null && latestScored?.overallBand != null) {
-      return {
-        ...base,
-        currentBand: latestScored.overallBand,
-        predictedBand: base.predictedBand ?? latestScored.overallBand,
-        cefrLevel: base.cefrLevel ?? latestScored.cefrLevel ?? null,
-      };
-    }
-    return base;
-  }, [data?.ielts, latestScored]);
-
-  const multilevel = React.useMemo(() => {
-    const base = data?.multilevel ?? EMPTY_PREDICTION.multilevel;
-    if (base.currentScore == null && latestScored?.overallScore != null) {
-      return {
-        ...base,
-        currentScore: latestScored.overallScore,
-        predictedScore: base.predictedScore ?? latestScored.overallScore,
-        cefrLevel: base.cefrLevel ?? latestScored.cefrLevel ?? null,
-      };
-    }
-    return base;
-  }, [data?.multilevel, latestScored]);
+  const evidenceCount = (data?.attemptsAnalyzed ?? 0) + (data?.sectionAttemptsAnalyzed ?? 0);
+  const hasEvidence = evidenceCount > 0 || completedAttemptsCount > 0;
+  const ielts = data?.ielts;
+  const multilevel = data?.multilevel;
 
   const fmtBand = (v: number | null | undefined) => (hasEvidence && v != null ? Number(v).toFixed(1) : "—");
   const fmtScore = (v: number | null | undefined) => (hasEvidence && v != null ? String(Math.round(v)) : "—");
   const scaleBands =
-    multilevel.scaleBands && multilevel.scaleBands.length > 0
+    multilevel?.scaleBands && multilevel.scaleBands.length > 0
       ? multilevel.scaleBands
       : DEFAULT_MULTILEVEL_BANDS;
 
   React.useEffect(() => {
-    if (predQ.data) {
-      setTargetBandInput(String(predQ.data.ielts?.targetBand ?? 7.5));
+    if (predQ.data && !editingGoal) {
+      setTargetBandInput(Number(predQ.data.ielts?.targetBand ?? 7.5).toFixed(1));
       setTargetScoreInput(String(predQ.data.multilevel?.targetScore ?? 65));
-      setTargetCefrInput(predQ.data.multilevel?.cefrLevel || "C1");
+      setTargetCefrInput(predQ.data.multilevel?.targetCefr || "C1");
     }
-  }, [predQ.data]);
+  }, [predQ.data, editingGoal]);
 
   async function handleSaveTarget() {
-    const band = Math.min(9.0, Math.max(4.0, Number(targetBandInput) || 7.0));
-    const mlScore = Math.min(75, Math.max(20, Math.round(Number(targetScoreInput) || 60)));
+    const band = Number(targetBandInput);
+    const mlScore = Number(targetScoreInput);
+    if (!targetScoreInput.trim() || !Number.isInteger(mlScore) || mlScore < 10 || mlScore > 75) {
+      toast.error(ti("targetScoreInvalid"));
+      return;
+    }
     try {
       await updateTarget.mutateAsync({
         targetIeltsBand: Math.round(band * 2) / 2,
@@ -168,7 +129,7 @@ export function ScorePredictionCard({
     );
   }
 
-  if (!data) {
+  if (!data || !ielts || !multilevel) {
     return (
       <Card className={cn("mb-5 p-5", className)}>
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-fg-muted">
@@ -185,7 +146,7 @@ export function ScorePredictionCard({
     data.trend === "improving" ? (
       <Badge variant="success" className="gap-1">
         <TrendingUp className="size-3.5" />
-        {ti("trendImproving", { delta: Math.abs(Number(ielts.trendDelta ?? 0)).toFixed(1) })}
+        {ti("trendImproving")}
       </Badge>
     ) : data.trend === "declining" ? (
       <Badge variant="danger" className="gap-1">
@@ -203,30 +164,6 @@ export function ScorePredictionCard({
         {ti("attemptsAnalyzed", { count: evidenceCount })}
       </Badge>
     );
-
-  const historyPoints = data.history ?? [];
-
-  
-  if (!hasEvidence) {
-    return (
-      <Card className="rounded-card border border-border bg-surface p-6 sm:p-8 text-center" data-testid="prediction-no-evidence">
-        <Award className="mx-auto size-12 text-fg-muted mb-3" />
-        <h3 className="text-xl font-bold text-fg">
-          Hali natija yo'q — birinchi testni boshlang
-        </h3>
-        <p className="mt-2 text-sm text-fg-muted max-w-md mx-auto">
-          Bilimingizni sinab ko'rish va taxminiy darajangizni aniqlash uchun mock imtihon topshiring.
-        </p>
-        <div className="mt-6">
-          <Button asChild className="min-h-[44px] bg-brand hover:bg-brand-hover text-brand-fg font-medium px-6 text-base">
-            <Link href="/mock">
-              Birinchi testni boshlash
-            </Link>
-          </Button>
-        </div>
-      </Card>
-    );
-  }
 
   return (
     <Card className={cn("mb-5 overflow-hidden border-brand/15 bg-surface/90 backdrop-blur-md  transition-all", className)}>
@@ -299,15 +236,16 @@ export function ScorePredictionCard({
             </p>
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
-                <label className="block text-xs font-medium text-fg-muted mb-1">
+                <label htmlFor="prediction-target-band" className="block text-xs font-medium text-fg-muted mb-1">
                   {ti("targetBandLabel")}
                 </label>
                 <select
+                  id="prediction-target-band"
                   value={targetBandInput}
                   onChange={(e) => setTargetBandInput(e.target.value)}
                   className="h-9 w-full rounded-lg border border-border bg-bg px-2.5 text-xs font-bold text-fg"
                 >
-                  {["5.0", "5.5", "6.0", "6.5", "7.0", "7.5", "8.0", "8.5", "9.0"].map((b) => (
+                  {Array.from({ length: 17 }, (_, index) => (1 + index / 2).toFixed(1)).map((b) => (
                     <option key={b} value={b}>
                       Band {b}
                     </option>
@@ -315,23 +253,26 @@ export function ScorePredictionCard({
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-fg-muted mb-1">
+                <label htmlFor="prediction-target-score" className="block text-xs font-medium text-fg-muted mb-1">
                   {ti("targetScoreLabel")}
                 </label>
                 <Input
+                  id="prediction-target-score"
                   type="number"
-                  min={30}
+                  min={10}
                   max={75}
+                  step={1}
                   value={targetScoreInput}
                   onChange={(e) => setTargetScoreInput(e.target.value)}
                   className="h-9 text-xs font-bold"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-fg-muted mb-1">
+                <label htmlFor="prediction-target-cefr" className="block text-xs font-medium text-fg-muted mb-1">
                   {ti("targetCefrLabel")}
                 </label>
                 <select
+                  id="prediction-target-cefr"
                   value={targetCefrInput}
                   onChange={(e) => setTargetCefrInput(e.target.value)}
                   className="h-9 w-full rounded-lg border border-border bg-bg px-2.5 text-xs font-bold text-fg"
@@ -385,7 +326,7 @@ export function ScorePredictionCard({
             <div className="rounded-xl border border-border bg-bg-subtle/40 p-4 space-y-3">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <Badge variant="info">IELTS Academic (0.0 – 9.0)</Badge>
+                  <Badge variant="info">IELTS (0.0 – 9.0)</Badge>
                   <h4 className="mt-1.5 text-sm font-bold text-fg">
                     {ti("ieltsEstimateTitle")}
                   </h4>
@@ -409,7 +350,7 @@ export function ScorePredictionCard({
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-medium text-fg-muted flex items-center gap-1">
                     <Target className="size-3.5 text-brand" />
-                    Maqsad: <strong className="text-fg">Band {Number(ielts.targetBand || 7.5).toFixed(1)}</strong>
+                    {ti("targetLabel")} <strong className="text-fg">Band {Number(ielts.targetBand ?? 7.5).toFixed(1)}</strong>
                   </span>
                   <span className="font-bold text-brand tabular-nums">
                     {ti("targetProgress", { percent: Math.min(100, Math.max(0, Math.round(ielts.targetProgressPercent || 0))) })}
@@ -419,7 +360,7 @@ export function ScorePredictionCard({
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-brand/80 to-brand transition-all duration-500"
                     style={{
-                      width: `${Math.min(100, Math.max(5, Math.round(ielts.targetProgressPercent || 0)))}%`,
+                      width: `${Math.min(100, Math.max(0, Math.round(ielts.targetProgressPercent || 0)))}%`,
                     }}
                   />
                 </div>
@@ -479,7 +420,7 @@ export function ScorePredictionCard({
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-medium text-fg-muted">
-                    Maqsad: <strong className="text-fg">{multilevel.targetScore || 65} ball</strong>
+                    {ti("targetLabel")} <strong className="text-fg">{multilevel.targetScore ?? 65} ball</strong>
                   </span>
                   <span className="font-bold text-brand tabular-nums">
                     {ti("targetProgress", { percent: Math.min(100, Math.max(0, Math.round(multilevel.targetProgressPercent || 0))) })}
@@ -531,23 +472,6 @@ export function ScorePredictionCard({
             </div>
           )}
         </div>
-
-        {/* Dynamic Progress Chart (Last 3-5 Attempts SVG Line/Area Chart) */}
-        {historyPoints.length > 0 && (
-          <div className="rounded-xl border border-border bg-bg-subtle/30 p-4 space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-fg-muted flex items-center gap-1.5">
-                <Award className="size-3.5 text-brand" />
-                {ti("historyTitle", { count: historyPoints.length })}
-              </h4>
-              <span className="text-xs text-fg-muted">
-                {ti("historyHint")}
-              </span>
-            </div>
-
-            <PredictionSvgChart history={historyPoints} mode={scaleTab === "multilevel" ? "multilevel" : "ielts"} belowB1={tm("levelBelowB1")} />
-          </div>
-        )}
 
         {/* Zaif Nuqtalar Xaritasi (Weak Points Map) */}
         <div className="space-y-3">
@@ -649,121 +573,5 @@ export function ScorePredictionCard({
         )}
       </CardContent>
     </Card>
-  );
-}
-
-function PredictionSvgChart({
-  history,
-  mode,
-  belowB1,
-}: {
-  history: ScorePredictionResponse["history"];
-  mode: "ielts" | "multilevel";
-  belowB1: string;
-}) {
-  const recent = history.slice(-6);
-  const width = 560;
-  const height = 130;
-  const padX = 36;
-  const padY = 22;
-
-  const maxVal = mode === "multilevel" ? 75 : 9.0;
-  const minVal = 0;
-
-  const points = recent.map((item, idx) => {
-    const val = mode === "multilevel" ? item.multilevelScore : item.ieltsBand;
-    const x =
-      recent.length === 1
-        ? width / 2
-        : padX + (idx / (recent.length - 1)) * (width - padX * 2);
-    const ratio = Math.min(1, Math.max(0, (val - minVal) / (maxVal - minVal)));
-    const y = height - padY - ratio * (height - padY * 2);
-    return { x, y, val, item };
-  });
-
-  const polyline = points.map((p) => `${p.x},${p.y}`).join(" ");
-  const areaPath =
-    points.length > 1
-      ? `M ${points[0].x},${height - padY} L ${points.map((p) => `${p.x},${p.y}`).join(" L ")} L ${points[points.length - 1].x},${height - padY} Z`
-      : "";
-
-  return (
-    <div className="w-full overflow-x-auto">
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        className="h-32 w-full min-w-[320px]"
-        role="img"
-        aria-label="Score progression chart"
-      >
-        <defs>
-          <linearGradient id="predGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--chart-series)" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="var(--chart-series)" stopOpacity="0.0" />
-          </linearGradient>
-        </defs>
-
-        {/* Horizontal grid lines */}
-        {[0.25, 0.5, 0.75].map((r) => {
-          const y = height - padY - r * (height - padY * 2);
-          return (
-            <line
-              key={r}
-              x1={padX}
-              y1={y}
-              x2={width - padX}
-              y2={y}
-              stroke="currentColor"
-              className="text-border"
-              strokeDasharray="3 3"
-              strokeWidth="1"
-            />
-          );
-        })}
-
-        {areaPath && <path d={areaPath} fill="url(#predGrad)" />}
-
-        {points.length > 1 && (
-          <polyline
-            fill="none"
-            stroke="var(--chart-series)"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            points={polyline}
-          />
-        )}
-
-        {points.map((p, i) => (
-          <g key={p.item.attemptId || i}>
-            <circle
-              cx={p.x}
-              cy={p.y}
-              r="4.5"
-              fill="var(--chart-series)"
-              stroke="var(--surface)"
-              strokeWidth="2"
-            />
-            <text
-              x={p.x}
-              y={p.y - 8}
-              textAnchor="middle"
-              className="fill-fg text-[10px] font-bold"
-            >
-              {mode === "multilevel"
-                ? `${Math.round(p.val)} (${multilevelLevelText(p.item.cefrLevel, belowB1)})`
-                : p.val.toFixed(1)}
-            </text>
-            <text
-              x={p.x}
-              y={height - 5}
-              textAnchor="middle"
-              className="fill-fg-muted text-[9px]"
-            >
-              #{i + 1}
-            </text>
-          </g>
-        ))}
-      </svg>
-    </div>
   );
 }

@@ -1486,7 +1486,13 @@ function GroupBlock({
   practice?: { script?: string | null; revealed: Set<string> } | null;
 }) {
   const tg = useTranslations("mock.runnerUx");
-  const [readingMobileTab, setReadingMobileTab] = React.useState<"passage" | "questions">("passage");
+  const readingPositionKey = `bw_exam_reading_${attemptId}_${group.id}`;
+  const [readingMobileTab, setReadingMobileTab] = React.useState<"passage" | "questions">(() => {
+    try { return sessionStorage.getItem(`${readingPositionKey}_tab`) === "questions" ? "questions" : "passage"; }
+    catch { return "passage"; }
+  });
+  const passageRef = React.useRef<HTMLDivElement>(null);
+  const questionsRef = React.useRef<HTMLDivElement>(null);
   const hasPassage = !taskOnly && !!(group.passageText || (skill === "reading" && group.imageUrl)) && !(skill === "writing" && sharedWritingStimulus);
   const hasGappedContent = hasGappedDocument(group.contentHtml);
   const matchingBank = sharedMatchingOptions(group.questions);
@@ -1519,6 +1525,25 @@ function GroupBlock({
   const [writingSplit, setWritingSplit] = useWritingSplit();
   const splitRef = React.useRef<HTMLDivElement>(null);
   const isMapSplit = Boolean(skill === "listening" && group.imageUrl);
+  React.useEffect(() => {
+    if (!tabbed) return;
+    try { sessionStorage.setItem(`${readingPositionKey}_tab`, readingMobileTab); } catch {}
+  }, [readingMobileTab, readingPositionKey, tabbed]);
+  React.useEffect(() => {
+    if (!tabbed) return;
+    const save = (key: string, panel: HTMLDivElement | null) => {
+      if (!panel || !panel.getClientRects().length) return undefined;
+      try { panel.scrollTop = Number(sessionStorage.getItem(key)) || 0; } catch {}
+      const onScroll = () => {
+        try { sessionStorage.setItem(key, String(panel.scrollTop)); } catch {}
+      };
+      panel.addEventListener("scroll", onScroll, { passive: true });
+      return () => panel.removeEventListener("scroll", onScroll);
+    };
+    const cleanPassage = save(`${readingPositionKey}_passage`, passageRef.current);
+    const cleanQuestions = save(`${readingPositionKey}_questions`, questionsRef.current);
+    return () => { cleanPassage?.(); cleanQuestions?.(); };
+  }, [readingMobileTab, readingPositionKey, tabbed]);
   React.useEffect(() => {
     const element = splitRef.current;
     if (!tabbed || !element) return;
@@ -1693,6 +1718,7 @@ function GroupBlock({
         {isWritingSplit && <ReadingSplitDivider variant="writing" value={writingSplit} onChange={setWritingSplit} containerRef={splitRef} />}
         {isPassageSplit && (
           <div
+            ref={passageRef}
             className={cn(
               "whitespace-pre-line rounded-card border border-border bg-surface p-5 text-base leading-relaxed text-fg max-w-[70ch] sm:text-[17px] sm:leading-[1.75] lg:max-w-none lg:rounded-none lg:border-0 lg:bg-transparent lg:py-1 lg:pl-1 lg:pr-4",
               "lg:block lg:sticky lg:top-16 lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto lg:overscroll-contain",
@@ -1730,7 +1756,7 @@ function GroupBlock({
           </div>
         )}
         {isPassageSplit && <ReadingSplitDivider value={readingSplit} onChange={setReadingSplit} containerRef={splitRef} />}
-        {taskContent ? <div data-testid="reading-task-groups" className={cn(
+        {taskContent ? <div ref={questionsRef} data-testid="reading-task-groups" className={cn(
           "min-w-0 space-y-3 lg:sticky lg:top-16 lg:block lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto lg:overscroll-contain",
           tabbed && readingMobileTab === "passage" && "hidden",
         )}>{taskContent}</div> : <div className="min-w-0 space-y-4">
@@ -1871,11 +1897,13 @@ export function EssayQuestionEditor({
     if (typeof window !== "undefined") {
       try {
         localStorage.setItem(draftKey, text);
-      } catch {}
+        setLocalDraft(text);
+      } catch { setLocalDraft(null); }
     }
   };
 
   const [writingMode, setWritingMode] = React.useState<"type" | "image">("type");
+  const [localDraft, setLocalDraft] = React.useState<string | null>(browserDraft);
 
   return (
     <div className="space-y-3">
@@ -1929,7 +1957,7 @@ export function EssayQuestionEditor({
             <Camera className="size-3.5" aria-hidden /> {tx("writingModeOcr")}
           </button>
         </div>
-        {value.trim() && (
+        {value.trim() && localDraft === value && (
           <span className="flex items-center gap-1 text-sm font-medium text-brand-subtle-fg">
             <CheckCircle2 className="size-3" aria-hidden /> {tx("writingDraftKept")}
           </span>

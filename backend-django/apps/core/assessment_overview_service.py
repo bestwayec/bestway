@@ -116,7 +116,7 @@ def get_assessment_overview(user) -> dict:
         metrics = prediction_service.extract_attempt_dual_metrics(att)
         status = att.status
         if status == "completed":
-            status = "evaluated" if (metrics["ieltsBand"] > 0 or metrics["multilevelScore"] > 0) else "completed"
+            status = "evaluated" if (metrics["hasOverall"]) else "completed"
 
         exam_title = att.exam.title if getattr(att, "exam", None) else "Mock Exam"
         exam_type = att.exam.type if getattr(att, "exam", None) else "ielts_academic"
@@ -319,12 +319,12 @@ def get_assessment_overview(user) -> dict:
     all_ml = []
     practice_seconds = 0.0
 
-    all_mock_rows = list(MockAttempt.objects.filter(student_id=user_id))
+    all_mock_rows = MockAttempt.objects.filter(student_id=user_id).select_related("exam")
     for att in all_mock_rows:
         metrics = prediction_service.extract_attempt_dual_metrics(att)
-        if metrics["ieltsBand"] > 0:
+        if metrics["hasIeltsOverall"]:
             all_bands.append(metrics["ieltsBand"])
-        if metrics["multilevelScore"] > 0:
+        if metrics["hasMultilevelOverall"]:
             all_ml.append(metrics["multilevelScore"])
         if att.finished_at and att.started_at:
             diff = (att.finished_at - att.started_at).total_seconds()

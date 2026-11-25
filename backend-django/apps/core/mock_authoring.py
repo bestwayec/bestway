@@ -512,7 +512,7 @@ def _copy_group_questions(questions, target, stamp, numbers=None):
             options=question.options, correct_answers=question.correct_answers, accepted_variants=question.accepted_variants,
             points=question.points, word_limit=question.word_limit, answer_rule=question.answer_rule,
             cefr_level=question.cefr_level, skill_tags=question.skill_tags, evidence_text=question.evidence_text,
-            evidence_offset=question.evidence_offset, audio_start_sec=question.audio_start_sec, created_at=stamp,
+            evidence_offset=question.evidence_offset, audio_start_sec=question.audio_start_sec, review_explanation=getattr(question, "review_explanation", None), created_at=stamp,
         )
         for question in questions
     ])

@@ -359,7 +359,7 @@ def review_audio_view(request, attempt_id, group_id):
     Only the attempt's own viewers (assert_view), only once the result is released, only a
     part of that attempt's exam, and never while the student has an attempt of the same
     exam in progress (review must not replay the audio of a running exam)."""
-    from .mock_attempts import assert_view
+    from .mock_attempts import assert_view, review_blocked
     from .mock_catalog import is_staff
     actor = request.user
     attempt = MockAttempt.objects.select_related('exam').filter(id=attempt_id).first()
@@ -372,8 +372,19 @@ def review_audio_view(request, attempt_id, group_id):
     if not is_staff(actor):
         if attempt.status != 'completed':
             raise ContractAPIException('REVIEW_NOT_AVAILABLE', 'The review opens when the result is released', 403)
-        if MockAttempt.objects.filter(student_id=attempt.student_id, exam_id=attempt.exam_id, status='in_progress').exists():
+        if review_blocked(attempt):
             raise ContractAPIException('REVIEW_BLOCKED_DURING_ATTEMPT', 'Finish the attempt in progress before reviewing this recording', 403)
+    from .mock_practice import scope
+    practice = scope(attempt)
+    if practice is not None:
+        from apps.legacy_schema.models import MockQuestion
+        from .review_evidence import review_sources
+
+        siblings = list(MockQuestionGroup.objects.filter(section_id=group.section_id).order_by('sort_order', 'id'))
+        sources = review_sources(siblings, 'listening', canonical_listening=attempt.exam.type != 'multilevel')
+        eligible = [id for id, (_, recording) in sources.items() if recording and recording.id == group.id]
+        if not MockQuestion.objects.filter(group_id__in=eligible, id__in=practice['questionIds']).exists():
+            raise ContractAPIException('FILE_NOT_FOUND', 'Fayl topilmadi', 404)
     if not group.audio_key or not resolve_key(group.audio_key).is_file():
         raise ContractAPIException('FILE_NOT_FOUND', 'Fayl topilmadi', 404)
     return _stream_key(request, group.audio_key, 'audio')

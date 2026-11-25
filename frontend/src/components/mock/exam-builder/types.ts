@@ -17,6 +17,7 @@ export interface BuilderQuestion {
   answerRule?: ObjectiveAnswerRule | null;
   /** Review only (after the result is released): the words that hold the answer. */
   evidenceText?: string | null;
+  reviewExplanation?: string | null;
   /** Review only, Listening: seconds into the recording where the answer is heard. */
   audioStartSec?: number | null;
   savedQuestionId?: string;

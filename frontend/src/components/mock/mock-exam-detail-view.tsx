@@ -89,6 +89,7 @@ export function MockExamDetailView({ examId }: { examId: string }) {
       {
         examId,
         mode,
+        ...(searchParams?.get("assignment") ? { assignmentId: searchParams.get("assignment")! } : {}),
         ...(skills && skills.length > 0 ? { skills } : { flow: "full_test" }),
       },
       {

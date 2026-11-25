@@ -139,10 +139,10 @@ def _words(value):
 # Optional, additive schema-1.0 question metadata (exported by ``mock_export`` so a
 # round trip keeps the item bank level/tags and the review evidence). Older packages
 # without them stay valid; nothing here can block an otherwise valid legacy package.
-OPTIONAL_QUESTION_FIELDS = ('cefrLevel', 'skillTags', 'evidenceText', 'audioStartSec')
+OPTIONAL_QUESTION_FIELDS = ('cefrLevel', 'skillTags', 'evidenceText', 'audioStartSec', 'reviewExplanation')
 
 
-def optional_question_issues(question, group, skill):
+def optional_question_issues(question, group, skill, source=None):
     """Same rules the editor applies (item_metadata / review_evidence), as issues."""
     from types import SimpleNamespace
 
@@ -154,6 +154,7 @@ def optional_question_issues(question, group, skill):
         ('cefrLevel', 'CEFR_LEVEL', lambda v: item_metadata.clean_cefr(v)),
         ('skillTags', 'SKILL_TAGS', lambda v: item_metadata.clean_tags(v)),
         ('audioStartSec', 'AUDIO_START', lambda v: review_evidence.clean_audio_start(v, None)),
+        ('reviewExplanation', 'REVIEW_EXPLANATION', review_evidence.clean_explanation),
     ]
     for field, code, check in checks:
         if field in question:
@@ -161,13 +162,16 @@ def optional_question_issues(question, group, skill):
                 check(question[field])
             except ContractAPIException as error:
                 found.append((code, '/' + field, error.contract_message))
+    if question.get('reviewExplanation') and skill not in ('reading', 'listening'):
+        found.append(('REVIEW_EXPLANATION', '/reviewExplanation', 'reviewExplanation is for objective sections'))
     if question.get('audioStartSec') not in (None, '') and skill != 'listening':
         found.append(('AUDIO_START', '/audioStartSec', 'audioStartSec is only for Listening questions'))
     if 'evidenceText' in question and question['evidenceText'] is not None:
-        source = review_evidence.source_text(SimpleNamespace(
-            audio_script=group.get('audioScript') if isinstance(group.get('audioScript'), str) else None,
-            passage_text=group.get('passageText') if isinstance(group.get('passageText'), str) else None,
-            content_html=group.get('contentHtml') if isinstance(group.get('contentHtml'), str) else None), skill)
+        if source is None:
+            source = review_evidence.source_text(SimpleNamespace(
+                audio_script=group.get('audioScript') if isinstance(group.get('audioScript'), str) else None,
+                passage_text=group.get('passageText') if isinstance(group.get('passageText'), str) else None,
+                content_html=group.get('contentHtml') if isinstance(group.get('contentHtml'), str) else None), skill)
         try:
             review_evidence.clean_evidence(question['evidenceText'], source)
         except ContractAPIException as error:
@@ -289,6 +293,8 @@ def validate_package(pkg, media_bindings=None, raw_text=None):
                     continue
                 source_skill = skill if exam.get('type') != 'multilevel' or skill == 'reading' else None
                 sources = source_only_groups((group for group in groups if isinstance(group, dict)), source_skill)
+                from .review_evidence import package_sources
+                review_sources = package_sources(groups, skill, exam.get('type'))
                 for gi, group in enumerate(groups):
                     gb = base + f'/groups/{gi}'
                     if not isinstance(group, dict):
@@ -346,7 +352,7 @@ def validate_package(pkg, media_bindings=None, raw_text=None):
                             add('QUESTION', qb, 'question must be an object')
                             continue
                         unknown(question, ('key', 'number', 'type', 'prompt', 'options', 'correctAnswers', 'acceptedVariants', 'points', 'wordLimit', 'answerRule', 'sourceRef', *OPTIONAL_QUESTION_FIELDS), qb, 'question')
-                        for code, path, message in optional_question_issues(question, group, skill):
+                        for code, path, message in optional_question_issues(question, group, skill, review_sources[id(group)][0]):
                             add(code, qb + path, message)
                         key_check(question.get('key'), 'question', qb, question_keys)
                         number = question.get('number')

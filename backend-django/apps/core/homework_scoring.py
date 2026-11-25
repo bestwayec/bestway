@@ -9,6 +9,7 @@
 """
 from __future__ import annotations
 
+from django.db.models.fields.json import KeyTextTransform
 from django.utils import timezone
 
 from apps.legacy_schema.models import MockAttempt
@@ -18,6 +19,7 @@ from .models import HomeworkSubmission
 GRADED = "graded"
 AWAITING_RESULT = "awaiting_result"
 AWAITING_REVIEW = "awaiting_review"
+ASSIGNMENT_KEY = "__homework_assignment"
 
 
 def attempt_percent(attempt) -> int | None:
@@ -33,10 +35,14 @@ def attempt_percent(attempt) -> int | None:
 def latest_attempt(assignment, student_id):
     if not assignment.exam_id:
         return None
-    return (MockAttempt.objects
-            .filter(exam_id=assignment.exam_id, student_id=student_id,
-                    started_at__gte=assignment.created_at, status__in=("completed", "grading"))
-            .order_by("-started_at").first())
+    rows = MockAttempt.objects.filter(exam_id=assignment.exam_id, student_id=student_id,
+                                     started_at__gte=assignment.created_at, status__in=("completed", "grading"))
+    linked = rows.alias(assignment=KeyTextTransform(ASSIGNMENT_KEY, "media_state")).filter(
+        assignment=assignment.id,
+    ).order_by("-started_at").first()
+    if linked is not None:
+        return linked
+    return rows.exclude(media_state__has_key=ASSIGNMENT_KEY).order_by("-started_at").first()
 
 
 def sync_from_exam(assignment, student_id):

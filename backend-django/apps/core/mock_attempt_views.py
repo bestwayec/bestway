@@ -65,7 +65,7 @@ def validate_answer(data):
 @permission_classes([AllowAny])
 def start_view(request, exam_id=None):
     student(request)
-    data = body(request, {'mode', 'flow', 'skills', 'skill', 'section', 'section_filter', 'examId', 'exam_id', 'retake', 'allow_retake', 'allowRetake', 'force', 'groupIds', 'timer'})
+    data = body(request, {'mode', 'flow', 'skills', 'skill', 'section', 'section_filter', 'examId', 'exam_id', 'retake', 'allow_retake', 'allowRetake', 'force', 'groupIds', 'timer', 'assignmentId'})
     target_exam_id = exam_id or data.get('examId') or data.get('exam_id') or request.query_params.get('examId') or request.query_params.get('exam_id')
     if not target_exam_id:
         engine.fail('VALIDATION_ERROR', 'examId should not be empty')

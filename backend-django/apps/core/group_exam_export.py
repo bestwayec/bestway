@@ -26,6 +26,7 @@ from apps.legacy_schema.models import (
 from common.api.exceptions import ContractAPIException
 
 from .mock_scoring import MULTILEVEL_BELOW_B1, cefr_band, multilevel_level
+from .teacher_analytics import classroom_attempts, comparable_score, skill_score, valid_score
 
 
 def fail(code: str, message: str, status: int = 400):
@@ -105,8 +106,8 @@ def get_group_exam_export_data(actor: User, group_id: str, exam_id: str) -> Dict
 
     # 2. Latest attempt per student for this exam (in-memory grouping for SQLite/PostgreSQL compatibility)
     attempts_qs = (
-        MockAttempt.objects.filter(exam_id=exam.id, student_id__in=student_ids)
-        .order_by("-submitted_at", "-started_at", "-id")
+        classroom_attempts(group_id).filter(exam_id=exam.id, student_id__in=student_ids)
+        .select_related("exam").order_by("-started_at", "-id")
     )
     attempts_by_student: Dict[str, MockAttempt] = {}
     for att in attempts_qs:
@@ -138,69 +139,34 @@ def get_group_exam_export_data(actor: User, group_id: str, exam_id: str) -> Dict
         att = attempts_by_student.get(st.user_id)
         u = getattr(st, "user", None)
         st_name = getattr(u, "name", "Noma'lum") or "Noma'lum"
-        st_phone = getattr(u, "phone", "-") or "-"
 
         if att:
-            submitted_count += 1
-            sec_bands = dict(att.section_bands or {})
-            std_scores = dict(att.standard_scores or {})
+            submitted_count += int(bool(att.submitted_at) or att.status in ("grading", "completed"))
             media_st = dict(att.media_state or {})
 
             w_job = jobs_by_attempt_skill.get((att.id, "writing"))
             s_job = jobs_by_attempt_skill.get((att.id, "speaking"))
 
-            # Writing score
-            w_score = None
-            if "writing" in sec_bands and sec_bands["writing"] is not None:
-                w_score = float(sec_bands["writing"])
-            elif "writing" in std_scores and std_scores["writing"] is not None:
-                w_score = float(std_scores["writing"])
-            elif w_job and w_job.final_score is not None:
-                w_score = float(w_job.final_score)
-            elif w_job and w_job.ai_score is not None:
-                w_score = float(w_job.ai_score)
-
-            # Speaking score
-            s_score = None
-            if "speaking" in sec_bands and sec_bands["speaking"] is not None:
-                s_score = float(sec_bands["speaking"])
-            elif "speaking" in std_scores and std_scores["speaking"] is not None:
-                s_score = float(std_scores["speaking"])
-            elif s_job and s_job.final_score is not None:
-                s_score = float(s_job.final_score)
-            elif s_job and s_job.ai_score is not None:
-                s_score = float(s_job.ai_score)
-
+            w_score = skill_score(att, "writing") if att.status == "completed" else None
+            s_score = skill_score(att, "speaking") if att.status == "completed" else None
             if w_score is not None:
                 writing_scores_list.append(w_score)
             if s_score is not None:
                 speaking_scores_list.append(s_score)
 
-            # AI score calculation (average of AI jobs if available)
-            ai_parts = []
-            if w_job and w_job.ai_score is not None:
-                ai_parts.append(float(w_job.ai_score))
-            if s_job and s_job.ai_score is not None:
-                ai_parts.append(float(s_job.ai_score))
+            maximum = 75 if exam.type == "multilevel" else 9
+            ai_parts = [job.ai_score for job in (w_job, s_job) if job and valid_score(job.ai_score, maximum)]
             ai_score = round(sum(ai_parts) / len(ai_parts), 1) if ai_parts else None
+            teacher_score = next((score for score in (
+                media_st.get("teacher_score"), w_job.teacher_score if w_job else None,
+                s_job.teacher_score if s_job else None,
+            ) if valid_score(score, maximum)), None)
 
-            # Teacher score
-            teacher_score = None
-            if media_st.get("teacher_score") is not None:
-                teacher_score = float(media_st["teacher_score"])
-            elif w_job and w_job.teacher_score is not None:
-                teacher_score = float(w_job.teacher_score)
-            elif s_job and s_job.teacher_score is not None:
-                teacher_score = float(s_job.teacher_score)
-
-            # Final score
-            final_score = att.overall_band if att.overall_band is not None else att.overall_score
+            final_score = comparable_score(att)
             if final_score is not None:
-                final_score = float(final_score)
                 final_scores_list.append(final_score)
 
-            # CEFR Level
-            cefr = compute_cefr_level(final_score, exam.type, att.cefr_level)
+            cefr = compute_cefr_level(final_score, exam.type, att.cefr_level) if final_score is not None else "-"
             if cefr in cefr_counts:
                 cefr_counts[cefr] += 1
 
@@ -234,7 +200,7 @@ def get_group_exam_export_data(actor: User, group_id: str, exam_id: str) -> Dict
                 "number": idx,
                 "student_id": st.user_id,
                 "name": st_name,
-                "phone": st_phone,
+                "phone": "-",
                 "attempt_id": att.id,
                 "submitted_at": date_str,
                 "writing_score": w_score,
@@ -253,7 +219,7 @@ def get_group_exam_export_data(actor: User, group_id: str, exam_id: str) -> Dict
                 "number": idx,
                 "student_id": st.user_id,
                 "name": st_name,
-                "phone": st_phone,
+                "phone": "-",
                 "attempt_id": None,
                 "submitted_at": "Topshirilmagan",
                 "writing_score": None,
@@ -269,13 +235,13 @@ def get_group_exam_export_data(actor: User, group_id: str, exam_id: str) -> Dict
             })
 
     # Summary metrics
-    avg_final = round(sum(final_scores_list) / len(final_scores_list), 1) if final_scores_list else 0.0
-    avg_writing = round(sum(writing_scores_list) / len(writing_scores_list), 1) if writing_scores_list else 0.0
-    avg_speaking = round(sum(speaking_scores_list) / len(speaking_scores_list), 1) if speaking_scores_list else 0.0
+    avg_final = round(sum(final_scores_list) / len(final_scores_list), 1) if final_scores_list else None
+    avg_writing = round(sum(writing_scores_list) / len(writing_scores_list), 1) if writing_scores_list else None
+    avg_speaking = round(sum(speaking_scores_list) / len(speaking_scores_list), 1) if speaking_scores_list else None
 
     teacher_name = "Noma'lum"
     if group.teacher:
-        teacher_name = group.teacher.name or group.teacher.phone
+        teacher_name = group.teacher.name or teacher_name
 
     return {
         "group": {
@@ -298,6 +264,10 @@ def get_group_exam_export_data(actor: User, group_id: str, exam_id: str) -> Dict
         "students": students_data,
         "exportedAt": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
+
+
+def display_score(score):
+    return f"{score:.1f}" if score is not None else "—"
 
 
 def generate_group_exam_excel(data: Dict[str, Any]) -> bytes:
@@ -372,7 +342,7 @@ def generate_group_exam_excel(data: Dict[str, Any]) -> bytes:
 
     ws["D5"] = "O'rtacha Yakuniy Ball:"
     ws["D5"].font = font_meta_bold
-    ws["E5"] = str(data["averageFinalScore"])
+    ws["E5"] = display_score(data["averageFinalScore"])
     ws["E5"].font = font_meta
 
     ws["H5"] = "Eksport Sanasi:"
@@ -448,11 +418,11 @@ def generate_group_exam_excel(data: Dict[str, Any]) -> bytes:
         ws.cell(row=current_row, column=c).fill = fill_subtotal
         ws.cell(row=current_row, column=c).border = cell_border
 
-    ws.cell(row=current_row, column=5, value=f"{data['averageWritingScore']:.1f}").alignment = align_center
-    ws.cell(row=current_row, column=6, value=f"{data['averageSpeakingScore']:.1f}").alignment = align_center
+    ws.cell(row=current_row, column=5, value=display_score(data["averageWritingScore"])).alignment = align_center
+    ws.cell(row=current_row, column=6, value=display_score(data["averageSpeakingScore"])).alignment = align_center
     ws.cell(row=current_row, column=7, value="-").alignment = align_center
     ws.cell(row=current_row, column=8, value="-").alignment = align_center
-    ws.cell(row=current_row, column=9, value=f"{data['averageFinalScore']:.1f}").alignment = align_center
+    ws.cell(row=current_row, column=9, value=display_score(data["averageFinalScore"])).alignment = align_center
     ws.cell(row=current_row, column=10, value="-").alignment = align_center
     ws.cell(row=current_row, column=11, value=f"{data['submissionRate']}% topshirdi").alignment = align_center
 
@@ -531,7 +501,7 @@ def generate_group_exam_pdf(data: Dict[str, Any]) -> bytes:
     draw_text(f"Imtihon: {exm['title'][:32]}", 230, 126, 9.5, "Helvetica-Bold", slate_dark)
     draw_text(f"O'quvchilar: {data['totalStudents']} nafar (Topshirdi: {data['submittedCount']})", 230, 142, 8.5, "Helvetica", slate_muted)
 
-    draw_text(f"O'rtacha Ball: {data['averageFinalScore']}", 430, 126, 10, "Helvetica-Bold", accent)
+    draw_text(f"O'rtacha Ball: {display_score(data['averageFinalScore'])}", 430, 126, 10, "Helvetica-Bold", accent)
     draw_text(f"Sana: {data['exportedAt'][:10]}", 430, 142, 8.5, "Helvetica", slate_muted)
 
     # 3. Table Headers
@@ -605,9 +575,9 @@ def generate_group_exam_pdf(data: Dict[str, Any]) -> bytes:
 
     y += 14
     stats_summary = (
-        f"O'rtacha Writing: {data['averageWritingScore']}  |  "
-        f"O'rtacha Speaking: {data['averageSpeakingScore']}  |  "
-        f"Guruh O'rtacha Yakuniy Balli: {data['averageFinalScore']}  |  "
+        f"O'rtacha Writing: {display_score(data['averageWritingScore'])}  |  "
+        f"O'rtacha Speaking: {display_score(data['averageSpeakingScore'])}  |  "
+        f"Guruh O'rtacha Yakuniy Balli: {display_score(data['averageFinalScore'])}  |  "
         f"Topshirish ko'rsatkichi: {data['submissionRate']}%"
     )
     draw_text(stats_summary, 50, y, 8, "Helvetica-Bold", accent)

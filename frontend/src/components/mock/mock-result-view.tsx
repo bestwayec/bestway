@@ -386,6 +386,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
                 skill={s.skill}
                 groups={s.groups}
                 flaggedIds={flaggedIds}
+                canonicalListening={isIelts}
               />
             );
           }

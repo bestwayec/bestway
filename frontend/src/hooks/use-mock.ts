@@ -128,6 +128,7 @@ export function useStartMock() {
   return useMutation({
     mutationFn: (v: {
       examId: string;
+      assignmentId?: string;
       mode?: "practice" | "timed";
       flow?: "full_test" | "single_skill" | "partial_practice";
       skills?: import("@/lib/types").MockPracticeSkill[];
@@ -139,6 +140,7 @@ export function useStartMock() {
     }) =>
       api.post<StartMockResult>(`/mock/exams/${v.examId}/start`, {
         mode: v.mode ?? "practice",
+        ...(v.assignmentId ? { assignmentId: v.assignmentId } : {}),
         ...(v.flow ? { flow: v.flow } : {}),
         ...(v.skills ? { skills: v.skills } : {}),
         ...(v.retake ? { retake: true } : {}),
@@ -1061,10 +1063,10 @@ export function useTargetedPractice(categoryId?: string, enabled = true) {
 
 /* ── Teacher Hub Group Analytics & Attendance Hooks ──────────────────── */
 
-export function useGroupAnalytics(groupId?: string, enabled = true) {
+export function useGroupAnalytics(groupId?: string, enabled = true, filters: Record<string, string> = {}) {
   return useQuery({
-    queryKey: ["group-analytics", groupId],
-    queryFn: () => api.get<import("@/lib/types").GroupAnalyticsResponse>(`/groups/${groupId}/analytics`),
+    queryKey: ["group-exam-analytics", groupId, filters],
+    queryFn: () => api.get<import("@/lib/types").GroupAnalyticsResponse>(`/groups/${groupId}/analytics`, filters),
     enabled: !!groupId && enabled,
     retry: false,
   });

@@ -194,7 +194,7 @@ describe('StudentAssignmentsWidget interactive behavior', () => {
       startBtn!.click();
     });
 
-    expect(mockPush).toHaveBeenCalledWith('/mock/exam-mock-4');
+    expect(mockPush).toHaveBeenCalledWith('/mock/exam-mock-4?assignment=asg-exam-2');
   });
 });
 

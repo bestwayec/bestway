@@ -79,67 +79,48 @@ class Phase5StudentProgressAndTeacherAnalyticsTests(SimpleTestCase):
         p1 = SimpleNamespace(user_id="s1", user=user1, current_points=120)
         p2 = SimpleNamespace(user_id="s2", user=user2, current_points=240)
 
-        attempt1 = SimpleNamespace(
-            student_id="s1",
-            exam=SimpleNamespace(type="ielts_academic"),
-            overall_band=6.5,
-            overall_score=None,
-            current_skill="reading",
-            submitted_sections=["reading"],
-            finished_at=timezone.now(),
-        )
-        attempt2 = SimpleNamespace(
-            student_id="s2",
-            exam=SimpleNamespace(type="ielts_academic"),
-            overall_band=7.5,
-            overall_score=None,
-            current_skill="writing",
-            submitted_sections=["writing"],
-            finished_at=timezone.now(),
-        )
+        now = timezone.now()
+        exam = SimpleNamespace(type="ielts_academic", title="IELTS")
+        attempts = [
+            SimpleNamespace(id=profile.user_id, student_id=profile.user_id, student=profile,
+                            exam=exam, exam_id="ielts", overall_band=band, flow_mode="full_test",
+                            media_state={}, status="completed", started_at=now, submitted_at=now,
+                            finished_at=now, specification_version=None, score_version=None,
+                            section_bands={}, submitted_sections=[skill])
+            for profile, band, skill in ((p1, 6.5, "reading"), (p2, 7.5, "writing"))
+        ]
 
-        with patch("apps.core.teacher_analytics.get_group", return_value=fake_group), \
+        with patch.object(teacher_analytics, "get_group", return_value=fake_group), \
+             patch.object(teacher_analytics, "classroom_attempts") as mock_attempts, \
+             patch.object(teacher_analytics, "objective_metrics", return_value=([], [])), \
+             patch("apps.core.teacher_analytics.HomeworkAssignment.objects.filter"), \
              patch("apps.core.teacher_analytics.StudentProfile.objects.filter") as mock_profiles, \
-             patch("apps.core.teacher_analytics.MockAttempt.objects.filter") as mock_attempts, \
-             patch("apps.core.teacher_analytics.Attendance.objects.filter") as mock_attendance:
-
-            mock_profiles.return_value.select_related.return_value.order_by.return_value = [p1, p2]
-            mock_attempts.return_value.select_related.return_value.order_by.return_value = [attempt1, attempt2]
-            mock_attendance.return_value = []
-
+             patch("apps.core.teacher_analytics.Attendance.objects.filter"):
+            mock_profiles.side_effect = [
+                SimpleNamespace(values_list=lambda *_: [(p1.user_id, user1.name), (p2.user_id, user2.name)]),
+                SimpleNamespace(values_list=lambda *_: []),
+            ]
+            mock_attempts.return_value.filter.return_value.select_related.return_value.order_by.return_value = attempts
             analytics = teacher_analytics.get_group_analytics(teacher_actor, "grp-1")
 
-            self.assertEqual(analytics["groupId"], "grp-1")
-            self.assertEqual(analytics["groupName"], "IELTS Band 7+ Cohort")
-            self.assertEqual(analytics["totalStudents"], 2)
-            self.assertEqual(analytics["totalMockAttempts"], 2)
-            self.assertEqual(analytics["groupAverageScore"], 7.0)  # (6.5 + 7.5) / 2
-            self.assertEqual(len(analytics["students"]), 2)
-
-            self.assertEqual(analytics["weakTopicsHeatmap"], [])
-            self.assertIsNone(analytics["groupAverageAttendance"])
+        self.assertEqual(analytics["groupId"], "grp-1")
+        self.assertEqual(analytics["groupName"], "IELTS Band 7+ Cohort")
+        self.assertEqual(analytics["totalStudents"], 2)
+        self.assertEqual(analytics["totalMockAttempts"], 2)
+        self.assertEqual(analytics["groupAverageScore"], 7.0)
+        self.assertEqual(len(analytics["students"]), 2)
+        self.assertEqual(analytics["weakTopicsHeatmap"], [])
+        self.assertIsNone(analytics["groupAverageAttendance"])
 
     def test_mixed_scales_and_zero_are_kept_separate(self):
-        actor = SimpleNamespace(id="teacher-1", role="teacher", name="Teacher")
-        group = SimpleNamespace(id="g", name="Group", teacher_id=actor.id, teacher=actor)
-        user = SimpleNamespace(name="Student", phone="", is_active=True)
-        profile = SimpleNamespace(user_id="s", user=user, current_points=0)
-        attempts = [
-            SimpleNamespace(student_id="s", exam=SimpleNamespace(type="ielts_academic"), overall_band=0,
-                            overall_score=None, submitted_sections=[], finished_at=None),
-            SimpleNamespace(student_id="s", exam=SimpleNamespace(type="multilevel"), overall_band=None,
-                            overall_score=65, submitted_sections=[], finished_at=None),
-        ]
-        with patch("apps.core.teacher_analytics.get_group", return_value=group), \
-             patch("apps.core.teacher_analytics.StudentProfile.objects.filter") as profiles, \
-             patch("apps.core.teacher_analytics.MockAttempt.objects.filter") as mock_attempts, \
-             patch("apps.core.teacher_analytics.Attendance.objects.filter", return_value=[]):
-            profiles.return_value.select_related.return_value.order_by.return_value = [profile]
-            mock_attempts.return_value.select_related.return_value.order_by.return_value = attempts
-            result = teacher_analytics.get_group_analytics(actor, "g")
-        self.assertEqual(result["groupAveragesByScale"], {"ielts_academic": 0.0, "multilevel": 65.0})
-        self.assertIsNone(result["groupAverageScore"])
-        self.assertIsNone(result["students"][0]["lastActiveAt"])
+        ielts = SimpleNamespace(exam=SimpleNamespace(type="ielts_academic"), overall_band=0,
+                                overall_score=65, status="completed", flow_mode="full_test", media_state={})
+        multilevel = SimpleNamespace(exam=SimpleNamespace(type="multilevel"), overall_band=0,
+                                     overall_score=65, status="completed", flow_mode="full_test", media_state={})
+        self.assertEqual(teacher_analytics.comparable_score(ielts), 0)
+        self.assertEqual(teacher_analytics.comparable_score(multilevel), 65)
+        multilevel.status = "grading"
+        self.assertIsNone(teacher_analytics.comparable_score(multilevel))
 
     def test_group_exam_excel_export_creates_valid_workbook(self):
         """Excel report generator produces valid openpyxl workbook with appropriate styling and headers."""

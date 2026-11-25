@@ -711,6 +711,7 @@ export interface MockQuestion {
   acceptedVariants?: string[] | null;
   /** Staff authoring only: review material (where the answer is). */
   evidenceText?: string | null;
+  reviewExplanation?: string | null;
   evidenceOffset?: number | null;
   audioStartSec?: number | null;
 }
@@ -905,12 +906,16 @@ export interface MockAttemptQuestion {
   correctAnswers?: string[] | null;
   /** Released review only: the words of the passage / audioscript that hold the answer. */
   evidence?: { text: string; offset: number };
+  reviewExplanation?: string;
   /** Released review only, Listening: where the answer is heard. */
   audioStartSec?: number;
 }
 
 export interface MockAttemptGroup {
   id: string;
+  stimulusRef?: string | null;
+  partNumber?: number | null;
+  reviewText?: string;
   title: string | null;
   instructions: string | null;
   passageText: string | null;
@@ -1200,18 +1205,18 @@ export interface ScorePredictionHistoryItem {
   examTitle: string;
   examType: string;
   date: string;
-  ieltsBand: number;
-  multilevelScore: number;
-  cefrLevel: string;
+  ieltsBand: number | null;
+  multilevelScore: number | null;
+  cefrLevel: string | null;
   skills: Record<string, number>;
 }
 
 export interface ScorePredictionResponse {
   ielts: {
-    currentBand: number;
+    currentBand: number | null;
     /** Band change from the first analysed attempt to the projection (backend `trendDelta`). */
     trendDelta?: number;
-    predictedBand: number;
+    predictedBand: number | null;
     targetBand: number;
     targetProgressPercent: number;
     cefrLevel: string;
@@ -1223,9 +1228,10 @@ export interface ScorePredictionResponse {
     };
   };
   multilevel: {
-    currentScore: number;
-    predictedScore: number;
+    currentScore: number | null;
+    predictedScore: number | null;
     targetScore: number;
+    targetCefr?: string;
     targetProgressPercent: number;
     cefrLevel: "A2" | "B1" | "B2" | "C1" | string;
     scaleBands: Array<{ level: string; min: number; max: number }>;
@@ -1386,20 +1392,13 @@ export interface TargetedPracticeResponse {
 export interface GroupAnalyticsStudent {
   studentId: string;
   name: string;
-  phone: string;
-  isActive: boolean;
   attendanceRate: number | null;
   mockAttemptsCount: number;
   essaysCount: number;
   averageScore: number | null;
-  scoreLabel: string;
+  scoresByScale: Record<string, number>;
   lastActiveAt: string | null;
-}
-
-export interface GroupWeakTopic {
-  topic: string;
-  groupErrorRate: number;
-  recommendation: string;
+  status: AttemptStatus | null;
 }
 
 export interface GroupAnalyticsResponse {
@@ -1407,14 +1406,43 @@ export interface GroupAnalyticsResponse {
   groupName: string;
   teacherName: string;
   totalStudents: number;
+  totalEligible: number;
+  assignedStudents: number | null;
+  startedStudents: number;
+  submittedStudents: number;
+  pendingStudents: number;
+  gradedStudents: number;
+  notSubmittedStudents: number;
+  completionRate: number | null;
   groupAverageScore: number | null;
   groupAveragesByScale: Record<string, number>;
+  scaleSummary: Record<string, { median: number; best: number; students: number }>;
   groupAverageAttendance: number | null;
   totalMockAttempts: number;
   totalEssays: number;
   students: GroupAnalyticsStudent[];
-  weakTopicsHeatmap: GroupWeakTopic[];
-  generatedAt: string;
+  weakTopicsHeatmap: Array<{
+    track: string; skill: string; questionType: string; accuracy: number | null;
+    correct: number; incorrect: number; unanswered: number; affectedStudentsCount: number;
+  }>;
+  questionDifficulty: Array<{
+    questionId: string; number: number; skill: string; questionType: string;
+    correct: number; incorrect: number; unanswered: number;
+  }>;
+  ranking: Array<{
+    rank: number; score: number; track: string; examId: string; specificationVersion: string | null;
+    scoreVersion: string | null; studentId: string; name: string; attemptId: string | null;
+    submittedAt: string | null; attempts: number; improvement: number | null; skills: Record<string, number | null>;
+  }>;
+  skills: Record<string, Record<string, { average: number | null; students: number; attempts: number }>>;
+  rankingPolicy: "latest" | "best";
+  assessments: Array<{ id: string; title: string }>;
+  assignments: Array<{ id: string; title: string; exam_id: string }>;
+  history: Array<{ track: string; month: string; average: number; attempts: number }>;
+  weeklyHistory: Array<{ track: string; week: string; average: number; attempts: number }>;
+  examHistory: Array<{ track: string; examId: string; title: string; specificationVersion: string | null;
+    scoreVersion: string | null; average: number; attempts: number }>;
+  scoreDistribution: Record<string, Array<{ score: number; count: number }>>;
 }
 
 export interface GroupAttendanceSummaryResponse {

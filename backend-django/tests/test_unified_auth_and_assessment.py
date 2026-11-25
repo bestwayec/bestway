@@ -280,6 +280,7 @@ class UniversalAssessmentOverviewTests(TestCase):
 
             # Setup MockAttempt mocks
             mock_att_filter.return_value.select_related.return_value.order_by.return_value = [fake_mock_attempt]
+            mock_att_filter.return_value.select_related.return_value.__iter__.return_value = [fake_mock_attempt]
             mock_att_filter.return_value.__iter__.return_value = [fake_mock_attempt]
             mock_att_filter.return_value.count.return_value = 1
 

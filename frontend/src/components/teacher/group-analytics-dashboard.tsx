@@ -1,407 +1,223 @@
 "use client";
 
-import * as React from "react";
-import {
-  AlertTriangle,
-  ArrowUpDown,
-  BookOpen,
-  CheckCircle,
-  Clock,
-  Download,
-  FileSpreadsheet,
-  FileText,
-  GraduationCap,
-  PenTool,
-  Search,
-  Sparkles,
-  Users,
-} from "lucide-react";
-import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import { useFormatter, useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/feedback";
 import { useGroupAnalytics } from "@/hooks/use-mock";
-import { cn } from "@/lib/utils";
-import type { GroupAnalyticsStudent, GroupWeakTopic } from "@/lib/types";
+import { api } from "@/lib/api-client";
 
-interface GroupAnalyticsDashboardProps {
+const TRACKS = { ielts_academic: "IELTS Academic", ielts_general: "IELTS General", multilevel: "Multilevel" };
+const SKILLS = ["listening", "reading", "writing", "speaking"] as const;
+const PAGE_SIZE = 20;
+const selectClass = "min-h-10 max-w-full rounded-field border border-border bg-surface px-2 text-sm text-fg";
+const tableClass = "w-full border-collapse text-left text-sm [&_td]:border-t [&_td]:border-border [&_td]:px-2 [&_td]:py-2 [&_th]:px-2 [&_th]:py-2";
+const trackLabel = (track: string) => TRACKS[track as keyof typeof TRACKS] ?? track;
+
+export function GroupAnalyticsDashboard({ groupId, groupName, className }: {
   groupId: string;
   groupName?: string;
   className?: string;
-}
+}) {
+  const t = useTranslations("exam4Analytics");
+  const format = useFormatter();
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("name");
+  const [page, setPage] = useState(0);
+  const [exportError, setExportError] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const base = useGroupAnalytics(groupId);
+  const result = useGroupAnalytics(groupId, Boolean(Object.values(filters).some(Boolean)), filters);
+  const query = Object.values(filters).some(Boolean) ? result : base;
+  const data = query.data;
 
-type SortField = "averageScore" | "mockAttemptsCount" | "essaysCount" | "attendanceRate" | "name";
-type SortOrder = "asc" | "desc";
-
-export function GroupAnalyticsDashboard({
-  groupId,
-  groupName,
-  className,
-}: GroupAnalyticsDashboardProps) {
-  const { data: analytics, isLoading, refetch } = useGroupAnalytics(groupId);
-
-  const [search, setSearch] = React.useState<string>("");
-  const [sortField, setSortField] = React.useState<SortField>("averageScore");
-  const [sortOrder, setSortOrder] = React.useState<SortOrder>("desc");
-  const [downloadingPdf, setDownloadingPdf] = React.useState<boolean>(false);
-  const [downloadingCsv, setDownloadingCsv] = React.useState<boolean>(false);
-
-  const students = analytics?.students ?? [];
-
-  // Filter & Sort students
-  const filteredStudents = React.useMemo(() => {
-    let result = [...students];
-
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (s) => s.name.toLowerCase().includes(q) || s.phone?.includes(q)
-      );
-    }
-
-    result.sort((a, b) => {
-      const valA: any = a[sortField];
-      const valB: any = b[sortField];
-
-      if (valA == null || valB == null) return valA == null ? (valB == null ? 0 : 1) : -1;
-      if (typeof valA === "string") {
-        return sortOrder === "asc"
-          ? valA.localeCompare(valB)
-          : valB.localeCompare(valA);
-      }
-
-      return sortOrder === "asc" ? valA - valB : valB - valA;
-    });
-
-    return result;
-  }, [students, search, sortField, sortOrder]);
-
-  const handleToggleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
-      setSortField(field);
-      setSortOrder("desc");
-    }
-  };
-
-  const handleDownloadPdf = async () => {
-    setDownloadingPdf(true);
-    try {
-      window.open(`/api/backend/v1/groups/${groupId}/report/pdf`, "_blank");
-      toast.success("A4 Rasmiy Oylik Hisobot (PDF) generatsiya qilinmoqda...");
-    } catch {
-      toast.error("PDF yuklab olishda xatolik yuz berdi");
-    } finally {
-      setTimeout(() => setDownloadingPdf(false), 1500);
-    }
-  };
-
-  const handleDownloadCsv = async () => {
-    setDownloadingCsv(true);
-    try {
-      window.open(`/api/backend/v1/groups/${groupId}/report/excel`, "_blank");
-      toast.success("Guruh tahliliy hisoboti (Excel/CSV) yuklab olinmoqda...");
-    } catch {
-      toast.error("Excel yuklab olishda xatolik yuz berdi");
-    } finally {
-      setTimeout(() => setDownloadingCsv(false), 1500);
-    }
-  };
-
-  if (isLoading && !analytics) {
-    return (
-      <Card className={cn("border-border bg-bg-subtle/90 text-fg shadow-xl", className)}>
-        <CardHeader className="pb-3 border-b border-border/80">
-          <Skeleton className="h-6 w-52 bg-surface-hover" />
-          <Skeleton className="h-4 w-72 bg-surface-hover" />
-        </CardHeader>
-        <CardContent className="p-4 space-y-3">
-          <Skeleton className="h-28 w-full bg-surface-hover rounded-xl" />
-          <Skeleton className="h-48 w-full bg-surface-hover rounded-xl" />
-        </CardContent>
-      </Card>
-    );
+  function update(key: string, value: string) {
+    setPage(0);
+    setFilters((previous) => ({ ...previous, ...(key === "examId" ? { assignmentId: "" } : key === "assignmentId" ? { examId: "" } : {}), [key]: value }));
   }
 
-  const weakTopics = analytics?.weakTopicsHeatmap ?? [];
+  async function download(kind: "pdf" | "excel") {
+    setExportError(false);
+    setDownloading(true);
+    try {
+      const { blob, filename } = await api.downloadBlob(`/groups/${groupId}/report/${kind}`, filters);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename ?? (kind === "pdf" ? "classroom-report.pdf" : "classroom-report.xlsx");
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      setExportError(true);
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  const score = (value: number | null | undefined) => value == null ? "—" : format.number(value, { maximumFractionDigits: 2 });
+  const matches = (name: string) => name.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase());
+  const students = data?.students.filter((student) => matches(student.name)).sort((a, b) => {
+    if (sort === "attempts") return b.mockAttemptsCount - a.mockAttemptsCount || a.name.localeCompare(b.name);
+    if (sort === "activity") return (b.lastActiveAt ?? "").localeCompare(a.lastActiveAt ?? "") || a.name.localeCompare(b.name);
+    return a.name.localeCompare(b.name);
+  }) ?? [];
+  const rank = data?.ranking.filter((student) => matches(student.name)) ?? [];
+  const pages = Math.ceil(Math.max(students.length, rank.length) / PAGE_SIZE);
+  const currentPage = Math.min(page, Math.max(0, pages - 1));
+  const start = currentPage * PAGE_SIZE;
+  const statuses: Record<string, string> = { in_progress: t("started"), grading: t("pending"), completed: t("graded") };
 
   return (
-    <Card className={cn("border-border bg-bg-subtle/95 text-fg shadow-xl overflow-hidden", className)}>
-      <CardHeader className="pb-3 border-b border-border/80">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="space-y-1">
-            <CardTitle className="text-base font-bold flex items-center gap-2 text-fg">
-              <GraduationCap className="size-4 text-success" />
-              Guruh Monitoringi va Chuqur Tahlili: {analytics?.groupName ?? groupName}
-            </CardTitle>
-            <CardDescription className="text-xs text-fg-muted">
-              Talabalarning o&apos;rtacha ballari, ishlangan testlar va esselar soni, davomat hamda zaif mavzular tahlili
-            </CardDescription>
-          </div>
-
-          {/* 1-Click B2B Export Buttons */}
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              disabled={downloadingPdf}
-              onClick={handleDownloadPdf}
-              className="h-8 border border-danger-border bg-danger-bg text-danger hover:bg-danger-bg/80 text-xs font-semibold px-3 shadow-sm transition-all flex items-center gap-1.5"
-            >
-              <FileText className="size-3.5" />
-              <span>{downloadingPdf ? "Tayyorlanmoqda..." : "📄 Oylik Hisobot (PDF)"}</span>
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={downloadingCsv}
-              onClick={handleDownloadCsv}
-              className="h-8 border-brand/40 bg-brand-subtle text-brand-subtle-fg hover:bg-brand hover:text-brand-fg text-xs font-semibold px-3 shadow-sm transition-all flex items-center gap-1.5"
-            >
-              <FileSpreadsheet className="size-3.5" />
-              <span>{downloadingCsv ? "Yuklanmoqda..." : "📊 Excel Yuklab Olish"}</span>
-            </Button>
-          </div>
+    <Card className={className} data-testid="group-exam-analytics">
+      <CardHeader>
+        <CardTitle>{t("title")} · {data?.groupName ?? groupName}</CardTitle>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" disabled={!data || downloading} onClick={() => void download("pdf")}>PDF</Button>
+          <Button variant="outline" size="sm" disabled={!data || downloading} onClick={() => void download("excel")}>Excel</Button>
         </div>
-
-        {/* Guruh Asosiy Metrikalari Paneli */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-3">
-          <div className="rounded-xl border border-border bg-surface p-3">
-            <div className="text-[11px] text-fg-muted flex items-center gap-1">
-              <Users className="size-3 text-success" />
-              O&apos;quvchilar soni
-            </div>
-            <div className="text-xl font-bold text-fg mt-1 tabular-nums">
-              {analytics?.totalStudents ?? 0} nafar
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-border bg-surface p-3">
-            <div className="text-[11px] text-fg-muted flex items-center gap-1">
-              <Sparkles className="size-3 text-success" />
-              O&apos;rtacha natija
-            </div>
-            <div className="text-xl font-bold text-success mt-1 tabular-nums">
-              {Object.entries(analytics?.groupAveragesByScale ?? {}).map(([scale, value]) => (
-                <div key={scale} className="text-sm">{scale.replaceAll("_", " ")} · {value.toFixed(1)}</div>
-              ))}
-              {!Object.keys(analytics?.groupAveragesByScale ?? {}).length && "—"}
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-border bg-surface p-3">
-            <div className="text-[11px] text-fg-muted flex items-center gap-1">
-              <CheckCircle className="size-3 text-info" />
-              O&apos;rtacha Davomat
-            </div>
-            <div className="text-xl font-bold text-info mt-1 tabular-nums">
-              {analytics?.groupAverageAttendance != null ? `${analytics.groupAverageAttendance}%` : "—"}
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-border bg-surface p-3">
-            <div className="text-[11px] text-fg-muted flex items-center gap-1">
-              <PenTool className="size-3 text-warning" />
-              Yozilgan Esselar
-            </div>
-            <div className="text-xl font-bold text-warning mt-1 tabular-nums">
-              {analytics?.totalEssays ?? 0} ta
-            </div>
-          </div>
-        </div>
+        {exportError && <p role="alert" className="text-sm text-danger">{t("exportError")}</p>}
       </CardHeader>
-
-      <CardContent className="p-4 space-y-5">
-        {/* 1. Guruh Ichidagi Zaif Mavzular Tahlili (Heatmap Diagramma) */}
-        {weakTopics.length > 0 && (
-          <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-fg flex items-center gap-1.5 uppercase tracking-wider">
-                <AlertTriangle className="size-3.5 text-warning" />
-                Guruhning Umumiy Zaif Mavzulari (Heatmap)
-              </h4>
-              <span className="text-[10px] text-fg-muted">
-                Butun guruh qaysi savol turlarida eng ko&apos;p xatoga yo&apos;l qo&apos;ymoqda
-              </span>
-            </div>
-
-            <div className="grid gap-2.5 sm:grid-cols-3">
-              {weakTopics.map((topic, idx) => (
-                <div
-                  key={idx}
-                  className="rounded-lg border border-border/80 bg-bg-subtle p-3 space-y-2"
-                >
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-fg truncate">{topic.topic}</span>
-                    <Badge
-                      variant={topic.groupErrorRate >= 35 ? "danger" : "warning"}
-                      className="text-[10px] py-0 px-1.5"
-                    >
-                      {topic.groupErrorRate}% xatolik
-                    </Badge>
-                  </div>
-
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-hover">
-                    <div
-                      className={cn(
-                        "h-full rounded-full transition-all",
-                        topic.groupErrorRate >= 35 ? "bg-rose-500" : "bg-amber-400"
-                      )}
-                      style={{ width: `${Math.min(100, topic.groupErrorRate)}%` }}
-                    />
-                  </div>
-
-                  <p className="text-[10px] text-fg-muted leading-relaxed">
-                    💡 <span className="text-fg-muted">Tavsiya:</span> {topic.recommendation}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* 2. O'quvchilar Reyting Jadvali (Qidirish va Saralash bilan) */}
-        <div className="space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-slate-500" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Talabani ism yoki telefon bo'yicha qidirish..."
-                className="pl-8 h-8 text-xs border-border bg-surface text-fg"
-              />
-            </div>
-
-            {/* Saralash tugmalari */}
-            <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
-              <span className="text-[11px] text-fg-muted shrink-0">Saralash:</span>
-              <button
-                type="button"
-                onClick={() => handleToggleSort("averageScore")}
-                className={cn(
-                  "rounded-md px-2 py-1 text-[11px] font-medium border transition-colors flex items-center gap-1 shrink-0",
-                  sortField === "averageScore"
-                    ? "border-brand bg-brand-subtle text-brand-subtle-fg"
-                    : "border-border bg-surface text-fg-muted hover:text-fg"
-                )}
-              >
-                O&apos;rtacha Ball
-                <ArrowUpDown className="size-2.5" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleToggleSort("mockAttemptsCount")}
-                className={cn(
-                  "rounded-md px-2 py-1 text-[11px] font-medium border transition-colors flex items-center gap-1 shrink-0",
-                  sortField === "mockAttemptsCount"
-                    ? "border-brand bg-brand-subtle text-brand-subtle-fg"
-                    : "border-border bg-surface text-fg-muted hover:text-fg"
-                )}
-              >
-                Mock Testlar
-                <ArrowUpDown className="size-2.5" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleToggleSort("essaysCount")}
-                className={cn(
-                  "rounded-md px-2 py-1 text-[11px] font-medium border transition-colors flex items-center gap-1 shrink-0",
-                  sortField === "essaysCount"
-                    ? "border-brand bg-brand-subtle text-brand-subtle-fg"
-                    : "border-border bg-surface text-fg-muted hover:text-fg"
-                )}
-              >
-                Insholar
-                <ArrowUpDown className="size-2.5" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleToggleSort("attendanceRate")}
-                className={cn(
-                  "rounded-md px-2 py-1 text-[11px] font-medium border transition-colors flex items-center gap-1 shrink-0",
-                  sortField === "attendanceRate"
-                    ? "border-brand bg-brand-subtle text-brand-subtle-fg"
-                    : "border-border bg-surface text-fg-muted hover:text-fg"
-                )}
-              >
-                Davomat
-                <ArrowUpDown className="size-2.5" />
-              </button>
-            </div>
-          </div>
-
-          {/* O'quvchilar Jadvali */}
-          <div className="rounded-xl border border-border overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-fg-muted">
-                <thead className="border-b border-border bg-bg-subtle text-[11px] uppercase tracking-wider text-fg-muted">
-                  <tr>
-                    <th className="py-2.5 px-3">O&apos;quvchi</th>
-                    <th className="py-2.5 px-3">Davomat</th>
-                    <th className="py-2.5 px-3">Mock Testlar</th>
-                    <th className="py-2.5 px-3">Insholar</th>
-                    <th className="py-2.5 px-3">O&apos;rtacha Ball</th>
-                    <th className="py-2.5 px-3">Oxirgi Faollik</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {filteredStudents.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-6 text-center text-fg-muted">
-                        O&apos;quvchilar topilmadi
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredStudents.map((st, i) => (
-                      <tr key={st.studentId} className="hover:bg-surface-hover transition-colors">
-                        <td className="py-2.5 px-3">
-                          <div className="font-semibold text-fg">{st.name}</div>
-                          {st.phone && <div className="text-[10px] text-fg-muted">{st.phone}</div>}
-                        </td>
-                        <td className="py-2.5 px-3 font-mono">
-                          <span
-                            className={cn(
-                              st.attendanceRate != null && st.attendanceRate >= 85
-                                ? "text-success font-bold"
-                                : st.attendanceRate != null && st.attendanceRate >= 70
-                                ? "text-warning"
-                                : "text-danger font-bold"
-                            )}
-                          >
-                            {st.attendanceRate != null ? `${st.attendanceRate}%` : "—"}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 font-mono text-fg">
-                          {st.mockAttemptsCount} ta
-                        </td>
-                        <td className="py-2.5 px-3 font-mono text-fg">
-                          {st.essaysCount} ta
-                        </td>
-                        <td className="py-2.5 px-3">
-                          <Badge
-                            variant="neutral"
-                            className="border-emerald-500/40 bg-emerald-950/30 text-success font-mono text-xs px-2 py-0.5"
-                          >
-                            {st.scoreLabel || "—"}
-                          </Badge>
-                        </td>
-                        <td className="py-2.5 px-3 text-[11px] text-fg-muted">
-                          {st.lastActiveAt ? st.lastActiveAt.slice(0, 16) : "—"}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap gap-2">
+          <select aria-label={t("track")} className={selectClass} value={filters.track ?? ""} onChange={(e) => update("track", e.target.value)}>
+            <option value="">{t("allTracks")}</option>
+            {Object.entries(TRACKS).map(([track, label]) => <option key={track} value={track}>{label}</option>)}
+          </select>
+          <select aria-label={t("assessment")} className={selectClass} value={filters.examId ?? ""} onChange={(e) => update("examId", e.target.value)}>
+            <option value="">{t("allAssessments")}</option>
+            {base.data?.assessments.map((exam) => <option key={exam.id} value={exam.id}>{exam.title}</option>)}
+          </select>
+          <select aria-label={t("assignment")} className={selectClass} value={filters.assignmentId ?? ""} onChange={(e) => update("assignmentId", e.target.value)}>
+            <option value="">{t("allAssignments")}</option>
+            {base.data?.assignments.map((assignment) => <option key={assignment.id} value={assignment.id}>{assignment.title}</option>)}
+          </select>
+          <select aria-label={t("skill")} className={selectClass} value={filters.skill ?? ""} onChange={(e) => update("skill", e.target.value)}>
+            <option value="">{t("allSkills")}</option>
+            {SKILLS.map((skill) => <option key={skill} value={skill}>{t(skill)}</option>)}
+          </select>
+          <select aria-label={t("status")} className={selectClass} value={filters.status ?? ""} onChange={(e) => update("status", e.target.value)}>
+            <option value="">{t("allStatuses")}</option>
+            {Object.entries(statuses).map(([status, label]) => <option key={status} value={status}>{label}</option>)}
+          </select>
+          <select aria-label={t("policy")} className={selectClass} value={filters.policy ?? "latest"} onChange={(e) => update("policy", e.target.value)}>
+            <option value="latest">{t("latest")}</option><option value="best">{t("best")}</option>
+          </select>
+          {(["from", "to"] as const).map((date) => (
+            <label key={date} className="flex items-center gap-1 text-sm">
+              {t(date)} <Input className="w-auto" type="date" value={filters[date] ?? ""} onChange={(e) => update(date, e.target.value)} />
+            </label>
+          ))}
         </div>
+        {query.isError && <div role="alert" className="text-sm text-danger">{t("loadError")} <Button size="sm" variant="outline" onClick={() => void query.refetch()}>{t("retry")}</Button></div>}
+        {query.isPending && <Skeleton className="h-48" />}
+        {data && <>
+          <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {([
+              ["members", data.totalStudents], ["eligible", data.totalEligible], ["assigned", data.assignedStudents],
+              ["started", data.startedStudents], ["submitted", data.submittedStudents], ["pending", data.pendingStudents],
+              ["graded", data.gradedStudents], ["notSubmitted", data.notSubmittedStudents],
+              ["completion", data.completionRate == null ? null : `${data.completionRate}%`],
+              ["attendance", data.groupAverageAttendance == null ? null : `${data.groupAverageAttendance}%`],
+            ] as const).map(([label, value]) => (
+              <div key={label} className="rounded-field border border-border p-3">
+                <dt className="text-xs text-fg-muted">{t(label)}</dt>
+                <dd className="mt-1 text-lg font-semibold tabular-nums">{value ?? "—"}</dd>
+              </div>
+            ))}
+          </dl>
+          {!Object.keys(data.groupAveragesByScale).length && <p role="status" className="text-sm text-fg-muted">{t("noScores")}</p>}
+          {Object.entries(data.groupAveragesByScale).map(([track, average]) => (
+            <section key={track} className="rounded-field border border-border p-3">
+              <h3 className="font-semibold">{trackLabel(track)}</h3>
+              <p className="text-sm">{t("summary", { average: score(average), median: score(data.scaleSummary[track]?.median), best: score(data.scaleSummary[track]?.best), count: data.scaleSummary[track]?.students ?? 0 })}</p>
+              <dl className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {Object.entries(data.skills[track] ?? {}).map(([skill, value]) => (
+                  <div key={skill}><dt className="text-xs text-fg-muted">{t(skill)}</dt><dd className="text-sm">{t("skillScore", { score: score(value.average), students: value.students, attempts: value.attempts })}</dd></div>
+                ))}
+              </dl>
+            </section>
+          ))}
+          <div className="flex flex-wrap gap-2">
+            <Input className="min-w-0 flex-1" aria-label={t("search")} placeholder={t("search")} value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(0); }} />
+            <select className={selectClass} aria-label={t("sort")} value={sort} onChange={(e) => { setSort(e.target.value); setPage(0); }}>
+              <option value="name">{t("student")}</option><option value="attempts">{t("attempts")}</option><option value="activity">{t("activity")}</option>
+            </select>
+          </div>
+          {rank.length > 0 && <div className="overflow-x-auto">
+            <table className={tableClass}>
+              <caption className="py-2 text-left font-semibold">{t("ranking")} · {t(data.rankingPolicy)}</caption>
+              <thead><tr>{[t("rank"), t("student"), t("track"), t("version"), t("score"), ...SKILLS.map((skill) => t(skill)), t("attempts"), t("submitted"), t("improvement"), t("review")].map((label) => <th key={label} scope="col">{label}</th>)}</tr></thead>
+              <tbody>{rank.slice(start, start + PAGE_SIZE).map((row) => (
+                <tr key={`${row.studentId}:${row.examId}:${row.specificationVersion}:${row.scoreVersion}`}>
+                  <td>{row.rank}</td><td>{row.name}</td><td>{trackLabel(row.track)}</td><td>{[row.specificationVersion, row.scoreVersion].filter(Boolean).join(" / ") || "—"}</td><td>{score(row.score)}</td>
+                  {SKILLS.map((skill) => <td key={skill}>{score(row.skills[skill])}</td>)}
+                  <td>{row.attempts}</td><td>{row.submittedAt ? format.dateTime(new Date(row.submittedAt), { dateStyle: "short" }) : "—"}</td>
+                  <td>{row.improvement != null && row.improvement > 0 ? "+" : ""}{score(row.improvement)}</td>
+                  <td>{row.attemptId ? <Link className="text-brand underline" href={`/mock/attempt/${encodeURIComponent(row.attemptId)}`}>{t("review")}</Link> : "—"}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>}
+          <div className="overflow-x-auto">
+            <table className={tableClass}>
+              <caption className="py-2 text-left font-semibold">{t("studentPerformance")}</caption>
+              <thead><tr>{[t("student"), t("status"), t("attempts"), t("score"), t("attendance"), t("activity")].map((label) => <th key={label} scope="col">{label}</th>)}</tr></thead>
+              <tbody>{students.slice(start, start + PAGE_SIZE).map((row) => (
+                <tr key={row.studentId}><td>{row.name}</td><td>{statuses[row.status ?? ""] ?? t("noAttempt")}</td><td>{row.mockAttemptsCount}</td>
+                  <td>{Object.keys(row.scoresByScale).length ? Object.entries(row.scoresByScale).map(([track, value]) => <div key={track}>{trackLabel(track)} · {score(value)}</div>) : "—"}</td>
+                  <td>{row.attendanceRate == null ? "—" : `${row.attendanceRate}%`}</td>
+                  <td>{row.lastActiveAt ? format.dateTime(new Date(row.lastActiveAt), { dateStyle: "short" }) : "—"}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+            {!students.length && <p className="p-2 text-sm text-fg-muted">{t("noStudents")}</p>}
+          </div>
+          {pages > 1 && <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>{t("previous")}</Button>
+            <span className="text-sm">{currentPage + 1}/{pages}</span>
+            <Button size="sm" variant="outline" disabled={currentPage + 1 >= pages} onClick={() => setPage(currentPage + 1)}>{t("next")}</Button>
+          </div>}
+          <section><h3 className="font-semibold">{t("topics")}</h3>
+            {data.weakTopicsHeatmap.length ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {data.weakTopicsHeatmap.map((row) => <div className="rounded-field border border-border p-2 text-sm" key={`${row.track}:${row.skill}:${row.questionType}`}>
+                  <p>{trackLabel(row.track)} · {t(row.skill)} · {row.questionType.replaceAll("_", " ")}</p>
+                  <p className="text-fg-muted">{row.accuracy == null ? "—" : `${row.accuracy}%`} · {t("topicScores", { correct: row.correct, incorrect: row.incorrect, unanswered: row.unanswered, affected: row.affectedStudentsCount })}</p>
+                </div>)}
+              </div>
+            ) : <p className="text-sm text-fg-muted">{t("noScores")}</p>}
+          </section>
+          {data.questionDifficulty.length > 0 && <details>
+            <summary className="cursor-pointer font-semibold">{t("difficulty")}</summary>
+            <ul className="space-y-1 py-2">{data.questionDifficulty.map((row) => <li className="text-sm" key={row.questionId}>
+              {t(row.skill)} #{row.number} · {row.questionType.replaceAll("_", " ")} · {t("questionScores", row)}
+            </li>)}</ul>
+          </details>}
+          {Object.keys(data.scoreDistribution).length > 0 && <details>
+            <summary className="cursor-pointer font-semibold">{t("distribution")}</summary>
+            {Object.entries(data.scoreDistribution).map(([track, values]) => <div key={track} className="py-2">
+              <p className="text-sm font-medium">{trackLabel(track)}</p>
+              <dl className="flex flex-wrap gap-2">{values.map((value) => <div className="rounded-field border border-border px-2 py-1" key={value.score}>
+                <dt className="text-xs text-fg-muted">{score(value.score)}</dt><dd className="text-sm">{value.count}</dd>
+              </div>)}</dl>
+            </div>)}
+          </details>}
+          {([
+            ["weekly", data.weeklyHistory.map((row) => ({ ...row, label: row.week, id: row.week }))],
+            ["monthly", data.history.map((row) => ({ ...row, label: row.month, id: row.month }))],
+            ["byExam", data.examHistory.map((row) => ({ ...row, label: [row.title, row.specificationVersion, row.scoreVersion].filter(Boolean).join(" · "), id: `${row.examId}:${row.specificationVersion}:${row.scoreVersion}` }))],
+          ] as const).map(([period, rows]) => rows.length > 0 && <details key={period}>
+            <summary className="cursor-pointer font-semibold">{t(period)}</summary>
+            <ul className="space-y-1 py-2">{rows.map((row) => <li className="text-sm" key={`${row.track}:${row.id}`}>
+              {row.label} · {trackLabel(row.track)} · {t("historyPoint", { score: score(row.average), count: row.attempts })}
+            </li>)}</ul>
+          </details>)}
+        </>}
       </CardContent>
     </Card>
   );
