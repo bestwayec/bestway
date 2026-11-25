@@ -274,71 +274,28 @@ class TeacherGroupsAnalyticsAndExcelExportTests(SimpleTestCase):
         teacher = SimpleNamespace(id="teacher-1", role="teacher", is_authenticated=True)
         self.client.force_authenticate(teacher)
 
-        group_obj = SimpleNamespace(
-            id="grp-excel",
-            name="IELTS Band 8",
-            teacher_id="teacher-1",
-            teacher=SimpleNamespace(name="Teacher One"),
-        )
-        student_profile = SimpleNamespace(
-            user_id="stu-1",
-            user=SimpleNamespace(name="Sardor Aliyev", phone="+998901234567", email="sardor@bestway.uz"),
-        )
-        attempt_obj = SimpleNamespace(
-            id="att-excel-1",
-            student_id="stu-1",
-            status="completed",
-            section_bands={"listening": 8.0, "reading": 7.5, "writing": 7.0, "speaking": 7.5},
-            overall_band=7.5,
-            overall_score=None,
-            cefr_level="C1",
-            finished_at=datetime(2026, 10, 16, 9, 30, tzinfo=UTC),
-            submitted_at=None,
-            started_at=datetime(2026, 10, 16, 8, 0, tzinfo=UTC),
-            exam=SimpleNamespace(title="Official IELTS Mock 4"),
-        )
-
-        with patch("apps.core.groups.get_group", return_value=group_obj), \
-             patch("apps.core.groups.StudentProfile.objects.filter") as mock_sp, \
-             patch("apps.core.groups.MockAttempt.objects.filter") as mock_att, \
-             patch("apps.core.groups.MockAnswer.objects.filter") as mock_ans:
-            mock_sp.return_value.select_related.return_value.order_by.return_value = [student_profile]
-            mock_att.return_value.select_related.return_value.order_by.return_value = [attempt_obj]
-            mock_ans.return_value.exclude.return_value.exclude.return_value = [
-                SimpleNamespace(attempt_id="att-excel-1", feedback="Strong lexical resource and clear cohesion.")
-            ]
-
-            res = self.client.get("/v1/groups/grp-excel/export/excel")
-            self.assertEqual(res.status_code, 200)
-            self.assertEqual(
-                res["Content-Type"],
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            )
-            self.assertIn(".xlsx", res["Content-Disposition"])
-
-            wb = load_workbook(BytesIO(res.content))
-            ws = wb.active
-            headers = [ws.cell(row=1, column=col).value for col in range(1, 13)]
-            self.assertEqual(
-                headers,
-                [
-                    "Student Name",
-                    "Email / Phone",
-                    "Group Name",
-                    "Exam Type",
-                    "Listening",
-                    "Reading",
-                    "Writing",
-                    "Speaking",
-                    "Overall Band",
-                    "CEFR Level",
-                    "Submitted Date",
-                    "Teacher Feedback Summary",
-                ],
-            )
-            self.assertEqual(ws.cell(row=2, column=1).value, "Sardor Aliyev")
-            self.assertEqual(ws.cell(row=2, column=9).value, 7.5)
-            self.assertEqual(ws.cell(row=3, column=1).value, "GROUP AVERAGE")
+        report = {
+            "groupName": "IELTS Band 8",
+            "teacherName": "Teacher One",
+            "totalStudents": 1,
+            "totalMockAttempts": 2,
+            "students": [{"name": "Sardor Aliyev", "attendanceRate": None, "mockAttemptsCount": 2,
+                          "scoresByScale": {"ielts_academic": 7.5, "multilevel": 61},
+                          "phone": "+998901234567", "feedback": "Private feedback"}],
+        }
+        with patch("apps.core.group_report.get_group_analytics", return_value=report) as analytics:
+            res = self.client.get("/v1/groups/grp-excel/export/excel?track=ielts_academic")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res["Content-Type"], "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        self.assertIn(".xlsx", res["Content-Disposition"])
+        analytics.assert_called_once_with(teacher, "grp-excel", {"track": "ielts_academic"})
+        wb = load_workbook(BytesIO(res.content))
+        sheet = wb["O'quvchilar"]
+        self.assertEqual(sheet["A2"].value, "Sardor Aliyev")
+        self.assertEqual(sheet["D2"].value, 7.5)
+        self.assertEqual(sheet["F2"].value, 61)
+        self.assertNotIn("+998901234567", list(sheet.values)[1])
+        self.assertNotIn("Private feedback", list(sheet.values)[1])
 
     def test_only_superadmin_can_delete_mock_exam(self):
         for role in ("teacher", "admin", "student"):

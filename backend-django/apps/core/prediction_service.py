@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+from datetime import UTC, datetime
 
 from django.db import connection
 
@@ -361,13 +362,24 @@ def get_student_prediction(student_id: str, limit: int = 5) -> dict:
     target = get_student_target(student_id)
     limit = max(3, min(10, int(limit or 5)))
 
-    completed_attempts = list(
-        MockAttempt.objects.filter(student_id=student_id, status__in=["completed", "grading"])
-        .select_related("exam")
-        .order_by("-started_at", "-id")[:limit]
-    )
-    # Reverse to chronological order (oldest -> newest) for trend calculation
-    chronological = list(reversed(completed_attempts))
+    attempts = MockAttempt.objects.filter(student_id=student_id, status__in=["completed", "grading"])
+    recent = list(attempts.select_related("exam").order_by("-started_at", "-id")[:limit])
+    overall = attempts.filter(status="completed").exclude(
+        flow_mode__in=("single_skill", "partial_practice"),
+    ).order_by("-started_at", "-id")
+    recent_ielts = overall.filter(exam__type__in=("ielts_academic", "ielts_general"), overall_band__isnull=False)
+    recent_multilevel = overall.filter(exam__type="multilevel", overall_score__isnull=False)
+    by_id = {attempt.id: attempt for attempt in reversed(recent)}
+    for rows in (recent_ielts, recent_multilevel):
+        by_id.update((attempt.id, attempt) for attempt in rows.select_related("exam")[:limit])
+
+    def chronological_key(attempt):
+        stamp = attempt.submitted_at or attempt.finished_at or attempt.started_at
+        if stamp is None:
+            return datetime.min.replace(tzinfo=UTC)
+        return stamp if stamp.tzinfo else stamp.replace(tzinfo=UTC)
+
+    chronological = sorted(by_id.values(), key=chronological_key)
     history: list[dict] = []
     ielts_series: list[float] = []
     ml_series: list[float] = []
@@ -444,7 +456,7 @@ def get_student_prediction(student_id: str, limit: int = 5) -> dict:
         skill_breakdown_ielts[sk] = float(round_half(sum(i_vals) / len(i_vals))) if i_vals else None
         skill_breakdown_ml[sk] = round(sum(m_vals) / len(m_vals), 1) if m_vals else None
 
-    weak_modules = _analyze_weak_modules([a.id for a in completed_attempts])
+    weak_modules = _analyze_weak_modules([a.id for a in recent])
 
     profile = StudentProfile.objects.filter(user_id=student_id).first()
     active_program = getattr(profile, "active_program", None) or "IELTS"

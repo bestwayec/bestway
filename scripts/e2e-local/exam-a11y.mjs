@@ -30,23 +30,21 @@ async function session({ locale, width, height, dark }) {
   const ctx = await browser.newContext({ viewport: { width, height }, colorScheme: dark ? "dark" : "light" });
   await ctx.addInitScript((d) => { window.confirm = () => true; try { localStorage.setItem("theme", d ? "dark" : "light"); } catch {} }, dark);
   const page = await ctx.newPage();
-  await page.route("**/mock/groups/*/audio*", (route) => route.fulfill({ status: 200, contentType: "audio/wav", body: Buffer.alloc(44) }));
-  await page.goto(`${WEB}/en/login`); await page.waitForSelector("#phone"); await page.waitForLoadState("networkidle").catch(() => {}); await page.waitForTimeout(1500);
-  await page.fill("#phone", STUDENT); await page.fill("#password", PASSWORD);
-  await Promise.all([page.waitForResponse((r) => r.url().includes("/api/auth/login")), page.click('button[type="submit"]')]);
-  await page.waitForURL(/dashboard/); await page.waitForLoadState("networkidle").catch(() => {});
+  const login = await ctx.request.post(`${WEB}/api/auth/login`, { data: { phone: STUDENT, password: PASSWORD } });
+  if (!login.ok()) throw new Error(`Synthetic login failed: ${login.status()}`);
+  await page.goto(`${WEB}/${locale}/dashboard`, { waitUntil: "domcontentloaded" });
   const api = (path, init) => page.evaluate(async ([p, i]) => { const r = await fetch(`/api/backend${p}`, i); return { status: r.status, body: await r.json().catch(() => null) }; }, [path, init]);
   const json = (body) => ({ method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   async function fresh(skill) {
     for (let i = 0; i < 4; i++) {
-      const data = (await api(`/mock/exams/${EXAM}/start`, json({ mode: "timed", skills: [skill] }))).body?.data;
+      const data = (await api(`/mock/exams/${EXAM}/start`, json({ mode: "timed", skills: [skill], retake: true }))).body?.data;
       if (data?.resumed || data?.isResumed) { await api(`/mock/attempts/${data.attemptId}/submit`, json({ confirm: true, confirmed: true, force: true })); continue; }
       return data?.attemptId;
     }
   }
   async function open(id, skill) {
     await ctx.addCookies([{ name: "NEXT_LOCALE", value: locale, url: WEB }]);
-    await page.goto(`${WEB}${locale === "en" ? "/en" : ""}/mock/attempt/${id}?skill=${skill}`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${WEB}/${locale}/mock/attempt/${id}?skill=${skill}`, { waitUntil: "domcontentloaded" });
     const notice = page.getByTestId("fullscreen-notice");
     await notice.waitFor({ timeout: 15000 }).then(() => notice.getByRole("button").click()).catch(() => {});
     await page.getByRole("timer").waitFor({ timeout: 30000 });

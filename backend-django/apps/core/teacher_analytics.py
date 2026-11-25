@@ -94,6 +94,29 @@ def comparable_score(attempt, skill=""):
     return value if valid_score(value, maximum) else None
 
 
+def own_exam_benchmark(attempt):
+    """A fixed, comparable classroom aggregate, available only for a learner's own result."""
+    if comparable_score(attempt) is None or not attempt.submitted_at:
+        return None
+    started = attempt.started_at
+    membership = ClassroomEnrollment.objects.filter(student_id=attempt.student_id, started_at__lte=started).filter(
+        Q(ended_at__isnull=True) | Q(ended_at__gt=started),
+    ).order_by("-started_at").first()
+    if membership is None:
+        return None
+    rows = list(classroom_attempts(membership.group_id).filter(
+        status="completed", flow_mode="full_test", exam_id=attempt.exam_id,
+        specification_version=attempt.specification_version, score_version=attempt.score_version,
+        submitted_at__isnull=False, submitted_at__lte=attempt.submitted_at,
+        started_at__gte=started - timedelta(days=90),
+    ).exclude(student_id=attempt.student_id).select_related("exam")
+                .order_by("-submitted_at", "-id")[:ATTEMPT_LIMIT + 1])
+    if len(rows) > ATTEMPT_LIMIT:
+        return None
+    scores = [comparable_score(row) for row in latest_attempts(rows, "", "latest").values()]
+    return dict(students=len(scores), median=round(median(scores), 1)) if len(scores) >= 5 else None
+
+
 def latest_attempts(attempts, skill, policy):
     selected = {}
     for attempt in attempts:

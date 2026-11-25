@@ -193,6 +193,11 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
                   <p className="text-sm text-fg-muted">{cefrDescriptor(attempt.cefrLevel)}</p>
                 </div>
               )}
+              {attempt.classroomBenchmark && (
+                <p className="mt-3 text-xs text-fg-muted">{t("resultOverview.classroomBenchmark", {
+                  score: attempt.classroomBenchmark.median, count: attempt.classroomBenchmark.students,
+                })}</p>
+              )}
               {provisionalSkills.size > 0 && (
                 <p className="mt-3 rounded-control border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning" data-testid="provisional-note">
                   {t("resultOverview.estimatedNote")}
@@ -232,7 +237,9 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           {attempt.sections.map((s) => {
             const rawSkill = attempt.rawScores?.[s.skill];
-            const isSkipped = rawSkill?.skipped || (rawSkill?.status === "SKIPPED") || (!s.score && !s.standardScore && !s.band && attempt.status === "completed" && !MANUAL_SKILLS.has(s.skill));
+            const hasObjectiveResponse = s.groups?.some((group) => group.questions.some((q) => q.response?.trim() || q.isCorrect === true));
+            const isSkipped = rawSkill?.skipped || rawSkill?.status === "SKIPPED" ||
+              (s.score === 0 && s.standardScore == null && !s.band && completed && !MANUAL_SKILLS.has(s.skill) && !hasObjectiveResponse);
             const pendingManual = MANUAL_SKILLS.has(s.skill) && !hasCompleteManualGrade(s);
             const accuracy = s.max && s.max > 0 && s.score != null ? Math.round(((s.score ?? 0) / s.max) * 100) : null;
             const questionCount = (s.groups ?? []).reduce((sum, g) => sum + (g.questions?.length ?? 0), 0);

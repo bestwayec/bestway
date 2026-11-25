@@ -2035,6 +2035,7 @@
       "extractedCount": "OCR: {count, plural, one {# ta so'z} other {# ta so'z}} ajratib olindi"
     },
     "resultOverview": {
+      "classroomBenchmark": "Guruh medianasi {score} · taqqoslanadigan {count} ta natija",
       "cefrBadge": "CEFR {level}",
       "cefrC2": "Mukammal foydalanuvchi — yuqori daraja",
       "cefrC1": "Mukammal foydalanuvchi — samarali daraja",

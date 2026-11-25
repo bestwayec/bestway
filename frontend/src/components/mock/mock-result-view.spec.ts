@@ -224,6 +224,22 @@ describe("attempt with no answers", () => {
     expect(html).not.toMatch(/Band \d/);
   });
 
+  it("shows zero correct answers for an attempted short objective section", () => {
+    const value = attempt(false);
+    value.examType = "ielts_academic";
+    value.flowMode = "single_skill";
+    value.overallBand = null;
+    value.sections = [{ ...value.sections[0], id: "reading", skill: "reading", score: 0, max: 5, band: null, standardScore: null,
+      groups: [{ id: "g", title: null, instructions: null, passageText: null, hasAudio: false, questions: [
+        { id: "q", number: 1, type: "short_answer", prompt: "Question", options: null, points: 1, wordLimit: null,
+          response: "incorrect", hasAudio: false, audioUrl: null, score: 0, isCorrect: false, isGraded: true, feedback: null },
+      ] }],
+    }];
+    const html = renderToStaticMarkup(React.createElement(MockResultView, { attempt: value }));
+    expect(html).toContain("0/5 correct · 0%");
+    expect(html).not.toContain(">Skipped<");
+  });
+
   it("marks an AI-scored Writing/Speaking section as provisional until a teacher confirms it", () => {
     viewer.role = "student";
     const value = attempt(false);

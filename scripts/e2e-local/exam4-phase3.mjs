@@ -10,8 +10,6 @@ const out = new URL("../../.local/e2e/phase3/", import.meta.url);
 await mkdir(out, { recursive: true });
 const { examId, attemptId } = JSON.parse(await readFile(new URL("../ielts-full.json", out), "utf8"));
 assert(examId && attemptId);
-const groupId = process.env.BW_GROUP_ID ?? "d596e11e-0f54-40c0-ba7a-6869a4858ed2";
-const reportPath = `/groups/${groupId}`;
 const attemptPath = `/mock/attempts/${attemptId}`;
 const browser = await chromium.launch({ executablePath: process.env.BW_CHROMIUM, args: ["--no-sandbox"] });
 
@@ -48,6 +46,10 @@ async function download(page, panel, name, extension) {
 
 try {
   const teacher = await session("+998900000003", { viewport: { width: 1440, height: 900 } });
+  const groups = await api(teacher, "/groups");
+  const groupId = process.env.BW_GROUP_ID ?? groups.find((group) => group.name === "Local Group A")?.id;
+  assert(groupId, "Set BW_GROUP_ID to the seeded local classroom with two dated enrollments.");
+  const reportPath = `/groups/${groupId}`;
   const learner = await session("+998900000011", { viewport: { width: 360, height: 800 } });
   const other = await session("+998900000010");
   const ownerPage = await learner.newPage();
@@ -128,8 +130,8 @@ try {
   await assignedPage.close();
   console.log("PASS explicit assignment launch, profile resume, participation and student report HTTP 403");
 
-  await teacherPage.goto(new URL(`/en${reportPath}`, web).href);
-  await teacherPage.locator("#group-tab-results").click();
+  await teacherPage.goto(new URL("/en/teacher/insights", web).href);
+  await teacherPage.locator(`a[href="/en${reportPath}?tab=results"]`).click();
   const analytics = teacherPage.getByTestId("group-exam-analytics");
   const examSelect = analytics.locator("select").nth(1);
   await examSelect.locator(`option[value="${examId}"]`).waitFor({ state: "attached" });
@@ -143,6 +145,12 @@ try {
   assert.equal(pdf.subarray(0, 4).toString(), "%PDF");
   const excel = await download(teacherPage, analytics, "Excel", ".xlsx");
   assert.equal(excel.subarray(0, 2).toString(), "PK");
+  const legacyExcel = await request(teacher, `${reportPath}/export/excel?examId=${examId}`);
+  assert.equal((await legacyExcel.body()).subarray(0, 2).toString(), "PK");
+  const legacyCsv = await request(teacher, `/assessment${reportPath}/export?examId=${examId}`);
+  assert.match(await legacyCsv.text(), /IELTS Academic/);
+  await teacherPage.goto(new URL("/en/groups", web).href);
+  await teacherPage.getByTestId("group-exam-analytics").waitFor();
   console.log("PASS browser ranking, filtered PDF and XLSX downloads");
 
   await api(teacher, `/mock/exams/${examId}/archive`, "POST");

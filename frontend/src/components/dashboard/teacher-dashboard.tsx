@@ -6,9 +6,6 @@ import {
   CalendarCheck,
   ChevronRight,
   ClipboardCheck,
-  FileSpreadsheet,
-  Printer,
-  Trophy,
   Users,
   Wallet,
   Send,
@@ -19,15 +16,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
-import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/app/page-header";
 import { LiveExamRoomPanel } from "@/components/teacher/live-exam-room-panel";
 import { useMe } from "@/hooks/use-me";
-import { printGroupAnalyticsPdf, useGroupAnalytics, useGroups } from "@/hooks/use-groups";
+import { useGroups } from "@/hooks/use-groups";
 import { useDebtors, usePayments } from "@/hooks/use-payments";
-import { api, ApiError } from "@/lib/api-client";
+import { api } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import { StatTile } from "@/components/ui/stat-tile";
 import type { GroupAttendanceSummaryResponse, TeacherGroupSummary, TeacherSelfProfile } from "@/lib/types";
@@ -62,118 +58,16 @@ function KpiCard({
 }
 
 function GroupPerformanceCard({ group }: { group: TeacherGroupSummary }) {
-  const t = useTranslations("teacherDash");
-  const tc = useTranslations("common");
-  const analyticsQ = useGroupAnalytics(group.id);
-  const [busy, setBusy] = React.useState(false);
-  const analytics = analyticsQ.data;
-
-  const top = React.useMemo(
-    () =>
-      (analytics?.students ?? [])
-        .filter((s) => s.overallBand !== null)
-        .sort((a, b) => (b.overallBand ?? 0) - (a.overallBand ?? 0))
-        .slice(0, 3),
-    [analytics],
-  );
-
-  async function downloadExcel() {
-    setBusy(true);
-    try {
-      const { blob, filename } = await api.downloadBlob(`/groups/${group.id}/export/excel`);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename || `${group.name}_results.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success(t("exportOk"));
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : t("exportError"));
-    } finally {
-      setBusy(false);
-    }
-  }
-
+  const t = useTranslations("tw");
   return (
-    <div className={cn(GLASS, "p-4")}>
-      <GlowCorner className="-left-12 -top-14" />
-      <div className="relative flex flex-wrap items-start justify-between gap-3">
-        <Link href={`/attendance?group=${group.id}`} className="group flex min-w-0 items-center gap-3">
-          <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-subtle text-brand-subtle-fg">
-            <BookOpen className="size-5" />
-          </span>
-          <span className="min-w-0">
-            <span className="block truncate font-semibold text-fg group-hover:text-brand">{group.name}</span>
-            <span className="flex items-center gap-1 text-xs text-fg-muted">
-              <Users className="size-3.5" />
-              {group.studentsCount}
-            </span>
-          </span>
-        </Link>
-
-        <div className="flex items-center gap-2">
-          <Button type="button" size="sm" variant="outline" loading={busy} onClick={() => void downloadExcel()}>
-            <FileSpreadsheet />
-            {t("excel")}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={!analytics}
-            onClick={() => analytics && printGroupAnalyticsPdf(analytics)}
-          >
-            <Printer />
-            {t("pdf")}
-          </Button>
-        </div>
+    <div className={cn(GLASS, "flex flex-wrap items-center justify-between gap-3 p-4")}>
+      <div className="min-w-0">
+        <p className="truncate font-semibold text-fg">{group.name}</p>
+        <p className="text-xs text-fg-muted">{t("home.students", { n: group.studentsCount })}</p>
       </div>
-
-      <div className="relative mt-4 grid gap-3 sm:grid-cols-[auto_1fr] sm:items-center">
-        <div className="flex gap-3">
-          <div className="rounded-xl border border-border/60 bg-bg/40 px-3 py-2">
-            <p className="text-[11px] text-fg-muted">{t("avgScore")}</p>
-            {analyticsQ.isLoading ? (
-              <Skeleton className="mt-1 h-6 w-10" />
-            ) : (
-              <p className="text-lg font-bold tabular-nums text-brand">{analytics?.averageBandScore ?? "—"}</p>
-            )}
-          </div>
-          <div className="rounded-xl border border-border/60 bg-bg/40 px-3 py-2">
-            <p className="text-[11px] text-fg-muted">{t("attempts")}</p>
-            {analyticsQ.isLoading ? (
-              <Skeleton className="mt-1 h-6 w-10" />
-            ) : (
-              <p className="text-lg font-bold tabular-nums text-fg">{analytics?.totalCompletedAttempts ?? "—"}</p>
-            )}
-          </div>
-        </div>
-
-        <div className="min-w-0">
-          {analyticsQ.isLoading ? (
-            <Skeleton className="h-10 w-full" />
-          ) : analyticsQ.isError ? (
-            <p className="text-xs text-danger">{tc("unknownError")}</p>
-          ) : top.length === 0 ? (
-            <p className="text-xs text-fg-subtle">{t("noResults")}</p>
-          ) : (
-            <ul className="space-y-1">
-              {top.map((s, i) => (
-                <li key={s.studentId} className="flex items-center justify-between gap-2 text-sm">
-                  <span className="flex min-w-0 items-center gap-1.5">
-                    <Trophy className={cn("size-3.5 shrink-0", i === 0 ? "text-warning" : "text-fg-subtle")} />
-                    <span className="truncate text-fg">{s.name}</span>
-                  </span>
-                  <Badge variant="brand">{s.overallBand}</Badge>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
+      <Button variant="outline" size="sm" asChild>
+        <Link href={`/groups/${group.id}?tab=results`}>{t("home.action.results")}</Link>
+      </Button>
     </div>
   );
 }

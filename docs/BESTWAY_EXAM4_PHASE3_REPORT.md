@@ -1,37 +1,40 @@
 # Phase 3 · CBT, result review and classroom analytics
 
-Branch `feat/bestway-exam4-cbt-analysis` is stacked on Phase 2 commit `16d0ea90a99b81682eed8bb5a19a12f756119e3e`. The starting Phase 3 commit was `e7cfd90c116d4027582398a077ea6a557f4fd611`.
+Branch `feat/bestway-exam4-cbt-analysis` is stacked on Phase 2 commit `16d0ea90a99b81682eed8bb5a19a12f756119e3e`. The starting Phase 3 commit was `e7cfd90c116d4027582398a077ea6a557f4fd611`. The recovery checkpoints are `c6f604cd00f757762fd1e27787751dc32b32260c` and `b559bec`.
 
-## Implementation checkpoint
+## Acceptance checklist
 
-- Reading and Listening results use the original question IDs and the canonical passage or recording association. The review shows status, the student's answer, accepted answers and points. It offers authorized audio and transcript, verified evidence, and optional teacher-authored explanations. The explanation field is included in full JSON exports and excluded from reusable exam templates.
-- Reading keeps the selected mobile panel and per-passage scroll positions in the current browser session. Writing indicates local storage only after a successful write. Speaking progress is announced to assistive technology. Server receipts, section clocks and playback guards stay authoritative.
-- Profile charts show the learner's submitted attempts, with separate IELTS bands, Multilevel scores, raw practice accuracy and full-mock skill trends. Prediction requires two graded full mocks on the same scale. Targets persist the selected IELTS band, Multilevel score and CEFR level independently.
-- Classroom reports use dated enrollment or an explicit assignment association. Date, track, assessment, assignment, skill, status and retake policy filter the report. Latest and best use only comparable results and retain shared ranks for equal scores. The dashboard and downloads share the same report service. Undated legacy enrollment contributes attributable records only.
-- Separate counts distinguish started, submitted, pending and graded students. Attendance comes from recorded present, late and absent marks. Objective statistics show answered and unanswered counts, and compare graded answers with the actual question definitions. No phone numbers are in the analytics downloads.
-
-## Verification at checkpoint
-
-| Check | Evidence |
+| Requirement | Status and evidence |
 | --- | --- |
-| PostgreSQL Django | 1,698 passed, 325 subtests passed. Four NestJS comparison checks skipped because the legacy distribution was unavailable. |
-| Vitest | 987 passed across 146 files. |
-| TypeScript and production build | Standalone TypeScript and Next.js webpack production build passed. |
-| ESLint | 0 errors and 405 warnings at the previous run. |
-| PostgreSQL reporting | Assignment participation, mixed scales, zero and pending, tie policy, historical membership, XLSX cells and unauthorized HTTP responses were checked against disposable rows. |
-| IELTS Chromium | First run passed all 10 steps with overall 8.0. Final production-build rerun includes persisted teacher explanation. |
-| Phase 2 Chromium | Canonical Reading/Listening, scores, reload, Builder duplication/reordering, preview, and publication passed on the production build. |
-| Multilevel Chromium | Prior run reached Speaking after 35 Listening, 35 Reading and three Writing responses. It stalled after three uploads. A production-build rerun is in progress. |
-| Delivery | Initial implementation checkpoint `c6f604cd00f757762fd1e27787751dc32b32260c`. GitHub GraphQL returned HTTP 403 on PR discovery. |
+| IELTS Reading and Listening CBT | Verified. Chromium rendered the canonical three passages and four parts with 40 scoring positions each. Passage and question panels scroll independently on desktop. Mobile tabs and the question palette preserve original IDs and position on reload. Matching, objective controls, keyboard and playback were exercised. |
+| Multilevel Listening, Reading, Writing | Verified. Production Chromium created and published all parts, persisted 35 Listening and 35 Reading answers, enforced two audio plays across a reload and rejected a third play with HTTP 403. Three Writing drafts survived offline save and reload. |
+| Multilevel Speaking, hand-in and grading | In verification. A production rerun using a continuous synthetic microphone source is in progress. Earlier reruns were rejected by the decoded-duration check or stalled during a response. |
+| IELTS Writing and Speaking | Verified. The four-skill Chromium run collected two essays, recorded three answers, marked one live answer and graded with teacher criteria. |
+| Save status, resume, session protection | Verified. Phase 1 browser checks covered pending local edits, saved receipts, lost submit response and idempotency. Two-tab and two-device takeover passed 22 checks. Profile resume across tracks passed the assignment journey. |
+| Responsive and accessible examination | Verified for the exercised journeys. Screenshots cover widths 360, 390, 768, 1024, 1366, 1440 and 1920. English/light and Uzbek/dark were inspected. The examination accessibility script passed 12 keyboard and axe checks for Reading, Listening and Writing. |
+| Reading/Listening result review | Verified. Rows open the original question, answer comparison, score and canonical passage or transcript. Released evidence is highlighted and authored playback starts at the timestamp. Filters cover correct, incorrect, unanswered, pending, available flags, type and passage/part. Unit tests cover the categories, and a PostgreSQL-backed browser check covered inherited evidence and audio for a Listening continuation. |
+| Disclosures and historical result persistence | Verified. Direct cross-student review and media requests returned HTTP 403. Audio range access worked for the owner on release. Archived result reopening preserved the score, original question IDs and evidence. PostgreSQL tests covered the active timed retake guard and its expiry. |
+| Learner history and progress | Verified. Profile uses the signed-in learner's submitted attempts across both tracks, with separate scale and practice charts, accessible tables and skill trends. Active attempts have direct resume links. The zero-score regression tests cover graded and short objective zero, invalid points and pending values. |
+| Prediction and targets | Verified. Predictions need two graded full results on the same scale. One observation remains an actual result, and unavailable scores contribute no target progress. The IELTS band, Multilevel target and CEFR goal survived a browser reload and were checked in PostgreSQL. |
+| Classroom scope and date filters | Verified. Queries use a dated enrollment interval or explicit assignment record. The pending learner, moved learner and unrelated attempts are covered by PostgreSQL fixtures. Reports use the application's local calendar day and deal with Prisma's legacy UTC timestamps. Undated legacy enrollment supplies attributable records only. |
+| Assignment participation | Verified. The teacher assigned the mock and one of two assigned learners opened it, resumed through Profile and remained in progress. The independent PostgreSQL fixture verified 3 assigned, 2 started, 2 submitted, 1 graded, 1 pending and a 67% completion rate. |
+| Group metrics, ranking and question difficulty | Verified. Scoped attempt data feeds attendance, completion, average, median, best result, score distribution and weekly, monthly, exam and skill summaries. Ranking compares compatible versions and scores with latest or best selection and ties. Wrong-answer summaries include repeated authored choices from at least two distinct learners. The API and downloads omit private responses and contact details. |
+| Learner benchmark | Verified on synthetic PostgreSQL data. The learner's own result can show a median with at least five distinct comparable peers, using records available at submission. Small samples and incompatible scoring versions suppress the aggregate. |
+| Reports and exports | Verified by Chromium, PostgreSQL API and file readers. PDF and XLSX use the same filters as the report. The generated files agree with the 8.0 IELTS ranking and skill scores. Legacy group CSV/XLSX actions use the same filtered generator. The separate exam-specific report uses the exam's native scale. |
+| PostgreSQL and frontend regression suites | Latest cumulative evidence is tracked below. |
+| Repository delivery and handoff | Local commits preserved. Git HTTPS push is available in dry-run. GitHub PR and Actions APIs returned HTTP 403. Final push and verification remain pending while browser verification runs. |
 
-## Browser follow-up
+## Verification and data
 
-- Production-build IELTS passed 10 of 10 steps, including the persisted teacher explanation. The result uses band 8.0. PostgreSQL counted 86 distinct answer rows and three recordings, with the fourth speaking answer entered in the live interview.
-- The report browser journey checked assignment participation, private result and audio denial, target persistence, ranking, PDF/XLSX and archive reopening. The latest rerun exercises assignment resume and both-track profile history.
-- Phase 1 passed the reliability and 22 takeover assertions. The Phase 2 browser suite verified canonical continuation review on the release build.
-- A second Multilevel run reached Speaking and rejected one recorded file with `SPEAKING_AUDIO_DURATION_INVALID`. Production-build retest with rejected synthetic clip capture is underway. The server duration thresholds were preserved.
-- Django checks and Prisma manifest matched. Prisma's engine checksum request returned HTTP 403. The additive SQL applied on local PostgreSQL and full tests exercised that schema.
+- PostgreSQL pytest baseline for the continued branch passed 1,701 tests and 325 subtests. Four legacy NestJS differential checks skipped because the compiled NestJS distribution was unavailable.
+- Vitest cumulative run passed 988 tests in 146 files. The subsequent result and profile regression run passed 27 tests, including the attempted objective zero case. Next.js production compilation and standalone TypeScript passed before the last small result/export update. Final suite logs are being collected.
+- Django `check`, Django migration consistency and the Prisma migration manifest passed. Prisma CLI schema validation returned HTTP 403 when downloading the engine checksum. Local PostgreSQL ran the checked-in additive SQL for the nullable explanation field. The release must apply Prisma migrations before starting the updated backend.
+- The IELTS browser journey passed 10/10, with Listening 9, Reading 9, Writing 6.5, Speaking 7 and overall band 8.0. PostgreSQL recorded 86 distinct answer rows and three recordings. The fourth Speaking answer was graded from the live interview. Reading canonical practice stored 4/40 and Listening stored 1/40, each over 40 distinct answer rows.
+- The target row contains IELTS 8.5, Multilevel 58 and CEFR B2. The evidence row contains `every statement is true` at offset 50 and the authored explanation. The assigned-timed attempt held one validated server-owned link. The Phase 1 lost-response fixture was persisted once.
+- Teacher Workspace PostgreSQL passed 61/61, the Listening schedule verification passed 10/10, and browser accessibility passed 12/12 for the selected viewports and skills.
+- Local analytics operated in eight SQL queries for both the classroom overview and the selected exam. Five calls measured medians of 535 ms for the overview with 53 attempts and 204 ms for the selected exam with two attempts while other tests were running. This is a local sample. The service caps each request at 5,000 attempts and requires narrower filters above the cap.
+- Screenshots, downloaded reports and browser reports are under `.local/e2e/phase3`, `.local/e2e/phase3-builder` and `.local/e2e/exam-a11y` in the workspace. All artifacts originate from the synthetic local fixtures.
 
-## Continuation point
+## Phase 4 handoff
 
-Finish the production-build IELTS, Multilevel, Phase 1 and Phase 3 browser checks. Inspect screenshots and downloaded reports. Verify runtime database receipts and assignment data, migration consistency, remote branch SHA and GitHub PR access. Use the checked-in report and test logs when passing the change to Phase 4.
+Apply the Prisma migration in CI and verify the coordinated frontend/backend build on deployment-equivalent PostgreSQL and Redis. Exercise browser microphone and playback on actual supported desktop and mobile devices. Keep the release stacked on Phase 2 for integration review. Production data and deployment were outside the verification scope.

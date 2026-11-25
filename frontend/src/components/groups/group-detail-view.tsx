@@ -47,7 +47,6 @@ import { GroupAnalyticsDashboard } from "@/components/teacher/group-analytics-da
 import { CheckSquare, FileText } from "lucide-react";
 import { GroupLiveMonitoring } from "@/components/teacher/group-live-monitoring";
 import { LiveExamRoomPanel } from "@/components/teacher/live-exam-room-panel";
-import { GroupAnalyticsPanel } from "@/components/groups/groups-view";
 import { useRouter } from "@/i18n/navigation";
 
 export function GroupDetailView({ groupId }: { groupId: string }) {
@@ -200,7 +199,7 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
               asChild
               className="gap-1.5 text-xs"
             >
-              <a href={`/api/backend/v1/groups/${groupId}/report/pdf`} target="_blank" rel="noopener noreferrer">
+              <a href={`/api/backend/groups/${groupId}/report/pdf`} target="_blank" rel="noopener noreferrer">
                 <FileText className="size-4" aria-hidden />
                 <span>{t("monthlyReportPdf")}</span>
               </a>
@@ -271,16 +270,6 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
       {canSeePhones && tab === "results" && (
         <section id="group-panel-results" role="tabpanel" aria-labelledby="group-tab-results" aria-label={ws("results")}>
           <LiveExamRoomPanel defaultGroupId={groupId} />
-          <GroupAnalyticsPanel
-            groups={allGroups}
-            selectedGroupId={groupId}
-            onSelectGroup={(nextId) => {
-              if (nextId && nextId !== groupId) {
-                router.push(`/groups/${nextId}`);
-              }
-            }}
-            showGroupSelector={Boolean(allGroups && allGroups.length > 1)}
-          />
           <GroupAnalyticsDashboard groupId={groupId} groupName={group.name} className="mb-4" />
           <GroupLiveMonitoring groupId={groupId} />
           <GroupAiRanking groupId={groupId} />

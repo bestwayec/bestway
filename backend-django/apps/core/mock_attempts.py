@@ -1076,7 +1076,9 @@ def detail(actor, attempt_id):
                     if guidance is not None:
                         item['guidance'] = guidance
                 if show:
-                    item['correctAnswers'] = q.correct_answers
+                    variants = getattr(q, 'accepted_variants', None)
+                    accepted = [variant for variant in variants if isinstance(variant, str)] if isinstance(variants, list) else []
+                    item['correctAnswers'] = list(dict.fromkeys([*(q.correct_answers or []), *accepted])) if accepted else q.correct_answers
                     item.update(review_evidence.review_fields(q, review_source))
                 if q.id in shown_in_practice:
                     item['revealed'] = True
@@ -1087,6 +1089,10 @@ def detail(actor, attempt_id):
     from .question_numbering import apply_display_numbers
     apply_display_numbers(attempt.exam.type, sections)
     result = summary(attempt, detail=True)
+    if show and getattr(actor, 'role', None) == 'student' and actor.id == attempt.student_id and attempt.status == 'completed':
+        from .teacher_analytics import own_exam_benchmark
+        if benchmark := own_exam_benchmark(attempt):
+            result['classroomBenchmark'] = benchmark
     if staff:
         result['examTitle'] = attempt.exam.title
         result['cheatEvents'] = [dict(event=e.event, date=e.created_at) for e in MockCheatEvent.objects.filter(attempt_id=attempt_id).order_by('created_at')]

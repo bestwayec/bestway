@@ -203,3 +203,48 @@ def test_calendar_day_filter_includes_local_midnight(classroom):
         MockAttempt.objects.filter(pk="exam4-p3-latest-zero").update(started_at=midnight)
         data = analysis(owner, examId=exam.id, **{"from": day.isoformat(), "to": day.isoformat()})
     assert [row["attemptId"] for row in data["ranking"]] == ["exam4-p3-latest-zero"]
+
+
+
+def test_student_benchmark_requires_five_comparable_peers(classroom):
+    from apps.core.teacher_analytics import own_exam_benchmark
+
+    _, _, _, _, exam, _ = classroom
+    own = MockAttempt.objects.get(pk="exam4-p3-latest-zero")
+    assert own_exam_benchmark(own) is None
+    now = own.started_at - timedelta(days=1)
+    for index, score in enumerate((0, 4, 5, 6, 8)):
+        key = f"exam4-p3-peer-{index}"
+        peer = User.objects.create(id=key, name=key, role="student", phone=key,
+                                   password_hash="", is_active=True, created_at=now, updated_at=now)
+        profile = StudentProfile.objects.create(user=peer, group_id="exam4-p3-group", available_programs=[],
+                                                is_approved=True, current_points=0, game_qualified=False,
+                                                link_code=key, created_at=now)
+        ClassroomEnrollment.objects.create(group_id="exam4-p3-group", student=peer, started_at=now)
+        MockAttempt.objects.create(id=key, student=profile, exam=exam, status="completed", started_at=now,
+                                   submitted_at=now, flow_mode="full_test", mode="timed", overall_band=score,
+                                   anti_cheat_count=0, specification_version=own.specification_version,
+                                   score_version=own.score_version)
+    report = own_exam_benchmark(own)
+    assert report == {"students": 5, "median": 5}
+    MockAttempt.objects.filter(pk="exam4-p3-peer-4").update(score_version="different")
+    assert own_exam_benchmark(own) is None
+
+
+
+def test_prediction_keeps_full_mock_history_across_recent_practice(classroom, monkeypatch):
+    from apps.core import prediction_service
+
+    _, _, _, student, exam, _ = classroom
+    monkeypatch.setattr(prediction_service, "get_student_target", lambda _id: {"targetBand": 7, "targetScore": 65, "targetCefr": "C1"})
+    now = timezone.now() - timedelta(hours=1)
+    for index in range(6):
+        key = f"exam4-p3-new-practice-{index}"
+        MockAttempt.objects.create(id=key, student_id=student.id, exam=exam, status="completed",
+                                   started_at=now, submitted_at=now, mode="practice", flow_mode="single_skill",
+                                   anti_cheat_count=0, overall_band=9)
+    data = prediction_service.get_student_prediction(student.id)
+    assert data["ielts"]["currentBand"] == 0
+    assert data["multilevel"]["currentScore"] == 65
+    assert [row["ieltsBand"] for row in data["history"] if row["ieltsBand"] is not None] == [7, 0]
+    assert all(row["multilevelScore"] is None or row["ieltsBand"] is None for row in data["history"])

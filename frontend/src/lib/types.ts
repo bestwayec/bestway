@@ -960,6 +960,7 @@ export interface MockAttemptDetail extends MockAttemptSummary {
   sections: MockAttemptSection[];
   cheatEvents?: { event: string; date: string }[];
   diagnosticFeedback?: Record<string, DiagnosticFeedback>;
+  classroomBenchmark?: { students: number; median: number };
   /** Writing/Speaking skills whose score is still an AI estimate (not yet confirmed by a teacher). */
   provisionalSkills?: string[];
 }

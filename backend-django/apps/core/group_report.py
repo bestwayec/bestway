@@ -3,15 +3,25 @@ import calendar
 import csv
 from datetime import date
 from io import BytesIO, StringIO
+from pathlib import Path
+from xml.sax.saxutils import escape
+
+import reportlab
 
 from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill
+from openpyxl.utils import get_column_letter
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
-from xml.sax.saxutils import escape
-
 from .teacher_analytics import get_group_analytics, invalid
+
+FONT_DIR = Path(reportlab.__file__).parent / "fonts"
+for name, filename in (("ReportSans", "Vera.ttf"), ("ReportSansBold", "VeraBd.ttf")):
+    pdfmetrics.registerFont(TTFont(name, str(FONT_DIR / filename)))
 
 SCALES = {"ielts_academic": "IELTS Academic", "ielts_general": "IELTS General", "multilevel": "Multilevel"}
 
@@ -87,6 +97,8 @@ def generate_group_monthly_pdf(actor, group_id, month=None, params=None):
     output = BytesIO()
     document = SimpleDocTemplate(output, pagesize=landscape(A4), title="Guruh imtihon hisoboti")
     styles = getSampleStyleSheet()
+    styles["Heading2"].fontName = "ReportSansBold"
+    styles["BodyText"].fontName = "ReportSans"
     story = []
     for title, rows in tables.items():
         story.append(Paragraph(escape(title), styles["Heading2"]))
@@ -108,21 +120,30 @@ def generate_group_workbook(actor, group_id, month=None, params=None):
     workbook.remove(workbook.active)
     for title, rows in _tables(_data(actor, group_id, month, params)).items():
         sheet = workbook.create_sheet(title)
+        widths = [12] * len(rows[0])
         for values in rows:
             sheet.append(values)
-            for cell in sheet[sheet.max_row]:
+            for index, cell in enumerate(sheet[sheet.max_row]):
                 if cell.data_type == "f":
                     cell.data_type = "s"
-        sheet.freeze_panes = "A2"
+                if cell.value is not None:
+                    widths[index] = min(44, max(widths[index], len(str(cell.value)) + 2))
+                if sheet.max_row == 1 and title != "Hisobot":
+                    cell.font = Font(bold=True, color="FFFFFF")
+                    cell.fill = PatternFill("solid", fgColor="166534")
+        for index, width in enumerate(widths, start=1):
+            sheet.column_dimensions[get_column_letter(index)].width = width
+        if title != "Hisobot":
+            sheet.freeze_panes = "A2"
     output = BytesIO()
     workbook.save(output)
     return output.getvalue()
 
 
-def generate_group_monthly_csv(actor, group_id, month=None):
+def generate_group_monthly_csv(actor, group_id, month=None, params=None):
     output = StringIO(newline="")
     writer = csv.writer(output)
-    for title, rows in _tables(_data(actor, group_id, month, None)).items():
+    for title, rows in _tables(_data(actor, group_id, month, params)).items():
         writer.writerow([title])
         for row in rows:
             writer.writerow(["'" + value if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@"))

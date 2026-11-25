@@ -2035,6 +2035,7 @@
       "extractedCount": "OCR: {count, plural, one {# word} other {# words}} extracted"
     },
     "resultOverview": {
+      "classroomBenchmark": "Classroom median {score} · {count} comparable peer results",
       "cefrBadge": "CEFR {level}",
       "cefrC2": "Mastery — proficient user",
       "cefrC1": "Proficient user — effective operational proficiency",

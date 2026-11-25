@@ -64,11 +64,38 @@ const PICTURE = pngFile("ml-speaking.png");
 // Fake microphone: Speaking records Chromium's synthetic tone, never a person.
 const browser = await chromium.launch({
   ...(process.env.BW_CHROMIUM ? { executablePath: process.env.BW_CHROMIUM } : {}),
-  args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"],
+  args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream",
+    ...(process.env.BW_SYNTHETIC_AUDIO_CONTEXT ? ["--autoplay-policy=no-user-gesture-required"] : [])],
 });
 
 async function session(phone, viewport = { width: 1440, height: 900 }) {
   const ctx = await browser.newContext({ viewport, permissions: ["microphone"] });
+  if (process.env.BW_SYNTHETIC_AUDIO_CONTEXT) {
+    // Feed the real Chromium MediaRecorder from Web Audio on hosts whose fake input drops frames.
+    await ctx.addInitScript(() => {
+      const nativeInput = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+      navigator.mediaDevices.getUserMedia = async (constraints) => {
+        if (!constraints?.audio || constraints.video) return nativeInput(constraints);
+        const context = new AudioContext();
+        const destination = context.createMediaStreamDestination();
+        const tone = context.createOscillator();
+        const gain = context.createGain();
+        gain.gain.value = 0.05;
+        tone.frequency.value = 440;
+        tone.connect(gain).connect(destination);
+        tone.start();
+        await context.resume();
+        for (const track of destination.stream.getTracks()) {
+          const stop = track.stop.bind(track);
+          track.stop = () => {
+            stop();
+            if (context.state !== "closed") void context.close();
+          };
+        }
+        return destination.stream;
+      };
+    });
+  }
   const page = await ctx.newPage();
   page.setDefaultTimeout(30000);
   page.on("pageerror", (e) => {
