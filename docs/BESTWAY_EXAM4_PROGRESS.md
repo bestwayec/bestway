@@ -19,4 +19,6 @@ Phase 2 uses existing Reading stimulus references and IELTS Listening part numbe
 
 The resumed workspace verified draft group duplication on PostgreSQL and in Chromium. A copy keeps its passage or part and receives new question IDs and gap mappings. Same-unit reordering preserves the original IDs and stored numbers. The Chromium fixture submitted Reading at 4/40 and Listening at 1/40. Both result records and their answer IDs were checked in PostgreSQL.
 
-The full Multilevel journey verified publication, Listening play limits and reload, Reading, and offline Writing. Its first continuation run reached 79 of 81 confirmed answers. Six Speaking recordings were stored, and the seventh response had no server window. The timed recorder transition is the remaining browser check.
+An earlier Multilevel run stopped before the seventh Speaking window. The automatic recorder transition was adjusted and the resumed run uploaded the seventh response. It opened the eighth window, where strict duration validation rejected the recording. The remaining check is a clean Chromium retest of the full Multilevel journey.
+
+The cumulative backend, frontend, and browser checks passed for the canonical Reading and Listening fixture, builder publication, and Phase 1 regression. Builder authoring, preview, and the published partial practice shared the same audio markers and question associations. PostgreSQL and the normal Prisma engine download were checked separately. The engine download still returns HTTP 403.

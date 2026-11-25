@@ -408,10 +408,23 @@ async function student() {
     const mic = page.getByRole("button", { name: "Start the test (5 seconds)" });
     if (await mic.count()) { await mic.click(); await page.getByRole("button", { name: /I can hear it/ }).click({ timeout: 20000 }); }
     const uploads = [];
+    let rejectedRecording;
     page.on("response", async (r) => {
       if (r.request().method() !== "POST" || !/\/speaking\/[^/]+$/.test(new URL(r.url()).pathname)) return;
       // A rejected upload is reported with its error code (the take must never be lost).
-      uploads.push(r.status() < 400 ? r.status() : `${r.status()} ${(await r.json().catch(() => ({})))?.error?.code ?? (await r.text().catch(() => "")).slice(0, 80)}`);
+      if (r.ok()) {
+        uploads.push(r.status());
+        return;
+      }
+      const { error } = await r.json().catch(() => ({}));
+      uploads.push(`${r.status()} ${error?.code ?? "unknown"}`);
+      if (error?.code === "SPEAKING_AUDIO_DURATION_INVALID") {
+        rejectedRecording = error.code;
+        const upload = r.request().postDataBuffer();
+        if (upload && upload.length <= 25 * 1024 * 1024) {
+          writeFileSync(join(OUT, "ml-speaking-rejected.multipart"), upload);
+        }
+      }
     });
     await page.getByRole("button", { name: "Test microphone" }).first().click();
     await page.locator('meter[aria-label="Microphone input level"]').first().waitFor();
@@ -424,6 +437,7 @@ async function student() {
     // The remaining 7 answers start on their own (server timing: up to 60 s preparation + 120 s).
     const deadline = Date.now() + 15 * 60 * 1000;
     while ((await answeredCount(page)) < 81) {
+      if (rejectedRecording) throw new Error(`Speaking recording rejected at ${await answeredCount(page)}/81: ${rejectedRecording}`);
       if (Date.now() > deadline) throw new Error(`speaking stalled at ${await answeredCount(page)}/81; uploads ${uploads.join(",")}`);
       await page.waitForTimeout(5000);
     }
