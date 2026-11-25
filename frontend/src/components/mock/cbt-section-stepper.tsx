@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 import { useRunnerShortcuts } from "./runner-shortcuts";
-import type { ExamSimulatorMode, MockSection, MockSkill } from "@/lib/types";
+import type { ExamSimulatorMode, MockQuestion, MockSection, MockSkill } from "@/lib/types";
 import { multilevelQuestionAnswered } from "@/lib/multilevel-completeness";
 
-import { objectiveNumberLabel } from "@/lib/objective-question";
+import { objectiveNumberLabel, objectivePositionCount, selectedObjectiveOptions } from "@/lib/objective-question";
 import { examContentUnits } from "@/lib/exam-content-units";
 
 export interface CbtSectionStepperProps {
@@ -39,6 +39,15 @@ export interface CbtSectionStepperProps {
   isFullTest?: boolean;
   /** Focus mode: the bar keeps only the question controls. */
   focus?: boolean;
+}
+
+function filledPositions(question: MockQuestion, answers: Record<string, string>, recordings: ReadonlySet<string>) {
+  const count = objectivePositionCount(question);
+  if (count > 1) {
+    const selected = selectedObjectiveOptions(answers[question.id] ?? "", question.options ?? []);
+    return Math.min(count, new Set(selected).size);
+  }
+  return multilevelQuestionAnswered(question, answers, recordings) ? 1 : 0;
 }
 
 export function CbtSectionStepper({
@@ -169,10 +178,9 @@ export function CbtSectionStepper({
   const partStats = React.useMemo(() => {
     return units.map(({ source: group, groups: members, number }, idx) => {
       const qs = members.flatMap((item) => item.questions || []);
-      const answeredCount = qs.filter((q) =>
-        multilevelQuestionAnswered(q, answers, audioSet)
-      ).length;
-      const isComplete = qs.length > 0 && answeredCount === qs.length;
+      const totalCount = qs.reduce((total, q) => total + objectivePositionCount(q), 0);
+      const answeredCount = qs.reduce((total, q) => total + filledPositions(q, answers, audioSet), 0);
+      const isComplete = totalCount > 0 && answeredCount === totalCount;
       const label =
         group?.title ||
         t(skill === "reading" ? "passageN" : "partN", { n: idx + 1 });
@@ -181,7 +189,7 @@ export function CbtSectionStepper({
         label,
         shortLabel: t(skill === "reading" ? "passageN" : "partN", { n: partNo }),
         answeredCount,
-        totalCount: qs.length,
+        totalCount,
         isComplete,
       };
     });
@@ -220,14 +228,15 @@ export function CbtSectionStepper({
     return () => window.removeEventListener("keydown", onKey);
   }, [sheetOpen]);
 
-  const answeredTotal = flattenedQuestions.filter((q) => multilevelQuestionAnswered(q, answers, audioSet)).length;
+  const answeredTotal = partStats.reduce((total, part) => total + part.answeredCount, 0);
+  const totalPositions = partStats.reduce((total, part) => total + part.totalCount, 0);
   const goTo = (index: number) => {
     const q = flattenedQuestions[index];
     if (q) jumpToQuestion(q);
   };
 
   const paletteButton = (q: (typeof flattenedQuestions)[number], tabStop: string | undefined, onOpen?: () => void) => {
-    const isAns = multilevelQuestionAnswered(q, answers, audioSet);
+    const isAns = filledPositions(q, answers, audioSet) === objectivePositionCount(q);
     const isFlag = flaggedQuestions.has(q.id);
     const isCurrent = q.id === activeQuestionId;
     const isCurrentPart = q.groupIndex === activePartIndex;
@@ -317,8 +326,8 @@ export function CbtSectionStepper({
             <p className="sr-only" aria-live="polite" aria-atomic="true">
               {t("announceQuestion", {
                 label: activeQuestion.label,
-                total: flattenedQuestions.length,
-                state: multilevelQuestionAnswered(activeQuestion, answers, audioSet) ? t("stateAnswered") : t("stateNotAnswered"),
+                total: totalPositions,
+                state: filledPositions(activeQuestion, answers, audioSet) === objectivePositionCount(activeQuestion) ? t("stateAnswered") : t("stateNotAnswered"),
               })}
               {flaggedQuestions.has(activeQuestion.id) ? `, ${t("stateFlagged")}` : ""}
             </p>
@@ -386,7 +395,7 @@ export function CbtSectionStepper({
             >
               <LayoutGrid className="size-4" aria-hidden />
               <span className="md:sr-only">{t("allQuestions")}</span>
-              <span className="tabular-nums text-fg-muted">{answeredTotal}/{flattenedQuestions.length}</span>
+              <span className="tabular-nums text-fg-muted">{answeredTotal}/{totalPositions}</span>
             </Button>
             {activeQuestionId && (
               <Button
@@ -434,7 +443,7 @@ export function CbtSectionStepper({
             <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-border-strong sm:hidden" aria-hidden />
             <div className="mb-3 flex items-center justify-between gap-2">
               <h2 id="question-sheet-title" className="text-base font-semibold text-fg">
-                {t("palette")} ({answeredTotal}/{flattenedQuestions.length})
+                {t("palette")} ({answeredTotal}/{totalPositions})
               </h2>
               <Button ref={sheetClose} type="button" variant="ghost" size="sm" className={iconButton} onClick={() => setSheetOpen(false)} aria-label={t("closePalette")}>
                 <X className="size-4" aria-hidden />

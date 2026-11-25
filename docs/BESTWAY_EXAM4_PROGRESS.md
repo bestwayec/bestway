@@ -16,3 +16,7 @@ Phase 4 should verify the final candidate against a deployment-equivalent Postgr
 ## Phase 2 · Canonical exam content
 
 Phase 2 uses existing Reading stimulus references and IELTS Listening part numbers to share sources across question groups. Draft authoring, JSON packages, preview and candidate navigation use those associations. [Phase 2 report](BESTWAY_EXAM4_PHASE2_REPORT.md)
+
+The resumed workspace verified draft group duplication on PostgreSQL and in Chromium. A copy keeps its passage or part and receives new question IDs and gap mappings. Same-unit reordering preserves the original IDs and stored numbers. The Chromium fixture submitted Reading at 4/40 and Listening at 1/40. Both result records and their answer IDs were checked in PostgreSQL.
+
+The full Multilevel journey verified publication, Listening play limits and reload, Reading, and offline Writing. Its first continuation run reached 79 of 81 confirmed answers. Six Speaking recordings were stored, and the seventh response had no server window. The timed recorder transition is the remaining browser check.

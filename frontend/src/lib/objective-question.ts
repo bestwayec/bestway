@@ -100,3 +100,8 @@ export function objectiveNumberLabel(question: Pick<ObjectiveQuestion, "number" 
   const end = question.displayNumberEnd;
   return end && end > start ? `${start}–${end}` : String(start);
 }
+
+export function objectivePositionCount(question: Pick<ObjectiveQuestion, "number" | "displayNumber" | "displayNumberEnd">): number {
+  const start = question.displayNumber ?? question.number;
+  return Math.max(1, (question.displayNumberEnd ?? start) - start + 1);
+}

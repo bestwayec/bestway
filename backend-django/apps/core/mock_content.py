@@ -74,8 +74,21 @@ def sanitize_content(value):
     return parser.finish()
 
 
+_GAP_SPAN = re.compile(r'<span\s+data-gap="([0-9]{1,3})"\s*>\s*</span>')
+
+
 def gap_numbers(value):
-    return [int(n) for n in re.findall(r'<span\s+data-gap="([0-9]{1,3})"\s*>\s*</span>', value or '')]
+    return [int(n) for n in _GAP_SPAN.findall(value or '')]
+
+
+def renumber_gaps(value, numbers):
+    if value is None:
+        return None
+    return _GAP_SPAN.sub(
+        lambda match: f'<span data-gap="{numbers[int(match[1])]}"></span>'
+        if int(match[1]) in numbers else match[0],
+        value,
+    )
 
 
 def _numbers(numbers):

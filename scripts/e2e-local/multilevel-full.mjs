@@ -293,7 +293,11 @@ async function openPart(page, n) {
 }
 async function answeredCount(page) {
   const text = await page.locator("body").innerText();
-  return Number((text.match(/(\d+) \/ 81 answered/) || [])[1] ?? -1);
+  return Number((text.match(/(\d+) \/ 81 confirmed/) || [])[1] ?? -1);
+}
+async function waitConfirmed(page, count) {
+  await page.getByText(`${count} / 81 confirmed`, { exact: true }).locator("visible=true").first()
+    .waitFor({ timeout: 20000 });
 }
 async function finishSection(page) {
   await page.getByRole("button", { name: "Next section" }).locator("visible=true").first().click();
@@ -362,18 +366,14 @@ async function student() {
     // The server refuses a third play even when asked directly.
     const third = await api(page, "POST", `/mock/attempts/${state.attemptId}/listening/${by.listening.groups[0].id}/play`, undefined, { allow: [403] });
     expect(third.status === 403 && third.error?.code === "AUDIO_REPLAY_BLOCKED", `third play: ${third.status} ${third.error?.code}`);
-    await page.waitForTimeout(2500);
-    const answered = await answeredCount(page);
-    expect(answered === 35, `answered after Listening: ${answered}`);
+    await waitConfirmed(page, 35);
     await finishSection(page);
     return `6 parts × 2 server plays, third play 403 AUDIO_REPLAY_BLOCKED; ${notes.join("; ")}; 35/35 answered`;
   });
 
   await step(page, "07-reading", async () => {
     for (const [i, group] of by.reading.groups.entries()) { await openPart(page, i + 1); for (const q of group.questions) await answerObjective(page, q); }
-    await page.waitForTimeout(2500);
-    const answered = await answeredCount(page);
-    expect(answered === 70, `answered after Reading: ${answered}`);
+    await waitConfirmed(page, 70);
     await finishSection(page);
     return "35/35 answered";
   });
@@ -393,14 +393,13 @@ async function student() {
         await area.pressSequentially(texts[0].slice(60), { delay: 2 });
         await page.getByText(/kept on this device/).first().waitFor();
         await page.context().setOffline(false);
-        await page.getByText("Saved", { exact: true }).first().waitFor({ timeout: 20000 });
-        await page.reload({ waitUntil: "networkidle" }); await dismissExamNotices(page);
+        await waitConfirmed(page, 71);
+        await page.reload({ waitUntil: "domcontentloaded" }); await dismissExamNotices(page);
         await page.locator(`[aria-label^="Task 1.1"]`).first().click();
         expect((await page.locator("main textarea").first().inputValue()) === texts[0], "the offline part of the essay was lost");
       } else await area.fill(texts[i]);
     }
-    await page.waitForTimeout(2500);
-    expect((await answeredCount(page)) === 73, `answered after Writing: ${await answeredCount(page)}`);
+    await waitConfirmed(page, 73);
     await finishSection(page);
     return "3 tasks; typed offline, sent when back online, intact after reload";
   });

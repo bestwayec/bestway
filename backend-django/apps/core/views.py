@@ -1038,7 +1038,7 @@ def mock_section_groups_view(request, section_id):
 
     require_role(request, "teacher", "admin", "super_admin")
 
-    data = body(request, {"parentGroupId", "sortOrder", "title", "instructions", "passageText", "contentHtml", "audioScript", "contentLayout", "optionsReusable", "maxScore", "stimulusRef", "partNumber", "audioDurationSec", "audioPlayLimit"})
+    data = body(request, {"copyFromGroupId", "parentGroupId", "sortOrder", "title", "instructions", "passageText", "contentHtml", "audioScript", "contentLayout", "optionsReusable", "maxScore", "stimulusRef", "partNumber", "audioDurationSec", "audioPlayLimit"})
 
     return success(mock_authoring.group_payload(mock_authoring.create_group(request.user, section_id, data)), status=201)
 
@@ -1058,7 +1058,7 @@ def mock_group_view(request, group_id):
 
         return success(mock_authoring.delete_group(request.user, group_id))
 
-    data = body(request, {"parentGroupId", "sortOrder", "title", "instructions", "passageText", "contentHtml", "audioScript", "contentLayout", "optionsReusable", "maxScore", "stimulusRef", "partNumber", "audioDurationSec", "audioPlayLimit"})
+    data = body(request, {"parentGroupId", "groupPlacement", "sortOrder", "title", "instructions", "passageText", "contentHtml", "audioScript", "contentLayout", "optionsReusable", "maxScore", "stimulusRef", "partNumber", "audioDurationSec", "audioPlayLimit"})
 
     return success(mock_authoring.group_payload(mock_authoring.update_group(request.user, group_id, data)))
 

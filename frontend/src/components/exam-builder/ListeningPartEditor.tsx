@@ -5,6 +5,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   ChevronDown,
+  ArrowDown,
+  ArrowUp,
   Eye,
   EyeOff,
   ImagePlus,
@@ -767,7 +769,16 @@ export function ListeningPartEditor({
           </div>
         ) : (
           <ol className="mt-3 space-y-2">
-            {part.questions.map((q) => {
+            {part.questions.map((q, index) => {
+              const moveQuestion = (step: -1 | 1) => update((p) => {
+                const questions = [...p.questions];
+                const other = questions[index + step];
+                if (other) {
+                  questions[index + step] = q;
+                  questions[index] = other;
+                }
+                return { ...p, questions };
+              });
               const open = expanded.has(q.clientId);
               const issues = questionIssues(
                 {
@@ -837,6 +848,14 @@ export function ListeningPartEditor({
                   </button>
                   {open && (
                     <div className="border-t border-border p-3">
+                      <div className="mb-2 flex gap-1">
+                        <Button type="button" variant="ghost" size="sm" disabled={index === 0}
+                          aria-label={`${tx(t, "moveUp", "Move question")} ${q.number} ${tx(t, "up", "up")}`}
+                          onClick={() => moveQuestion(-1)}><ArrowUp className="size-4" aria-hidden /></Button>
+                        <Button type="button" variant="ghost" size="sm" disabled={index === part.questions.length - 1}
+                          aria-label={`${tx(t, "moveDown", "Move question")} ${q.number} ${tx(t, "down", "down")}`}
+                          onClick={() => moveQuestion(1)}><ArrowDown className="size-4" aria-hidden /></Button>
+                      </div>
                       <QuestionEditor
                         question={q}
                         skill="listening"

@@ -2325,6 +2325,10 @@
   "examBuilder": {
     "moveUnitTaskGroup": "{group} guruhini boshqa matn yoki qismga ko‘chirish",
     "moveUnitTaskGroupShort": "Ko‘chirish…",
+    "moveUnitTaskGroupUp": "{group} guruhini yuqoriga ko‘chirish",
+    "moveUnitTaskGroupDown": "{group} guruhini pastga ko‘chirish",
+    "duplicateUnitTaskGroup": "{group} savollar guruhidan nusxa olish",
+    "duplicateUnitTaskGroupShort": "Nusxa olish",
     "sharedUnitSource": "Biriktirilgan matn",
     "openUnitSource": "Manba guruhini ochish",
     "sharedUnitAudio": "Audio ushbu qismdagi boshqa guruhga biriktirilgan.",
@@ -2504,6 +2508,7 @@
     "questionGroup": "Question group",
     "noQuestionsYet": "No questions yet",
     "questionOne": "question",
+    "scoringPositions": "{count} baholash o‘rni",
     "emptyGroupTitle": "This question group is empty.",
     "question": "Question",
     "collapse": "Collapse",

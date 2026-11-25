@@ -15,6 +15,7 @@ import {
   useUpdateMockSection,
 } from "@/hooks/use-mock";
 import { ApiError } from "@/lib/api-client";
+import { objectivePositionCount } from "@/lib/objective-question";
 import type { MockExamDetail } from "@/lib/types";
 import { groupIssueCount } from "./checks";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -136,7 +137,18 @@ export function ReadingSectionPanel({
     { groupId, input: { parentGroupId } },
     { onError: (e) => toast.error(e instanceof ApiError ? e.message : tc("unknownError")) },
   );
+  const reorderTaskGroup = (groupId: string, siblingId: string, before: boolean) => updateGroup.mutate(
+    { groupId, input: { groupPlacement: { siblingId, before } } },
+    { onError: (e) => toast.error(e instanceof ApiError ? e.message : tc("unknownError")) },
+  );
   const selectGroup = (groupId: string) => onSelect({ kind: "group", groupId });
+  const duplicateTaskGroup = (copyFromGroupId: string) => createGroup.mutate(
+    { sectionId: section.id, input: { copyFromGroupId } },
+    {
+      onSuccess: (g) => selectGroup((g as { id: string }).id),
+      onError: (e) => toast.error(e instanceof ApiError ? e.message : tc("unknownError")),
+    },
+  );
   const addTaskGroup = (parentGroupId: string) => createGroup.mutate(
     { sectionId: section.id, input: { parentGroupId, title: t("newUnitTaskGroup") } },
     {
@@ -194,7 +206,10 @@ export function ReadingSectionPanel({
             );
             const n = passage.questions.length;
             const hasText = !!passage.passageText?.trim();
-            const range = partRangeLabel(passage.questions.map((q) => q.number));
+            const range = partRangeLabel(passage.questions.flatMap((q) => [
+              q.displayNumber ?? q.number, q.displayNumberEnd ?? q.displayNumber ?? q.number,
+            ]));
+            const scoringPositions = passage.questions.reduce((total, q) => total + objectivePositionCount(q), 0);
             const types = [
               ...new Set(
                 passage.groups.flatMap((group) => group.questions.map((q) => q.type)),
@@ -239,6 +254,7 @@ export function ReadingSectionPanel({
                     {range ? `Q${range}` : "—"}
                     {" · "}
                     {n} {n === 1 ? tx(t, "questionOne", "question") : tx(t, "questions", "questions")}
+                    {scoringPositions !== n && ` · ${t("scoringPositions", { count: scoringPositions })}`}
                   </span>
                 </div>
                 {typeText && (
@@ -261,7 +277,8 @@ export function ReadingSectionPanel({
                 </p>
               </button>
               <UnitGroupActions groups={passage.groups} select={selectGroup} add={() => addTaskGroup(firstGroup.id)}
-                move={moveTaskGroup} busy={createGroup.isPending || updateGroup.isPending}
+                duplicate={duplicateTaskGroup} move={moveTaskGroup} reorder={reorderTaskGroup}
+                busy={createGroup.isPending || updateGroup.isPending}
                 targets={passages.filter((other) => other !== passage).map((other) => ({
                   id: other.groups[0].id, label: other.title ?? `${t("passage")} ${other.ordinal}`,
                 }))} />

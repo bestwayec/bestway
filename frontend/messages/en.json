@@ -2325,6 +2325,10 @@
   "examBuilder": {
     "moveUnitTaskGroup": "Move {group} to another passage or part",
     "moveUnitTaskGroupShort": "Move to…",
+    "moveUnitTaskGroupUp": "Move {group} up",
+    "moveUnitTaskGroupDown": "Move {group} down",
+    "duplicateUnitTaskGroup": "Duplicate question group {group}",
+    "duplicateUnitTaskGroupShort": "Duplicate",
     "sharedUnitSource": "Shared passage text",
     "openUnitSource": "Open source group",
     "sharedUnitAudio": "Audio is attached to another group in this part.",
@@ -2504,6 +2508,7 @@
     "questionGroup": "Question group",
     "noQuestionsYet": "No questions yet",
     "questionOne": "question",
+    "scoringPositions": "{count} scoring positions",
     "emptyGroupTitle": "This question group is empty.",
     "question": "Question",
     "collapse": "Collapse",

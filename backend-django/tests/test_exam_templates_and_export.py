@@ -15,7 +15,7 @@ from django.db import connection
 from django.test import SimpleTestCase, TestCase
 from rest_framework.test import APIClient
 
-from apps.core.mock_content import reading_passage_count
+from apps.core.mock_content import gap_numbers, reading_passage_count
 from apps.core.mock_import_validate import validate_package
 from apps.core.multilevel import blueprint_issues
 from apps.legacy_schema import models as legacy_models
@@ -243,6 +243,40 @@ class ExportRoundTripTests(TestCase):
         self.assertEqual(row.evidence_offset, group['passageText'].index(row.evidence_text))
         exported = self.export(exam_id).data['data']
         self.assertEqual(exported['exam']['sections'][0]['groups'][0]['questions'][0]['evidenceText'], row.evidence_text)
+
+    def test_duplicate_task_keeps_the_source_and_remaps_only_the_copy(self):
+        exam_id = self.commit(fixture('reading-passage-1')).data['data']['examId']
+        section = MockSection.objects.get(exam_id=exam_id)
+        source = MockQuestionGroup.objects.filter(section=section).order_by('sort_order').first()
+        original = list(MockQuestion.objects.filter(group=source).order_by('sort_order', 'number', 'id'))
+        source.content_html = f'<p>Draft example <span data-gap="{original[0].number}"></span></p>'
+        source.save(update_fields=['content_html'])
+        route = f'/v1/mock/sections/{section.id}/groups'
+        payload = {'copyFromGroupId': source.id}
+        self.client.force_authenticate(OTHER_TEACHER)
+        self.assertEqual(self.client.post(route, payload, format='json').status_code, 403)
+        self.client.force_authenticate(TEACHER)
+        response = self.client.post(route, payload, format='json')
+        self.assertEqual(response.status_code, 201, response.data)
+        duplicate = MockQuestionGroup.objects.get(id=response.data['data']['id'])
+        cloned = list(MockQuestion.objects.filter(group=duplicate).order_by('sort_order', 'number', 'id'))
+        source.refresh_from_db()
+        self.assertEqual(duplicate.stimulus_ref, source.stimulus_ref)
+        self.assertIsNone(duplicate.passage_text)
+        self.assertIsNone(duplicate.audio_key)
+        self.assertEqual([q.correct_answers for q in cloned], [q.correct_answers for q in original])
+        self.assertFalse({q.id for q in original} & {q.id for q in cloned})
+        self.assertGreater(cloned[0].number, max(q.number for q in original))
+        self.assertEqual(gap_numbers(source.content_html), [original[0].number])
+        self.assertEqual(gap_numbers(duplicate.content_html), [cloned[0].number])
+        placement = {'groupPlacement': {'siblingId': source.id, 'before': True}}
+        for _ in range(2):
+            moved = self.client.patch(f'/v1/mock/groups/{duplicate.id}', placement, format='json')
+            self.assertEqual(moved.status_code, 200, moved.data)
+        duplicate.refresh_from_db()
+        source.refresh_from_db()
+        self.assertLess(duplicate.sort_order, source.sort_order)
+        self.assertEqual(gap_numbers(duplicate.content_html), [cloned[0].number])
 
     def test_multilevel_writing_scores_and_shared_stimulus_are_stored(self):
         exam_id = self.commit(fixture('multilevel-writing')).data['data']['examId']

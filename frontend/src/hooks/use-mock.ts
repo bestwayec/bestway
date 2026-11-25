@@ -378,7 +378,7 @@ export function useDeleteMockSection(examId: string) {
 export function useCreateMockGroup(examId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (v: { sectionId: string; input?: MockGroupInput }) =>
+    mutationFn: (v: { sectionId: string; input?: MockGroupInput | { copyFromGroupId: string } }) =>
       api.post(`/mock/sections/${v.sectionId}/groups`, v.input ?? {}),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam"] }),
   });
@@ -387,7 +387,7 @@ export function useCreateMockGroup(examId: string) {
 export function useUpdateMockGroup(examId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (v: { groupId: string; input: MockGroupInput }) =>
+    mutationFn: (v: { groupId: string; input: MockGroupInput | { groupPlacement: { siblingId: string; before: boolean } } }) =>
       api.patch(`/mock/groups/${v.groupId}`, v.input),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam"] }),
   });

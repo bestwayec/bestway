@@ -16,6 +16,7 @@ import {
   useUpdateMockSection,
 } from "@/hooks/use-mock";
 import { ApiError } from "@/lib/api-client";
+import { objectivePositionCount } from "@/lib/objective-question";
 import type { MockExamDetail } from "@/lib/types";
 import { groupIssueCount } from "./checks";
 import { ListeningAudioGatePanel } from "./ListeningAudioGatePanel";
@@ -138,7 +139,18 @@ export function ListeningSectionPanel({
     { groupId, input: { parentGroupId } },
     { onError: (e) => toast.error(e instanceof ApiError ? e.message : tc("unknownError")) },
   );
+  const reorderTaskGroup = (groupId: string, siblingId: string, before: boolean) => updateGroup.mutate(
+    { groupId, input: { groupPlacement: { siblingId, before } } },
+    { onError: (e) => toast.error(e instanceof ApiError ? e.message : tc("unknownError")) },
+  );
   const selectGroup = (groupId: string) => onSelect({ kind: "group", groupId });
+  const duplicateTaskGroup = (copyFromGroupId: string) => createGroup.mutate(
+    { sectionId: section.id, input: { copyFromGroupId } },
+    {
+      onSuccess: (g) => selectGroup((g as { id: string }).id),
+      onError: (e) => toast.error(e instanceof ApiError ? e.message : tc("unknownError")),
+    },
+  );
   const addTaskGroup = (parentGroupId: string) => createGroup.mutate(
     { sectionId: section.id, input: { parentGroupId, title: t("newUnitTaskGroup") } },
     {
@@ -198,9 +210,12 @@ export function ListeningSectionPanel({
         <div className="grid gap-3 sm:grid-cols-2">
           {parts.map(({ source: g, groups, number: partNo }) => {
             const questions = groups.flatMap((group) => group.questions);
-            const issues = groupIssueCount(g, "listening");
+            const issues = groups.reduce((total, group) => total + groupIssueCount(group, "listening"), 0);
             const n = questions.length;
-            const range = partRangeLabel(questions.map((q) => q.number));
+            const range = partRangeLabel(questions.flatMap((q) => [
+              q.displayNumber ?? q.number, q.displayNumberEnd ?? q.displayNumber ?? q.number,
+            ]));
+            const scoringPositions = questions.reduce((total, q) => total + objectivePositionCount(q), 0);
             const summary = partTypeSummary(questions.map((q) => q.type));
             const missing: string[] = [];
             if (!g.hasAudio && n > 0) missing.push(tx(t, "audioMissingShort", "Audio missing"));
@@ -235,6 +250,7 @@ export function ListeningSectionPanel({
                     {range ? `Q${range}` : "—"}
                     {" · "}
                     {n} {n === 1 ? tx(t, "questionOne", "question") : tx(t, "questions", "questions")}
+                    {scoringPositions !== n && ` · ${t("scoringPositions", { count: scoringPositions })}`}
                   </span>
                 </div>
                 {summary && <p className="mt-1 text-xs text-fg-muted">{summary}</p>}
@@ -252,7 +268,9 @@ export function ListeningSectionPanel({
                 </p>
               </button>
               <UnitGroupActions groups={groups} select={selectGroup} add={g.partNumber && detail.type !== "multilevel" ? () => addTaskGroup(g.id) : undefined}
+                duplicate={g.partNumber && detail.type !== "multilevel" ? duplicateTaskGroup : undefined}
                 move={detail.type !== "multilevel" ? moveTaskGroup : undefined}
+                reorder={detail.type !== "multilevel" ? reorderTaskGroup : undefined}
                 busy={createGroup.isPending || updateGroup.isPending}
                 targets={parts.filter((part) => part.source.id !== g.id && part.source.partNumber).map((part) => ({
                   id: part.source.id, label: part.source.title ?? `${t("partShort")} ${part.number}`,

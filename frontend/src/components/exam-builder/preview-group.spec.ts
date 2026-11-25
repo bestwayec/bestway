@@ -78,7 +78,7 @@ describe("reading matching preview scope", () => {
     }));
     const selects = html.match(/<select\b[^]*?<\/select>/g) ?? [];
     expect(selects).toHaveLength(2);
-    const river = (select: string) => select.match(/<option\b[^>]*value="River"[^>]*>/)?.[0];
+    const river = (select = "") => select.match(/<option\b[^>]*value="River"[^>]*>/)?.[0];
     expect(river(selects[0])).toContain('selected=""');
     expect(river(selects[0])).not.toContain('disabled=""');
     expect(river(selects[1])).toContain('disabled=""');

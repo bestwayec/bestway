@@ -41,14 +41,18 @@ async function openAttempt(skill) {
   return { id: start.attemptId, url };
 }
 
-async function save(page, path, questionId, value) {
-  const slot = page.locator(`[id="q-${questionId}"]`).getByRole("textbox");
-  assert.equal(await slot.count(), 1);
+async function confirmedEdit(page, path, questionId, edit) {
   const receipt = page.waitForResponse((response) => response.url().endsWith(`${path}/answers`) && response.status() === 201);
-  await slot.fill(value);
+  await edit();
   const result = await (await receipt).json();
   assert.equal(result.data.receipts[questionId].status, "saved");
   return result.data.receipts[questionId].revision;
+}
+
+async function save(page, path, questionId, value) {
+  const slot = page.locator(`[id="q-${questionId}"]`).getByRole("textbox");
+  assert.equal(await slot.count(), 1);
+  return confirmedEdit(page, path, questionId, () => slot.fill(value));
 }
 
 async function screenshot(page, name) {
@@ -66,8 +70,13 @@ try {
   const readId = (number) => `exam4-phase2-local-reading-q${number}`;
   const revision = await save(page, readingPath, readId(1), "alpha");
   assert(await passageText.isVisible());
-  assert.equal(await page.locator(`[id="q-${readId(6)}"]`).count(), 1);
-  assert.equal(await page.locator(`[id="q-${readId(11)}"]`).count(), 1);
+  for (const [number, value] of [[6, "TRUE"], [11, "Alpha"]]) {
+    const questionId = readId(number);
+    const question = page.locator(`[id="q-${questionId}"]`);
+    assert.equal(await question.count(), 1);
+    await confirmedEdit(page, readingPath, questionId, () => question.getByRole("radio", { name: value, exact: true }).check());
+    assert(await passageText.isVisible());
+  }
   const detail = await api(context, readingPath);
   const questions = detail.sections.flatMap((section) => section.groups.flatMap((group) => group.questions));
   assert.deepEqual(questions.map((question) => question.displayNumber), Array.from({ length: 40 }, (_, index) => index + 1));
@@ -83,6 +92,10 @@ try {
   await page.getByText(/Synthetic source about gardens/).waitFor();
   assert.equal(await page.locator(`[id="q-${readId(21)}"] input`).inputValue(), "alpha");
   assert.equal(await page.locator(`button[data-qid="${readId(21)}"][aria-current="true"]`).count(), 1);
+  await tabs(page).first().click();
+  assert(await page.locator(`[id="q-${readId(6)}"]`).getByRole("radio", { name: "TRUE", exact: true }).isChecked());
+  assert(await page.locator(`[id="q-${readId(11)}"]`).getByRole("radio", { name: "Alpha", exact: true }).isChecked());
+  await tabs(page).nth(1).click();
 
   assert.equal((await api(context, readingPath)).deadlineAt, detail.deadlineAt);
 
@@ -93,8 +106,8 @@ try {
   }
   const result = await api(context, `${readingPath}/submit`, "POST", { confirm: true });
   assert.equal(result.rawScores.reading.max, 40);
-  assert.equal(result.rawScores.reading.score, 2);
-  console.log(`PASS Reading: three passages, 40 positions, table and summary receipt, reload and score (${reading.id})`);
+  assert.equal(result.rawScores.reading.score, 4);
+  console.log(`PASS Reading: three passages, 40 positions, four saved question types, reload and score (${reading.id})`);
 
   const listening = await openAttempt("listening");
   const listeningPath = `/mock/attempts/${listening.id}`;
@@ -118,6 +131,9 @@ try {
   const section = await api(teacher, `/mock/exams/${draft.id}/sections`, "POST", { skill: "reading", title: "Synthetic Reading" });
   const parent = await api(teacher, `/mock/sections/${section.id}/groups`, "POST", { title: "Synthetic source", passageText: "Original draft source text." });
   const child = await api(teacher, `/mock/sections/${section.id}/groups`, "POST", { title: "Synthetic continuation", parentGroupId: parent.id });
+  await api(teacher, `/mock/groups/${child.id}/questions`, "POST", { questions: [
+    { number: 1, type: "short_answer", prompt: "Write alpha.", correctAnswers: ["alpha"] },
+  ] });
   assert(child.stimulusRef);
   const preview = await api(teacher, `/mock/exams/${draft.id}/preview`);
   assert.equal(preview.sections[0].groups[0].stimulusRef, child.stimulusRef);
@@ -126,8 +142,19 @@ try {
   const builder = await teacher.newPage();
   await builder.goto(new URL(`/en/exam-builder/${draft.id}`, web).href, { waitUntil: "domcontentloaded" });
   await builder.getByText("Synthetic builder draft", { exact: true }).first().waitFor();
+  await builder.setViewportSize({ width: 700, height: 900 });
+  await builder.locator("#builder-outline").selectOption(`section:${section.id}`);
+  await builder.setViewportSize({ width: 1366, height: 900 });
   await screenshot(builder, "builder-1366");
-  console.log("PASS teacher creates linked draft groups and reopens the candidate-safe preview model");
+  const copied = builder.waitForResponse((response) => response.url().endsWith(`/sections/${section.id}/groups`) && response.status() === 201);
+  await builder.getByRole("button", { name: "Duplicate question group Synthetic continuation" }).click();
+  const duplicatedGroup = (await (await copied).json()).data;
+  const reopened = await api(teacher, `/mock/exams/${draft.id}/preview`);
+  const duplicated = reopened.sections[0].groups.find((group) => group.id === duplicatedGroup.id);
+  assert.equal(duplicated.stimulusRef, child.stimulusRef);
+  assert.equal(duplicated.questions[0].number, 2);
+  assert(!Object.hasOwn(duplicated.questions[0], "correctAnswers"));
+  console.log("PASS teacher creates and duplicates linked draft groups and reopens the candidate-safe preview model");
 } finally {
   await browser.close();
 }

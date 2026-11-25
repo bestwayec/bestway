@@ -8,7 +8,7 @@ import re
 from uuid import uuid4
 
 from django.db import connection, transaction
-from django.db.models import Q
+from django.db.models import Max, Q
 from django.utils import timezone
 
 from apps.legacy_schema.models import (
@@ -441,16 +441,24 @@ def delete_section(actor, section_id: str):
     return {"deleted": True}
 
 
-def _associate_task_group(section, parent_id):
-    values = {}
+def _ordered_section_groups(section):
+    return list(MockQuestionGroup.objects.filter(section=section).order_by('sort_order', 'id'))
+
+
+def _section_group_units(section, rows):
     from .mock_content import exam_content_units
 
-    if not isinstance(parent_id, str) or section.skill not in ('reading', 'listening'):
-        raise ContractAPIException('VALIDATION_ERROR', 'Choose a parent passage or Listening part', 400)
-    rows = list(MockQuestionGroup.objects.filter(section_id=section.id).order_by('sort_order', 'id'))
     groups = [dict(id=row.id, stimulusRef=row.stimulus_ref, passageText=row.passage_text,
                    partNumber=row.part_number) for row in rows]
-    unit = next((unit for unit in exam_content_units(groups, section.skill)
+    return exam_content_units(groups, section.skill)
+
+
+def _associate_task_group(section, parent_id):
+    values = {}
+    if not isinstance(parent_id, str) or section.skill not in ('reading', 'listening'):
+        raise ContractAPIException('VALIDATION_ERROR', 'Choose a parent passage or Listening part', 400)
+    rows = _ordered_section_groups(section)
+    unit = next((unit for unit in _section_group_units(section, rows)
                  if any(member['id'] == parent_id for member in unit)), None)
     if unit is None:
         raise ContractAPIException('MOCK_GROUP_NOT_FOUND', 'Parent is outside this section', 404)
@@ -467,12 +475,82 @@ def _associate_task_group(section, parent_id):
     return values
 
 
+def _place_task_group(group, placement):
+    valid_section = group.section.skill in ('reading', 'listening') and group.section.exam.type != 'multilevel'
+    if not valid_section or not isinstance(placement, dict) or set(placement) != {'siblingId', 'before'}:
+        raise ContractAPIException('VALIDATION_ERROR', 'Choose another task group in this passage or part', 400)
+    sibling_id, before = placement['siblingId'], placement['before']
+    if not isinstance(sibling_id, str) or sibling_id == group.id or not isinstance(before, bool):
+        raise ContractAPIException('VALIDATION_ERROR', 'Choose another task group in this passage or part', 400)
+    rows = _ordered_section_groups(group.section)
+    unit = next((unit for unit in _section_group_units(group.section, rows)
+                 if {group.id, sibling_id} <= {member['id'] for member in unit}), None)
+    if unit is None:
+        raise ContractAPIException('VALIDATION_ERROR', 'Choose another task group in this passage or part', 400)
+    unit_ids = {member['id'] for member in unit}
+    slots = [index for index, row in enumerate(rows) if row.id in unit_ids]
+    ordered = [rows[index] for index in slots if rows[index].id != group.id]
+    current = next(rows[index] for index in slots if rows[index].id == group.id)
+    target = next(index for index, row in enumerate(ordered) if row.id == sibling_id)
+    ordered.insert(target if before else target + 1, current)
+    for index, row in zip(slots, ordered):
+        rows[index] = row
+    updated = []
+    for index, row in enumerate(rows):
+        if row.sort_order != index:
+            row.sort_order = index
+            updated.append(row)
+    MockQuestionGroup.objects.bulk_update(updated, ['sort_order'])
+    return current
+
+
+def _copy_group_questions(questions, target, stamp, numbers=None):
+    MockQuestion.objects.bulk_create([
+        MockQuestion(
+            id=new_id(), group=target, number=question.number if numbers is None else numbers[question.number],
+            sort_order=question.sort_order, type=question.type, prompt=question.prompt,
+            options=question.options, correct_answers=question.correct_answers, accepted_variants=question.accepted_variants,
+            points=question.points, word_limit=question.word_limit, answer_rule=question.answer_rule,
+            cefr_level=question.cefr_level, skill_tags=question.skill_tags, evidence_text=question.evidence_text,
+            evidence_offset=question.evidence_offset, audio_start_sec=question.audio_start_sec, created_at=stamp,
+        )
+        for question in questions
+    ])
+
+
+def _duplicate_task_group(section, source_id):
+    from .mock_content import renumber_gaps
+
+    association = _associate_task_group(section, source_id)
+    source = MockQuestionGroup.objects.get(id=source_id, section=section)
+    questions = list(MockQuestion.objects.filter(group=source).order_by('sort_order', 'number', 'id'))
+    last_number = MockQuestion.objects.filter(group__section=section).aggregate(last=Max('number'))['last'] or 0
+    if last_number + len(questions) > 200:
+        raise ContractAPIException('VALIDATION_ERROR', 'The duplicated questions would exceed the section numbering limit of 200', 400)
+    numbers = {question.number: last_number + index for index, question in enumerate(questions, 1)}
+    if len(numbers) != len(questions):
+        raise ContractAPIException('VALIDATION_ERROR', 'Give each source question a unique number before duplicating the group', 400)
+    stamp = now()
+    group = MockQuestionGroup.objects.create(
+        id=new_id(), section=section, title=source.title, instructions=source.instructions,
+        content_html=renumber_gaps(source.content_html, numbers), content_layout=source.content_layout,
+        options_reusable=source.options_reusable, image_key=source.image_key, max_score=source.max_score,
+        audio_play_limit=source.audio_play_limit, created_at=stamp, **association,
+    )
+    _copy_group_questions(questions, group, stamp, numbers)
+    return group
+
+
 def create_group(actor, section_id: str, data: dict):
     try: section = MockSection.objects.select_related("exam").get(id=section_id)
     except MockSection.DoesNotExist: raise ContractAPIException("MOCK_SECTION_NOT_FOUND", "Bo'lim topilmadi", 404)
     if data.get("partNumber", 1) > 4 and section.exam.type != "multilevel":
         raise ContractAPIException("VALIDATION_ERROR", "IELTS listening parts must be 1–4", 400)
     def write(_exam):
+        if 'copyFromGroupId' in data:
+            if set(data) != {'copyFromGroupId'}:
+                raise ContractAPIException('VALIDATION_ERROR', 'Save copied group content after duplicating it', 400)
+            return _duplicate_task_group(section, data['copyFromGroupId'])
         values = _group_payload(data)
         parent_id = data.get("parentGroupId")
         if parent_id is not None:
@@ -481,7 +559,7 @@ def create_group(actor, section_id: str, data: dict):
             values['stimulus_ref'] = 'passage-' + new_id()
         return MockQuestionGroup.objects.create(id=new_id(), section_id=section_id, sort_order=values.pop("sort_order", MockQuestionGroup.objects.filter(section_id=section_id).count()), title=values.pop("title", None), instructions=values.pop("instructions", None), passage_text=values.pop("passage_text", None), content_html=values.pop("content_html", None), audio_script=values.pop("audio_script", None), content_layout=values.pop("content_layout", None), options_reusable=values.pop("options_reusable", None), audio_key=None, image_key=None, max_score=values.pop("max_score", None), stimulus_ref=values.pop("stimulus_ref", None), part_number=values.pop("part_number", None), audio_play_limit=values.pop("audio_play_limit", 1), audio_duration_sec=values.pop("audio_duration_sec", None), created_at=now())
     group = _locked_mutation(actor, section.exam_id, write)
-    audit_event(actor, "mock.group.create", "mockQuestionGroup", group.id, new={"sectionId": section_id})
+    audit_event(actor, "mock.group.create", "mockQuestionGroup", group.id, new={"sectionId": section_id, **({"copyFromGroupId": data["copyFromGroupId"]} if "copyFromGroupId" in data else {})})
     return group
 
 
@@ -492,6 +570,10 @@ def update_group(actor, group_id: str, data: dict):
         raise ContractAPIException("VALIDATION_ERROR", "IELTS listening parts must be 1–4", 400)
     values = _group_payload(data)
     def write(_exam):
+        if 'groupPlacement' in data:
+            if set(data) != {'groupPlacement'}:
+                raise ContractAPIException('VALIDATION_ERROR', 'Save the group content before reordering', 400)
+            return _place_task_group(group, data['groupPlacement'])
         parent_id = data.get("parentGroupId")
         if parent_id is not None:
             group.refresh_from_db(fields=['passage_text', 'audio_key'])
@@ -839,8 +921,7 @@ def _copy_exam(actor, source: MockExam) -> MockExam:
         copied_section = MockSection.objects.create(id=new_id(), exam_id=clone.id, skill=section.skill, title=section.title, sort_order=section.sort_order, duration_minutes=section.duration_minutes, instructions=section.instructions)
         for group in MockQuestionGroup.objects.filter(section_id=section.id).order_by("sort_order", "id"):
             copied_group = MockQuestionGroup.objects.create(id=new_id(), section_id=copied_section.id, sort_order=group.sort_order, title=group.title, instructions=group.instructions, passage_text=group.passage_text, content_html=group.content_html, audio_script=group.audio_script, content_layout=group.content_layout, options_reusable=group.options_reusable, audio_key=group.audio_key, image_key=group.image_key, max_score=group.max_score, stimulus_ref=group.stimulus_ref, part_number=group.part_number, audio_play_limit=group.audio_play_limit, audio_duration_sec=group.audio_duration_sec, created_at=stamp)
-            for question in MockQuestion.objects.filter(group_id=group.id).order_by("sort_order", "number", "id"):
-                MockQuestion.objects.create(id=new_id(), group_id=copied_group.id, number=question.number, sort_order=question.sort_order, type=question.type, prompt=question.prompt, options=question.options, correct_answers=question.correct_answers, accepted_variants=question.accepted_variants, points=question.points, word_limit=question.word_limit, answer_rule=question.answer_rule, cefr_level=question.cefr_level, skill_tags=question.skill_tags, evidence_text=question.evidence_text, evidence_offset=question.evidence_offset, audio_start_sec=question.audio_start_sec, created_at=stamp)
+            _copy_group_questions(MockQuestion.objects.filter(group=group).order_by("sort_order", "number", "id"), copied_group, stamp)
     from .mock27.gates import copy_gate
     copy_gate(source.id, clone.id)
     return clone
