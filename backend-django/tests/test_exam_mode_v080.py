@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+from datetime import datetime
 from io import BytesIO
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -229,8 +230,9 @@ class ScorePredictionEngineTests(SimpleTestCase):
                 raw_scores={"listening": {"score": 29, "max": 35}, "reading": {"score": 28, "max": 35}},
                 section_bands={},
                 standard_scores={"listening": {"estimatedStandardScore": 63}, "reading": {"estimatedStandardScore": 61}},
-                finished_at=SimpleNamespace(isoformat=lambda: "2026-10-16T10:00:00Z"),
-                started_at=SimpleNamespace(isoformat=lambda: "2026-10-16T09:00:00Z"),
+                finished_at=datetime.fromisoformat("2026-10-16T10:00:00+00:00"),
+                submitted_at=datetime.fromisoformat("2026-10-16T09:45:00+00:00"),
+                started_at=datetime.fromisoformat("2026-10-16T09:00:00+00:00"),
             ),
             SimpleNamespace(
                 id="att-3",
@@ -243,8 +245,9 @@ class ScorePredictionEngineTests(SimpleTestCase):
                 raw_scores={"listening": {"score": 25, "max": 35}, "reading": {"score": 24, "max": 35}},
                 section_bands={},
                 standard_scores={"listening": {"estimatedStandardScore": 55}, "reading": {"estimatedStandardScore": 53}},
-                finished_at=SimpleNamespace(isoformat=lambda: "2026-10-12T10:00:00Z"),
-                started_at=SimpleNamespace(isoformat=lambda: "2026-10-12T09:00:00Z"),
+                finished_at=datetime.fromisoformat("2026-10-12T10:00:00+00:00"),
+                submitted_at=datetime.fromisoformat("2026-10-12T09:45:00+00:00"),
+                started_at=datetime.fromisoformat("2026-10-12T09:00:00+00:00"),
             ),
             SimpleNamespace(
                 id="att-2",
@@ -257,8 +260,9 @@ class ScorePredictionEngineTests(SimpleTestCase):
                 raw_scores={"listening": {"score": 20, "max": 35}, "reading": {"score": 21, "max": 35}},
                 section_bands={},
                 standard_scores={"listening": {"estimatedStandardScore": 44}, "reading": {"estimatedStandardScore": 44}},
-                finished_at=SimpleNamespace(isoformat=lambda: "2026-10-08T10:00:00Z"),
-                started_at=SimpleNamespace(isoformat=lambda: "2026-10-08T09:00:00Z"),
+                finished_at=datetime.fromisoformat("2026-10-08T10:00:00+00:00"),
+                submitted_at=datetime.fromisoformat("2026-10-08T09:45:00+00:00"),
+                started_at=datetime.fromisoformat("2026-10-08T09:00:00+00:00"),
             ),
         ]
         mock_attempt_cls.objects.filter.return_value.select_related.return_value.order_by.return_value.__getitem__.return_value = fake_attempts
@@ -269,7 +273,7 @@ class ScorePredictionEngineTests(SimpleTestCase):
         self.assertEqual(pred["multilevel"]["currentScore"], 62.0)
         self.assertGreaterEqual(pred["multilevel"]["predictedScore"], 60.0)
         # 60-64 is B2 under the agency criteria (C1 starts at 65).
-        self.assertEqual(pred["multilevel"]["cefrLevel"], "B2" if pred["multilevel"]["predictedScore"] < 65 else "C1")
+        self.assertEqual(pred["multilevel"]["cefrLevel"], "B2")
         self.assertEqual(len(pred["history"]), 3)
         self.assertEqual(pred["weakModules"][0]["module"], "Reading — Matching Headings")
 
