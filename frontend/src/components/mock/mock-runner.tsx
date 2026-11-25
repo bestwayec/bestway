@@ -1173,8 +1173,12 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
                     taskGroups.map((group) => render(group.id === source.id ? { ...group, title: null, imageUrl: null } : group, true)));
                 }
                 if (section.skill === "listening" && taskGroups.length > 1) {
+                  const timestamp = examAudioTimestamps.find((item) => item.partNumber === partNumber);
+                  const audioSource = taskGroups.find((group) => attempt.listeningSchedule?.[group.id])
+                    ?? taskGroups.find((group) => group.hasAudio && group.id === timestamp?.groupId)
+                    ?? source;
                   return <div key={unitKey} className="space-y-3">
-                    {render({ ...source, title: null, questions: [], contentHtml: null, instructions: null, imageUrl: null })}
+                    {render({ ...audioSource, title: null, questions: [], contentHtml: null, instructions: null, imageUrl: null })}
                     {taskGroups.map((group) => <div key={group.id}>{render(group, true)}</div>)}
                   </div>;
                 }
@@ -1490,7 +1494,8 @@ function GroupBlock({
 
   // Resolve single-audio timestamp boundaries for this Listening part
   const stimTs = group.stimulusRef as { startSec?: number; endSec?: number | null } | null | undefined;
-  const matchedTs = audioTimestamps.find((ts) => ts.partNumber === (partNumber ?? partIndex + 1));
+  const matchedTs = audioTimestamps.find((ts) => ts.groupId === group.id)
+    ?? audioTimestamps.find((ts) => ts.partNumber === (partNumber ?? partIndex + 1));
   const startSec = group.startSec ?? stimTs?.startSec ?? matchedTs?.startSec;
   const endSec = group.endSec ?? stimTs?.endSec ?? matchedTs?.endSec ?? null;
 

@@ -5,7 +5,7 @@ import math
 import re
 import unicodedata
 
-from .mock_content import LAYOUTS, exam_content_units, gap_numbers, sanitize_content
+from .mock_content import LAYOUTS, exam_content_units, gap_numbers, sanitize_content, source_only_groups
 from .mock_parse import build_correct_answers
 from .mock_rules import (
     ANSWER_RULES,
@@ -287,6 +287,8 @@ def validate_package(pkg, media_bindings=None, raw_text=None):
                 if not isinstance(groups, list) or not 1 <= len(groups) <= 50:
                     add('COUNT_LIMIT', base + '/groups', 'section.groups must contain 1-50 groups')
                     continue
+                source_skill = skill if exam.get('type') != 'multilevel' or skill == 'reading' else None
+                sources = source_only_groups((group for group in groups if isinstance(group, dict)), source_skill)
                 for gi, group in enumerate(groups):
                     gb = base + f'/groups/{gi}'
                     if not isinstance(group, dict):
@@ -332,8 +334,9 @@ def validate_package(pkg, media_bindings=None, raw_text=None):
                             if field == 'contentHtml' and clean is None:
                                 add('HTML_UNSAFE', gb + '/contentHtml', 'contentHtml was fully stripped by the sanitizer')
                     questions = group.get('questions')
-                    if not isinstance(questions, list) or not 1 <= len(questions) <= 200:
-                        add('COUNT_LIMIT', gb + '/questions', 'group.questions must contain 1-200 questions')
+                    minimum = 0 if id(group) in sources else 1
+                    if not isinstance(questions, list) or not minimum <= len(questions) <= 200:
+                        add('COUNT_LIMIT', gb + '/questions', 'group.questions must contain 1-200 questions unless it supplies a linked source')
                         continue
                     q_nums = []
                     for qi, question in enumerate(questions):
@@ -555,9 +558,9 @@ def validate_package(pkg, media_bindings=None, raw_text=None):
                     if len(texts) != 1:
                         add('PASSAGE_SOURCE', f'/exam/sections/{index}/groups',
                             f'Passage {ordinal} needs exactly one source. Assign a shared stimulusRef to its groups.', ('publish',))
-                elif sum(bool(g.get('audioRef')) for g in unit) != 1:
+                elif len({g['audioRef'] for g in unit if isinstance(g.get('audioRef'), str) and g['audioRef']}) != 1:
                     add('PART_AUDIO', f'/exam/sections/{index}/groups',
-                        f'Part {unit[0].get("partNumber") or ordinal} needs exactly one audio owner.', ('publish',))
+                        f'Part {unit[0].get("partNumber") or ordinal} needs one unambiguous recording.', ('publish',))
     if isinstance(exam, dict) and profile in ('practice', 'full_mock'):
         if profile == 'practice' and not skills:
             add('PROFILE_BLUEPRINT', '/profile', 'practice packages need at least one skill', ('publish',))

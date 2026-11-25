@@ -793,7 +793,7 @@ def readiness(actor, exam_id: str, effective_profile: str | None = None) -> dict
         qs = [q for g in gs for q in persisted_questions[g.id]]
         if skill in ('reading', 'listening') and ielts:
             groups = [dict(stimulusRef=g.stimulus_ref, partNumber=g.part_number, passageText=g.passage_text,
-                           audio=bool(g.audio_key)) for g in gs]
+                           audio=g.audio_key) for g in gs]
             units = exam_content_units(groups, skill)
             if is_full:
                 if skill == 'reading':
@@ -809,8 +809,8 @@ def readiness(actor, exam_id: str, effective_profile: str | None = None) -> dict
                     item('reading_passage', len(texts) == 1, f'Passage {ordinal} needs one source and an explicit shared reference for continuations')
             else:
                 for ordinal, unit in enumerate(units, 1):
-                    count = sum(g['audio'] for g in unit)
-                    item('listening_audio', count == 1, f'Part {unit[0]["partNumber"] or ordinal} needs one audio owner')
+                    keys = {g['audio'] for g in unit if g['audio']}
+                    item('listening_audio', len(keys) == 1, f'Part {unit[0]["partNumber"] or ordinal} needs one unambiguous recording')
         elif skill == 'listening':
             count = sum(bool(g.audio_key) for g in gs)
             item('listening_audio', bool(gs) and count == len(gs), f'{count}/{len(gs)} groups with audio')

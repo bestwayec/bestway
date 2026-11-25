@@ -26,6 +26,7 @@ from common.api.exceptions import ContractAPIException
 
 from .mock_authoring import (
     STAFF,
+    assert_mutable,
     audit_event,
     bump,
     group_payload,
@@ -2384,9 +2385,6 @@ def save_listening_timestamps(
 
     _assert_staff_author(actor, exam)
 
-    if uploaded_file is not None:
-        audio_key = store_upload(uploaded_file, "audio")
-
     normalized_ts: list[dict] = []
     if isinstance(timestamps, list):
         for idx, item in enumerate(timestamps):
@@ -2408,6 +2406,11 @@ def save_listening_timestamps(
     normalized_ts.sort(key=lambda x: x["partNumber"])
 
     with transaction.atomic():
+        exam = MockExam.objects.select_for_update().get(id=exam.id)
+        _assert_staff_author(actor, exam)
+        assert_mutable(exam)
+        if uploaded_file is not None:
+            audio_key = store_upload(uploaded_file, "audio")
         section = MockSection.objects.filter(exam_id=exam_id, skill="listening").first()
         groups = (
             list(MockQuestionGroup.objects.filter(section_id=section.id).order_by("sort_order", "id"))
@@ -2417,9 +2420,12 @@ def save_listening_timestamps(
 
         for ts_item in normalized_ts:
             p_num = ts_item["partNumber"]
-            matched = next(
-                (g for g in groups if g.part_number == p_num or g.sort_order == p_num - 1),
-                None,
+            part_groups = [group for group in groups if group.part_number == p_num]
+            matched = (
+                next((group for group in part_groups if group.id == ts_item["groupId"]), None)
+                or next((group for group in part_groups if group.audio_key), None)
+                or next(iter(part_groups), None)
+                or next((group for group in groups if group.part_number is None and group.sort_order == p_num - 1), None)
             )
             if matched:
                 ts_item["groupId"] = matched.id
@@ -2481,6 +2487,7 @@ def save_listening_timestamps(
                     """,
                     [exam_id, section_id, audio_key, resolved_url, duration_sec, ts_json],
                 )
+        bump(exam)
 
     return get_listening_timestamps(exam_id)
 
@@ -2515,45 +2522,12 @@ def get_listening_timestamps(exam_id: str) -> dict:
             "timestamps": ts_val if isinstance(ts_val, list) else [],
         }
 
-    # Fallback: synthesize timestamps from existing Listening MockQuestionGroups if present
     section = MockSection.objects.filter(exam_id=exam_id, skill="listening").first()
-    if not section:
-        return {
-            "examId": exam_id,
-            "sectionId": None,
-            "audioKey": None,
-            "audioUrl": None,
-            "durationSec": None,
-            "timestamps": [],
-        }
-
-    groups = list(MockQuestionGroup.objects.filter(section_id=section.id).order_by("sort_order", "id"))
-    cursor_sec = 0.0
-    fallback_ts = []
-    first_audio_key = None
-    first_audio_url = None
-    for idx, g in enumerate(groups):
-        p_num = g.part_number or (idx + 1)
-        dur = float(g.audio_duration_sec or 420)
-        if g.audio_key and not first_audio_key:
-            first_audio_key = g.audio_key
-            first_audio_url = media_url(g.id, "audio")
-        fallback_ts.append(
-            {
-                "partNumber": p_num,
-                "groupId": g.id,
-                "label": g.title or f"Part {p_num}",
-                "startSec": round(cursor_sec, 2),
-                "endSec": round(cursor_sec + dur, 2),
-            }
-        )
-        cursor_sec += dur
-
     return {
         "examId": exam_id,
-        "sectionId": section.id,
-        "audioKey": first_audio_key,
-        "audioUrl": first_audio_url,
-        "durationSec": int(cursor_sec) if fallback_ts else None,
-        "timestamps": fallback_ts,
+        "sectionId": section.id if section else None,
+        "audioKey": None,
+        "audioUrl": None,
+        "durationSec": None,
+        "timestamps": [],
     }

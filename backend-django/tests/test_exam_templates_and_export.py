@@ -10,6 +10,7 @@ import copy
 import json
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from django.db import connection
 from django.test import SimpleTestCase, TestCase
@@ -210,6 +211,53 @@ class ExportRoundTripTests(TestCase):
         self.assertEqual([group.stimulus_ref for group in persisted[:2]], ['shared-source'] * 2)
         self.assertTrue(persisted[0].passage_text)
         self.assertIsNone(persisted[1].passage_text)
+
+    def test_whole_listening_recording_uses_explicit_part_markers(self):
+        exam_id = self.commit(fixture('listening-full')).data['data']['examId']
+        section = MockSection.objects.get(exam_id=exam_id, skill='listening')
+        part_one = MockQuestionGroup.objects.get(section=section, part_number=1)
+        part_two = MockQuestionGroup.objects.get(section=section, part_number=2)
+        part_two.sort_order = 20
+        part_two.save(update_fields=['sort_order'])
+        extra = self.client.post(f'/v1/mock/sections/{section.id}/groups', {'parentGroupId': part_one.id}, format='json')
+        self.assertEqual(extra.status_code, 201, extra.data)
+        extra_id = extra.data['data']['id']
+        MockQuestionGroup.objects.filter(id=extra_id).update(sort_order=1)
+        route = f'/v1/mock/exams/{exam_id}/audio-timestamps'
+        payload = {'audioKey': 'mock-audio/synthetic.wav', 'timestamps': [
+            {'partNumber': 1, 'startSec': 0.25, 'endSec': 1.75},
+            {'partNumber': 2, 'groupId': extra_id, 'startSec': 2, 'endSec': 4},
+        ]}
+        with patch('apps.core.exam_import_service._listening_table_ensured', False):
+            self.assertEqual(self.client.get(route).data['data']['timestamps'], [])
+            saved = self.client.post(route, payload, format='json')
+            self.assertEqual(saved.status_code, 200, saved.data)
+            markers = saved.data['data']['timestamps']
+            self.assertEqual([item['groupId'] for item in markers], [part_one.id, part_two.id])
+            self.assertEqual([item['startSec'] for item in markers], [0.25, 2])
+            self.assertEqual(MockQuestionGroup.objects.get(id=extra_id).audio_key, payload['audioKey'])
+            ready = self.client.get(f'/v1/mock/exams/{exam_id}/readiness').data['data']
+            self.assertTrue(all(i['ok'] for i in ready['items'] if i['key'] == 'listening_audio'))
+            MockExam.objects.filter(id=exam_id).update(is_published=True)
+            self.assertEqual(self.client.post(route, payload, format='json').status_code, 409)
+
+    def test_source_only_group_survives_round_trip(self):
+        exam_id = self.commit(fixture('reading-passage-1')).data['data']['examId']
+        source = MockQuestionGroup.objects.filter(section__exam_id=exam_id).order_by('sort_order').first()
+        route = f'/v1/mock/sections/{source.section_id}/groups'
+        added = self.client.post(route, {'parentGroupId': source.id, 'title': 'Source questions'}, format='json')
+        self.assertEqual(added.status_code, 201, added.data)
+        MockQuestion.objects.filter(group=source).update(group_id=added.data['data']['id'])
+        exported = self.export(exam_id).data['data']
+        groups = exported['exam']['sections'][0]['groups']
+        owner, task = groups[0], next(group for group in groups if group['title'] == 'Source questions')
+        self.assertEqual(owner['questions'], [])
+        self.assertEqual(owner['passageText'], source.passage_text)
+        self.assertEqual(owner['stimulusRef'], task['stimulusRef'])
+        result = self.commit(exported)
+        self.assertEqual(result.status_code, 201, result.data)
+        imported = self.export(result.data['data']['examId']).data['data']
+        self.assertEqual(content(imported), content(exported))
 
     def test_teacher_can_move_a_task_without_changing_question_ids(self):
         exam_id = self.commit(fixture('reading-passage-1')).data['data']['examId']

@@ -145,3 +145,19 @@ def exam_content_units(groups, skill):
         unit.append(group)
         previous_text = text
     return units
+
+
+def source_only_groups(groups, skill):
+    """Find source records needed by a populated unit even if they contain no questions."""
+    if skill not in ('reading', 'listening'):
+        return set()
+    field = 'passageText' if skill == 'reading' else 'audioRef'
+    reference = 'stimulusRef' if skill == 'reading' else 'partNumber'
+    return {
+        id(group)
+        for unit in exam_content_units(groups, skill)
+        if any(isinstance(member.get('questions'), list) and member['questions'] for member in unit)
+        for group in unit
+        if group.get(reference) and group.get('questions') == []
+        and isinstance(group.get(field), str) and group[field].strip()
+    }
