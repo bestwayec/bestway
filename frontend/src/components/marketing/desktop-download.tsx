@@ -28,6 +28,7 @@ const REPO = "bestwayec/bw-tauri";
 // Always the latest published release: no version is written into the page, so it never goes stale.
 const RELEASES_URL = `https://github.com/${REPO}/releases/latest`;
 const API_URL = `https://api.github.com/repos/${REPO}/releases/latest`;
+const RELEASE_TIMEOUT_MS = 8000;
 
 type Os = "windows" | "macos" | "linux" | "android" | "ios" | "unknown";
 
@@ -132,6 +133,7 @@ export function DesktopDownload() {
   const [release, setRelease] = React.useState<ReleaseInfo | null>(null);
   const [error, setError] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
+  const [request, setRequest] = React.useState(0);
 
   function applyRelease(json: {
     tag_name: string;
@@ -160,8 +162,8 @@ export function DesktopDownload() {
     setLoading(false);
   }
 
-  function requestRelease() {
-    return fetch(API_URL, { headers: { Accept: "application/vnd.github+json" } }).then(
+  function requestRelease(signal: AbortSignal) {
+    return fetch(API_URL, { signal, headers: { Accept: "application/vnd.github+json" } }).then(
       async (res) => {
         if (!res.ok) throw new Error(`GitHub API ${res.status}`);
         return (await res.json()) as {
@@ -175,23 +177,27 @@ export function DesktopDownload() {
 
   React.useEffect(() => {
     let live = true;
-    requestRelease().then(
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), RELEASE_TIMEOUT_MS);
+    requestRelease(controller.signal).then(
       (json) => {
         if (live) applyRelease(json);
       },
       () => {
         if (live) failRelease();
       },
-    );
+    ).finally(() => window.clearTimeout(timeout));
     return () => {
       live = false;
+      window.clearTimeout(timeout);
+      controller.abort();
     };
-  }, []);
+  }, [request]);
 
   function retry() {
     setLoading(true);
     setError(false);
-    requestRelease().then(applyRelease, failRelease);
+    setRequest((value) => value + 1);
   }
 
   const date = release?.publishedAt
