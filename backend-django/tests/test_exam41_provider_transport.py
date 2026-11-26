@@ -149,3 +149,13 @@ def test_invalid_audio_and_unapproved_plan_do_not_dispatch(provider, recording, 
     with pytest.raises(ProviderError, match='STT_PLAN_UNVERIFIED'):
         transcribe(recording, 'audio/wav')
     assert not captured
+
+
+def test_groq_does_not_use_a_legacy_provider_key(provider, recording, monkeypatch):
+    url, _, captured = provider
+    set_groq(monkeypatch, url)
+    monkeypatch.delenv('GROQ_API_KEY')
+    monkeypatch.setenv('STT_API_KEY', 'unrelated-fixture')
+    with pytest.raises(ProviderError, match='STT_NOT_CONFIGURED'):
+        transcribe(recording, 'audio/wav')
+    assert not captured

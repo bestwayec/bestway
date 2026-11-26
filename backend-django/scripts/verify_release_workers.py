@@ -181,6 +181,19 @@ try:
         assert sorted(f.result(timeout=20) for f in revisions) == ['ASSESSMENT_STALE_VERSION', 'ok']
         report['gates'].append('PASS two teacher revisions on the same version produce one commit and one stale conflict')
     fixture['block'] = False
+    recovery = seed(5, 'PROCESSING', attemptCount=1, leaseToken='expired-after-output', leaseExpiresAt='2000-01-01')
+    db.execute("""INSERT INTO "AssessmentEvaluation"
+        (id,"jobId",role,"attemptNumber","inputHash",provider,model,status,result,"completedAt")
+        VALUES (%s,%s,'PRIMARY',1,%s,'openrouter','previous-model','SUCCEEDED',%s,NOW())""",
+        (str(uuid4()), recovery, canonical_checksum(snapshot), json.dumps(fixture['result'])))
+    before = fixture['calls']
+    worker()
+    if state(recovery)[0] == 'RETRY':
+        worker()
+    assert state(recovery)[:3] == ('NEEDS_REVIEW',2,'ASSESSMENT_PROVIDER_CHANGED'), state(recovery)
+    assert fixture['calls'] == before, fixture['calls']
+    report['gates'].append('PASS a saved evaluation for a different model is sent to review without a second provider request')
+
     from unittest.mock import patch
 
     from apps.core import assessment_provider_policy as policy

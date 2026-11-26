@@ -134,6 +134,7 @@ def for_attempt(actor,identifier):
                     text=t_text,
                     correctedText=corrections.get((job.id, transcript.id), {}).get('text'),
                     provider=transcript.provider, model=transcript.model, durationMs=transcript.duration_ms,
+                    language=r.get('transcriptionLanguage', 'en'),
                     confidence=transcript.confidence,
                     segments=transcript.segments if (transcript and transcript.segments) else [],
                     pronunciationEvidence='AVAILABLE' if (speech_diag and speech_diag.get('mispronounced_words')) else 'UNAVAILABLE',

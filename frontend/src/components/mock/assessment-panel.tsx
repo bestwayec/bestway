@@ -357,6 +357,7 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
                 {submission.transcriptStatus && <p className="mt-1 text-xs text-fg-subtle">{t(`transcriptionStates.${submission.transcriptStatus}`)}</p>}
                 {submission.transcript && <p className="mt-1 text-xs text-fg-subtle">
                   {submission.transcript.provider} · {submission.transcript.model}
+                  {submission.transcript.language && ` · ${submission.transcript.language.toUpperCase()}`}
                 </p>}
                 {submission.transcript && <TranscriptCorrection job={job} attemptId={attemptId} submission={submission} />}
                 {submission.transcript?.confidence != null && <p className="mt-1 text-xs text-fg-subtle">{t("transcriptConfidence")}: {Math.round(submission.transcript.confidence * 100)}%</p>}

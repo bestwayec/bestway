@@ -119,8 +119,11 @@ async function dismissExamNotices(page) {
   }
 }
 async function startSectionIfAsked(page) {
-  const now = page.getByRole("button", { name: /^Start .* now$/ });
-  if (await now.count()) { await now.first().click(); await page.waitForTimeout(1500); }
+  const now = page.getByRole("button", { name: /^Start .* now$/ }).first();
+  if (await now.waitFor({ timeout: 5000 }).then(() => true).catch(() => false)) {
+    await now.click();
+    await now.waitFor({ state: "hidden" });
+  }
 }
 const correct = (q) => (q.correctAnswers || [])[0];
 async function answerObjective(page, q) {
@@ -244,6 +247,7 @@ async function student() {
   await teacherView.context().close();
   const by = Object.fromEntries(exam.sections.map((s) => [s.skill, s]));
   const page = await session(STUDENT_IELTS);
+  let resumedSkill;
   // A re-run starts clean: hand in this exam's attempts an earlier run left open.
   if (!ASSIGNMENT) {
     const mine = (await api(page, "GET", "/mock/attempts/mine")).data;
@@ -257,6 +261,8 @@ async function student() {
       saveState();
       await page.goto(`${WEB}/en/mock/attempt/${state.attemptId}`, { waitUntil: "networkidle" });
       await dismissExamNotices(page);
+      await startSectionIfAsked(page);
+      resumedSkill = (await api(page, "GET", `/mock/attempts/${state.attemptId}`)).data.currentSkill;
       return `assigned IELTS attempt ${state.attemptId}`;
     }
     await page.goto(`${WEB}/en/mock`, { waitUntil: "networkidle" });
@@ -275,14 +281,16 @@ async function student() {
     return `timed IELTS attempt ${state.attemptId}`;
   });
   await step(page, "04-listening-reading", async () => {
-    for (const [i, group] of by.listening.groups.entries()) {
-      await openBlock(page, i + 1);
-      const play = page.getByRole("button", { name: /Play audio/ }).first();
-      if (await play.count() && !(await play.isDisabled())) await play.click();
-      for (const q of group.questions) await answerObjective(page, q);
+    if (resumedSkill !== "reading") {
+      for (const [i, group] of by.listening.groups.entries()) {
+        await openBlock(page, i + 1);
+        const play = page.getByRole("button", { name: /Play audio/ }).first();
+        if (await play.count() && !(await play.isDisabled())) await play.click();
+        for (const q of group.questions) await answerObjective(page, q);
+      }
+      await waitConfirmed(page, 40);
+      await finishSection(page);
     }
-    await waitConfirmed(page, 40);
-    await finishSection(page);
     // Owner decision: IELTS Reading is numbered from 1 like the paper (stored numbers 41–80 are unchanged).
     expect(by.reading.groups[0].questions[0].displayNumber === 1, "reading display numbering");
     await page.getByRole("button", { name: /^Question 1, / }).first().waitFor();

@@ -58,7 +58,7 @@ def parse_transcript(output, model, duration, language):
 
 
 def transcribe(path, mime, language, duration_ms, *, transport, timeout):
-    key = (os.environ.get('GROQ_API_KEY') or os.environ.get('STT_API_KEY') or '').strip()
+    key = os.environ.get('GROQ_API_KEY', '').strip()
     if not key:
         raise ProviderError('STT_NOT_CONFIGURED')
     model = os.environ.get('STT_MODEL', GROQ_MODEL).strip() or GROQ_MODEL

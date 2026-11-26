@@ -25,12 +25,12 @@ OpenRouter sends a model ID and an explicit provider allowlist with zero-retenti
 
 ## Evidence and grading
 
-- Whisper receives English audio in validated multipart uploads. The server checks the saved file hash, decoded container, size, and duration. The transcript includes model provenance and available segments. Confidence is null when the provider supplies no calibrated confidence.
+- Whisper receives English audio in validated multipart uploads. The server checks the saved file hash, decoded container, size, and duration. The frozen submission records the transcription language. The transcript includes model provenance and available segments. Confidence is null when the provider supplies no calibrated confidence.
 - The advisory scorer receives frozen rubric and exam versions, task content, candidate text or transcript, and word count. The provider payload omits account records, private storage paths, and signed media links. Essay or audio contents can still contain personal information, which requires consent and institutional authorization before activation.
 - JSON validation enforces rubric bounds, half-point increments, expected criteria, and source-matching evidence quotes. Provider feedback is rendered as plain text. Candidate data travels in a separate message and no tools are requested.
 - IELTS Speaking pronunciation remains unavailable to a transcript-only model. The teacher reviews original audio. Multilevel uses the configured raw task maxima and existing score conversions.
 - Writing Task 1 images remain available in teacher review. External visual assessment is disabled for the unverified route. The advisory output explicitly identifies missing visual evidence.
-- Provider output stays in evaluation and transcript records. Teacher review projects grades atomically using locks and revision checks. Drafts and transcript corrections are stored in the audit ledger. Late AI responses cannot project a score or overwrite an in-flight review. Technical failure leads to manual review. The existing unanswered-response rules remain separate from provider failure.
+- Provider output stays in evaluation and transcript records. Automatic retry reuses records only within a matching job, evidence checksum, and configured provider and model. A changed model returns the attempt to review. Teacher review projects grades atomically using locks and revision checks. Drafts and transcript corrections are stored in the audit ledger. Late AI responses cannot project a score or overwrite an in-flight review. Technical failure leads to manual review. The existing unanswered-response rules remain separate from provider failure.
 
 ## Activation and calibration
 

@@ -17,7 +17,7 @@ The runner now selects the server section for an active full test. Other section
 
 ## Teacher workflow
 
-The group dashboard uses real enrollment and assignment records. It shows participation counts and a grading queue with Writing and Speaking stages, teacher review links, and available provider failure details. Its group, assignment, exam, track, skill, student search, and review stage filters share the existing analytics surface. Classroom averages and rankings exclude provisional subjective grades. Previously released attempts retain their stored scores and remain readable.
+The group dashboard uses real enrollment and assignment records. It shows participation counts and a grading queue with Writing and Speaking stages, teacher review links, and available provider failure details. Its group, assignment, exam, track, skill, student search, and review stage filters share the existing analytics surface. Repeated requests reuse the same classroom assignment and the same learner attempt. Classroom averages and rankings exclude provisional subjective grades. Previously released attempts retain their stored scores and remain readable.
 
 The teacher reviews the original essay or audio and may save a partial rubric and comment. A teacher can confirm an eligible AI suggestion or finalize the rubric manually. The assessment history records the actor, reason, version, and submitted rubric or accepted evaluation. A teacher correction of a transcript is recorded separately from the original. Students see released teacher feedback and scores under existing access rules.
 

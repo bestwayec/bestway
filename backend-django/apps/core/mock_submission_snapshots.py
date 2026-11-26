@@ -41,7 +41,7 @@ def build_input(exam, attempt, skill, groups, answers, hash_audio):
             key = answer.get('audioKey')
             if key:
                 mime = {'.m4a':'audio/mp4','.mp4':'audio/mp4','.ogg':'audio/ogg','.wav':'audio/wav','.aac':'audio/aac','.webm':'audio/webm'}.get(Path(key).suffix.lower(), 'audio/mpeg')
-                response.update(audioKey=key, audioHash=hash_audio(key), mimeType=mime)
+                response.update(audioKey=key, audioHash=hash_audio(key), mimeType=mime, transcriptionLanguage='en')
             phase = (attempt.media_state or {}).get(question['id'], {})
             if key:
                 measured = phase.get('audioDurationMs') if phase.get('durationVerifiedHash') == response['audioHash'] else phase.get('recordingDurationMs')

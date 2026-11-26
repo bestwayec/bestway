@@ -84,6 +84,7 @@ export interface AssessmentJobView {
       correctedText?: string | null;
       provider?: string;
       model?: string;
+      language?: string;
       durationMs?: number | null;
       confidence: number | null;
       segments: Array<{ start: number; end: number; text: string; confidence: number | null }>;

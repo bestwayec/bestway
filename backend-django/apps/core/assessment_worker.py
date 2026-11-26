@@ -32,6 +32,21 @@ def refresh(job):
     count=AssessmentJob.objects.filter(id=job.id,status='PROCESSING',lease_token=job.lease_token).update(lease_expires_at=timezone.now()+timedelta(minutes=10),updated_at=timezone.now())
     if not count:raise results.ProviderError('ASSESSMENT_STALE_LEASE')
 
+def current_speech_model(transcript):
+    from .assessment_local_stt import PROVIDER as LOCAL_PROVIDER
+    from .assessment_provider_policy import enabled as configured
+    from .assessment_whisper import GROQ_MODEL
+
+    provider = os.environ.get('STT_PROVIDER', 'groq').strip().lower()
+    model = os.environ.get('STT_MODEL', '').strip()
+    expected = {(provider, model or GROQ_MODEL)} if provider == 'groq' else {(provider, model)}
+    if provider in ('faster-whisper', 'faster_whisper'):
+        expected = {(LOCAL_PROVIDER, model or 'small.en')}
+    if provider == 'groq' and configured('STT_ALLOW_LOCAL_FALLBACK'):
+        expected.add((LOCAL_PROVIDER, os.environ.get('STT_LOCAL_FALLBACK_MODEL') or 'small.en'))
+    return (transcript.provider, transcript.model) in expected
+
+
 def transcribe(job,input,speech):
     for response in [r for p in input['parts'] for r in p['responses']]:
         if not response.get('audioKey'):
@@ -60,6 +75,8 @@ def transcribe(job,input,speech):
             job_id=job.id, question_id=response['questionId'], audio_hash=audio_hash, status='SUCCEEDED',
         ).order_by('-completed_at').first()
         if saved:
+            if speech is providers.transcribe and not current_speech_model(saved):
+                raise results.ProviderError('ASSESSMENT_PROVIDER_CHANGED')
             if not isinstance(saved.text, str) or not saved.text.strip():
                 raise results.ProviderError('STT_EMPTY_TRANSCRIPT')
             response['transcript'] = saved.text
@@ -73,7 +90,7 @@ def transcribe(job,input,speech):
             transcript=SpeechTranscript.objects.create(id=str(uuid4()),job_id=job.id,question_id=response['questionId'],audio_hash=audio_hash or 'nohash',attempt_number=job.attempt_count,status='STARTED',
                 provider=os.environ.get('STT_PROVIDER','groq'),model=os.environ.get('STT_MODEL','UNCONFIGURED'),pronunciation_evidence='UNAVAILABLE',uncertain=False,started_at=now)
         try:
-            output=speech(path,mime_type,'en',response.get('durationMs'))
+            output=speech(path,mime_type,response.get('transcriptionLanguage', 'en'),response.get('durationMs'))
             if not isinstance(output.get('text'), str) or not output['text'].strip():
                 raise results.ProviderError('STT_EMPTY_TRANSCRIPT')
             with transaction.atomic():
@@ -152,13 +169,20 @@ def build_zero_result(input_data):
 
 def rate(job,input,role,grader):
     refresh(job)
+    input_hash = canonical_checksum(input)
+    provider, model = providers.assessment_identity(role)
     cached=AssessmentEvaluation.objects.filter(job_id=job.id,role=role,status='SUCCEEDED').order_by('-completed_at').first()
-    if cached:return cached.id,results.validate(cached.result,input)
+    if cached:
+        identity = (cached.provider, cached.model)
+        if cached.input_hash != input_hash or (grader is providers.assess and identity not in (
+            (provider, model), ('SYSTEM_FALLBACK', 'ZERO_FALLBACK'),
+        )):
+            raise results.ProviderError('ASSESSMENT_PROVIDER_CHANGED')
+        return cached.id,results.validate(cached.result,input)
     with transaction.atomic():
         service.require_lease(job, lock=True)
-        provider,model=providers.assessment_identity(role)
         AssessmentEvaluation.objects.filter(job_id=job.id,role=role,attempt_number=job.attempt_count).delete()
-        evaluation=AssessmentEvaluation.objects.create(id=str(uuid4()),job_id=job.id,role=role,attempt_number=job.attempt_count,input_hash=canonical_checksum(input),provider=provider,
+        evaluation=AssessmentEvaluation.objects.create(id=str(uuid4()),job_id=job.id,role=role,attempt_number=job.attempt_count,input_hash=input_hash,provider=provider,
             model=model or 'UNCONFIGURED',status='STARTED',uncertain=False,started_at=timezone.now())
     try:
         from .assessment_quality import normalized, response_text
