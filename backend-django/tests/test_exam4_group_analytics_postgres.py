@@ -12,7 +12,7 @@ from rest_framework.test import APIClient
 from apps.core.homework_scoring import ASSIGNMENT_KEY
 from apps.core.models import ClassroomEnrollment, Cohort, HomeworkAssignment
 from apps.legacy_schema.models import (
-    Attendance, Group, MockAnswer, MockAttempt, MockExam, MockQuestion, MockQuestionGroup, MockSection,
+    AssessmentJob, Attendance, AuditLog, Group, MockAnswer, MockAttempt, MockExam, MockQuestion, MockQuestionGroup, MockSection, SpeechTranscript,
     StudentProfile, User,
 )
 
@@ -23,7 +23,7 @@ REPORT = "/v1/groups/exam4-p3-group"
 @pytest.fixture
 def classroom():
     models = (User, Group, StudentProfile, Attendance, MockExam, MockSection, MockQuestionGroup,
-              MockQuestion, MockAttempt, MockAnswer)
+              MockQuestion, MockAttempt, MockAnswer, AssessmentJob, AuditLog, SpeechTranscript)
     existing = set(connection.introspection.table_names())
     created = []
     for model in models:

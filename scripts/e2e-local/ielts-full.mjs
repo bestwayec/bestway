@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const OUT = join(here, "..", "..", ".local", "e2e");
+const OUT = process.env.BW_OUT || join(here, "..", "..", ".local", "e2e");
 mkdirSync(OUT, { recursive: true });
 const STATE_FILE = join(OUT, "ielts-full.json");
 
@@ -26,6 +26,7 @@ const WEB = process.env.BW_WEB || "http://localhost:3300";
 const PASSWORD = process.env.BW_PASSWORD || "LocalDev-2026!"; // synthetic, local only (seed_local_dev)
 const TEACHER = process.env.BW_TEACHER || "+998900000003";
 const STUDENT_IELTS = process.env.BW_STUDENT_IELTS || "+998900000011";
+const ASSIGNMENT = process.env.BW_ASSIGNMENT_ID;
 if (!["127.0.0.1", "localhost"].includes(new URL(WEB).hostname)) { console.error("Refusing non-loopback host"); process.exit(2); }
 
 const phases = process.argv.slice(2).length ? process.argv.slice(2) : ["build", "student", "grade"];
@@ -244,10 +245,20 @@ async function student() {
   const by = Object.fromEntries(exam.sections.map((s) => [s.skill, s]));
   const page = await session(STUDENT_IELTS);
   // A re-run starts clean: hand in this exam's attempts an earlier run left open.
-  const mine = (await api(page, "GET", "/mock/attempts/mine")).data;
-  for (const open of (Array.isArray(mine) ? mine : mine?.items ?? []).filter((a) => a.examId === state.examId && a.status === "in_progress"))
-    await api(page, "POST", `/mock/attempts/${open.id}/submit`, { confirm: true, confirmed: true, force: true }, { allow: [400, 403, 404, 409] });
+  if (!ASSIGNMENT) {
+    const mine = (await api(page, "GET", "/mock/attempts/mine")).data;
+    for (const open of (Array.isArray(mine) ? mine : mine?.items ?? []).filter((a) => a.examId === state.examId && a.status === "in_progress"))
+      await api(page, "POST", `/mock/attempts/${open.id}/submit`, { confirm: true, confirmed: true, force: true }, { allow: [400, 403, 404, 409] });
+  }
   await step(page, "03-student-starts-on-ielts-track", async () => {
+    if (ASSIGNMENT) {
+      const { data } = await api(page, "POST", `/mock/exams/${state.examId}/start`, { mode: "timed", flow: "full_test", assignmentId: ASSIGNMENT });
+      state.attemptId = data.attemptId;
+      saveState();
+      await page.goto(`${WEB}/en/mock/attempt/${state.attemptId}`, { waitUntil: "networkidle" });
+      await dismissExamNotices(page);
+      return `assigned IELTS attempt ${state.attemptId}`;
+    }
     await page.goto(`${WEB}/en/mock`, { waitUntil: "networkidle" });
     const toIelts = page.getByTestId("exam-track-card-IELTS").getByRole("button", { name: /Switch to/ });
     if (await toIelts.count()) await toIelts.click();
@@ -288,7 +299,10 @@ async function student() {
     const essay = (words) => Array.from({ length: words }, (_, i) => ["museums", "visitors", "students", "history", "culture"][i % 5]).join(" ") + ".";
     for (const [i, group] of by.writing.groups.entries()) {
       await openBlock(page, i + 1);
-      await page.getByLabel(`Written response to question ${group.questions[0].displayNumber ?? group.questions[0].number}`).fill(essay(i ? 260 : 160));
+      const editor = page.getByLabel(`Written response to question ${group.questions[0].displayNumber ?? group.questions[0].number}`);
+      const response = essay(i ? 260 : 160);
+      await editor.pressSequentially(response);
+      expect(await editor.inputValue() === response, "Writing did not retain the keyboard input");
     }
     await waitConfirmed(page, 82);
     await finishSection(page);

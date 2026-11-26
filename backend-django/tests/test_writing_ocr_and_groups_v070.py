@@ -79,41 +79,13 @@ class WritingOcrAndGeminiFallbackTests(SimpleTestCase):
             self.assertEqual(res["coherence_cohesion"], 7.5)
             self.assertEqual(res["provider"], "gemini")
 
-    def test_assessment_providers_3_tier_chain_falls_back_to_gemini(self):
-        input_data, valid_result = quality_fixture("writing")
-        gemini_resp = {
-            "candidates": [
-                {
-                    "content": {
-                        "parts": [{"text": json.dumps(valid_result)}]
-                    }
-                }
-            ],
-            "usageMetadata": {"promptTokenCount": 140, "candidatesTokenCount": 65},
-        }
-        env_cfg = {
-            "ASSESSMENT_PROVIDER": "openrouter",
-            "OPENROUTER_API_KEY": "or-test-key",
-            "XKIRO_API_KEY": "xk-test-key",
-            "GEMINI_API_KEY": "gemini-test-key-v070",
-        }
-
-        def fake_http(url, body, headers, timeout):
-            if "openrouter.ai" in url:
-                raise assessment_providers.ProviderError("PROVIDER_RATE_LIMITED", True, False)
-            if "xkiro.com" in url:
-                raise assessment_providers.ProviderError("PROVIDER_UNAVAILABLE", True, False)
-            if "generativelanguage.googleapis.com" in url:
-                return gemini_resp
-            raise AssertionError(f"Unexpected URL: {url}")
-
-        with patch.dict(os.environ, env_cfg, clear=True), \
-             patch.object(assessment_providers, "provider_json", side_effect=fake_http):
-            output = assessment_providers.assess(input_data, "PRIMARY")
-            self.assertEqual(output["provider"], "gemini")
-            self.assertEqual(output["model"], "gemini-2.0-flash")
-            self.assertEqual(output["inputTokens"], 140)
-            self.assertEqual(output["outputTokens"], 65)
+    def test_unapproved_gemini_does_not_receive_assessment_input(self):
+        input_data, _ = quality_fixture("writing")
+        env = {"ASSESSMENT_PROVIDER": "openrouter", "OPENROUTER_API_KEY": "fixture", "GEMINI_API_KEY": "fixture"}
+        with patch.dict(os.environ, env, clear=True), patch.object(assessment_providers, "provider_json") as http:
+            with self.assertRaisesRegex(assessment_providers.ProviderError, "ASSESSMENT_EXTERNAL_AI_DISABLED"):
+                assessment_providers.assess(input_data, "PRIMARY")
+        http.assert_not_called()
 
     def test_writing_ocr_upload_endpoint_saves_images_and_updates_mock_answer(self):
         student = SimpleNamespace(id="student-1", role="student", is_authenticated=True)
@@ -160,7 +132,7 @@ class WritingOcrAndGeminiFallbackTests(SimpleTestCase):
             self.assertEqual(len(call_kwargs["defaults"]["rubric_scores"]["imageKeys"]), 2)
 
     def test_assessment_worker_finish_triggers_telegram_notification(self):
-        fake_job = SimpleNamespace(id="job-99", attempt_id="att-99", skill="writing", status="SUCCEEDED")
+        fake_job = SimpleNamespace(id="job-99", attempt_id="att-99", skill="writing", status="SUCCEEDED", final_score_source="TEACHER")
         with patch("apps.core.telegram_delivery.notify_submission_result", create=True) as mock_notify:
             assessment_worker.finish(fake_job)
             mock_notify.assert_called_once_with(fake_job)

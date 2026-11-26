@@ -63,6 +63,7 @@ export function useReviewAssessment(attemptId: string, jobId: string) {
       qc.invalidateQueries({ queryKey: ["mock-attempts"] });
       qc.invalidateQueries({ queryKey: ["mock-attempts-mine"] });
       qc.invalidateQueries({ queryKey: ["group-ai-ranking"] });
+      qc.invalidateQueries({ queryKey: ["group-exam-analytics"] });
       qc.invalidateQueries({ queryKey: ["assessment-overview"] });
     },
   });
@@ -85,6 +86,7 @@ export function useTeacherGradeAttempt(attemptId: string) {
     mutationFn: (input: TeacherGradeAttemptInput) =>
       api.post(`/assessment/attempts/${encodeURIComponent(attemptId)}/teacher-grade`, input),
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["group-exam-analytics"] });
       qc.invalidateQueries({ queryKey: ["attempt-assessments", attemptId] });
       qc.invalidateQueries({ queryKey: ["mock-attempt", attemptId] });
       qc.invalidateQueries({ queryKey: ["mock-attempts"] });

@@ -162,14 +162,15 @@ class EvidenceRankingTests(SimpleTestCase):
 
 
 class DeepSeekV2Tests(SimpleTestCase):
-    def test_official_deepseek_uses_documented_chat_json_mode_no_private_identifiers(self):
+    def test_loopback_deepseek_uses_configured_chat_json_mode_no_private_identifiers(self):
         input,result=fixture(raw=2.5)
         output=dict(choices=[dict(finish_reason='stop',message=dict(role='assistant',content=json.dumps(result)))],
             usage=dict(prompt_tokens=12,completion_tokens=13))
-        with patch.dict(os.environ,dict(DEEPSEEK_API_KEY='test-only-key',DEEPSEEK_MODEL='fixture-model'),clear=True),\
+        with patch.dict(os.environ,dict(ASSESSMENT_PROVIDER='deepseek',DEEPSEEK_API_KEY='test-only-key',DEEPSEEK_MODEL='fixture-model',
+                    DEEPSEEK_BASE_URL='http://localhost',DEEPSEEK_API_FORMAT='chat_completions'),clear=True),\
                 patch.object(providers,'provider_json',return_value=output) as http:
             value=providers.assess(input,'PRIMARY')
-        self.assertEqual(http.call_args.args[0],'https://api.deepseek.com/chat/completions')
+        self.assertEqual(http.call_args.args[0],'http://localhost/chat/completions')
         body=json.loads(http.call_args.args[1]);self.assertEqual(body['response_format'],dict(type='json_object'))
         self.assertIn('Required JSON schema',body['messages'][0]['content'])
         for private in ('private-id','private/key','private-hash','test-only-key'):
@@ -179,7 +180,8 @@ class DeepSeekV2Tests(SimpleTestCase):
 
     def test_truncated_chat_result_never_becomes_a_grade(self):
         input,_=fixture()
-        with patch.dict(os.environ,dict(DEEPSEEK_API_KEY='test-only-key',DEEPSEEK_MODEL='fixture-model'),clear=True),\
+        with patch.dict(os.environ,dict(ASSESSMENT_PROVIDER='deepseek',DEEPSEEK_API_KEY='test-only-key',DEEPSEEK_MODEL='fixture-model',
+                    DEEPSEEK_BASE_URL='http://localhost',DEEPSEEK_API_FORMAT='chat_completions'),clear=True),\
                 patch.object(providers,'provider_json',return_value=dict(choices=[dict(finish_reason='length')])):
             with self.assertRaisesRegex(results.ProviderError,'PROVIDER_TRUNCATED_RESULT'):providers.assess(input,'PRIMARY')
 
@@ -217,7 +219,7 @@ class ScopedAiPolicyTests(SimpleTestCase):
             groups.filter.return_value.values_list.return_value=[('g',None)]
             enqueue(attempt)
         saved=jobs.get_or_create.call_args.kwargs['defaults']
-        self.assertEqual((saved['policy_mode'],saved['status'],saved['failure_code']),('PRACTICE_AUTO_AI','PENDING',None))
+        self.assertEqual((saved['policy_mode'],saved['status'],saved['failure_code']),('FULL_MOCK_AI_WITH_REVIEW','PENDING',None))
         self.assertEqual(saved['input_snapshot']['parts'][0]['responses'][0]['originalResponse'],'Original submission')
 
 

@@ -18,7 +18,7 @@ import type { AssessmentJobView, AssessmentPartFeedback, AssessmentResult, Asses
 type Translate = ReturnType<typeof useTranslations>;
 const TEXT_FEEDBACK = ["taskCoverage", "grammar", "vocabulary", "fluencyCohesion", "ideaDevelopment", "register", "spellingPunctuation", "position", "argumentBalance"] as const;
 const LIST_FEEDBACK = ["strengths", "issues", "missedPrompts", "usefulPhrases"] as const;
-const ACTIONS: AssessmentReviewAction[] = ["ACCEPT", "OVERRIDE", "EDIT_FEEDBACK", "REGRADE", "NEEDS_REVIEW"];
+const ACTIONS: AssessmentReviewAction[] = ["ACCEPT", "OVERRIDE", "SAVE_DRAFT", "EDIT_FEEDBACK", "REGRADE", "NEEDS_REVIEW"];
 
 export function TeacherAttemptOverrideCard({
   attemptId,
@@ -249,7 +249,7 @@ export function AssessmentPanel({ attemptId, isStaff }: { attemptId: string; isS
         <Card className="p-4 text-sm text-fg-muted">{t("manualFallback")}</Card>
       )}
       {query.pollingStopped && hasActiveAssessments(query.data) && <p role="status" className="text-sm text-fg-muted">{t("pollingPaused")}</p>}
-      {query.data?.assessments.map((job) => <AssessmentCard key={`${job.id}:${job.version}`} job={job} attemptId={attemptId} isStaff={isStaff} />)}
+      {query.data?.assessments.map((job) => <AssessmentCard key={job.id} job={job} attemptId={attemptId} isStaff={isStaff} />)}
     </section>
   );
 }
@@ -257,12 +257,15 @@ export function AssessmentPanel({ attemptId, isStaff }: { attemptId: string; isS
 export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJobView; attemptId: string; isStaff: boolean }) {
   const t = useTranslations("assessment");
   const [selectedZoomImage, setSelectedZoomImage] = React.useState<{ url: string; title: string } | null>(null);
-  const result = job.approvedFeedback ?? job.finalResult ?? job.evaluation?.result;
+  const result = isStaff
+    ? job.approvedFeedback ?? job.finalResult ?? job.evaluation?.result
+    : job.status === "SUCCEEDED" || job.finalScoreSource === "TEACHER" ? job.approvedFeedback ?? job.finalResult : null;
   const partial = job.practiceMode === "PARTIAL";
   const title = partial ? t("partialPractice", { skill: job.skill === "writing" ? "Writing" : "Speaking" }) : job.program === "MULTILEVEL" ? t(`multilevel.${job.skill}`) : t(`ielts.${job.skill}`);
   const reviewed = job.finalScoreSource === "TEACHER";
   const active = ["PENDING", "PROCESSING", "RETRY"].includes(job.status);
-  const variant = job.status === "SUCCEEDED" ? "success" : active ? "info" : "warning";
+  const status = !isStaff && reviewed ? "reviewed" : assessmentStatusKey(job);
+  const variant = status === "reviewed" || job.status === "SUCCEEDED" ? "success" : active ? "info" : "warning";
   // The worker records why speech could not be transcribed; STT_NOT_CONFIGURED is a server setup gap, not a missing answer.
   const scoringUnavailable = job.skill === "speaking" && job.failureCode === "STT_NOT_CONFIGURED";
   const pronunciationUnavailable = job.skill === "speaking" && result?.pronunciationEvidence !== "ACOUSTIC";
@@ -271,12 +274,11 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
       <div className="space-y-3 border-b border-border p-5">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <h3 className="font-semibold text-fg">{title}</h3>
-          <Badge variant={variant}>{t(`status.${assessmentStatusKey(job)}`)}</Badge>
+          <Badge variant={variant}>{t(`status.${status}`)}</Badge>
         </div>
         <dl className="grid gap-2 sm:grid-cols-3">
-          {(["aiScore", "teacherScore", "finalScore"] as const).map((key) => {
-            // A score on a job that is still being assessed is intermediate: never shown as a result.
-            const value = active ? null : job[key];
+          {(isStaff ? ["aiScore", "teacherScore", "finalScore"] as const : ["teacherScore", "finalScore"] as const).map((key) => {
+            const value = job[key];
             return <div key={key} className="rounded-field bg-bg-subtle p-3">
             <dt className="text-xs text-fg-muted">{t(key)}</dt>
             <dd className="mt-1 text-lg font-semibold text-fg tabular-nums">{value ?? t("pending")}{value != null && partial ? ` /${job.rawMax ?? job.parts.reduce((sum, part) => sum + part.max, 0)} raw` : value != null && job.program === "MULTILEVEL" ? " /75" : ""}</dd>
@@ -284,12 +286,14 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
         </dl>
         <div className="flex flex-wrap gap-2 text-xs text-fg-muted">
           <span>{t("source")}: {job.finalScoreSource ? t(`sources.${job.finalScoreSource}`) : t("pending")}</span>
-          <span>{t("confidence")}: {job.confidence == null ? t("unavailable") : `${Math.round(job.confidence * 100)}%`}</span>
+          {isStaff && <span>{t("confidence")}: {job.confidence == null ? t("unavailable") : `${Math.round(job.confidence * 100)}%`}</span>}
+          {isStaff && job.evaluation?.model && <span>{job.evaluation.provider} · {job.evaluation.model}</span>}
           {isStaff && <span>{t(`policies.${job.policyMode}`)}</span>}
         </div>
         {pronunciationUnavailable && <p className="rounded-field bg-warning-bg p-3 text-sm text-warning">{t("pronunciationUnavailable")}</p>}
-        {(job.status === "FAILED" || job.status === "NEEDS_REVIEW") && <p className="text-sm text-fg-muted">{t("reviewFallback")}</p>}
+        {isStaff && (job.status === "FAILED" || job.status === "NEEDS_REVIEW") && <p className="text-sm text-fg-muted">{t("reviewFallback")}{job.failureCode && ` · ${job.failureCode}`}</p>}
         {job.finalScore == null && <p className="text-sm text-fg-muted">{t("resultPending")}</p>}
+        {job.teacherComment && <p className="whitespace-pre-wrap text-sm">{job.teacherComment}</p>}
         {reviewed && <p className="text-sm text-fg-muted">{t(job.evaluation ? "teacherReviewed" : "teacherReviewedManual")}</p>}
       </div>
       <div className="space-y-5 p-5">
@@ -302,6 +306,10 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
               {job.program === "MULTILEVEL" && partResult && <Badge variant="neutral">{t(reviewed ? "teacherRawPart" : "aiRawPart")}: {partResult.rawScore ?? t("pending")} /{part.max}</Badge>}
             </div>
             {part.context && <p className="whitespace-pre-wrap text-sm text-fg-muted">{part.context}</p>}
+            {isStaff && part.imageGroupId && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={`/api/backend/mock/groups/${encodeURIComponent(part.imageGroupId)}/image`} alt={t("taskImage")} className="max-h-96 max-w-full object-contain" />
+            )}
             {isStaff && job.program === "MULTILEVEL" && job.skill === "speaking" && submissions.length > 1 && <p className="text-xs text-fg-subtle">{t("holisticPart")}</p>}
             {submissions.map((submission) => <div key={submission.questionId} className="space-y-2 rounded-control border border-border p-3">
               <p className="whitespace-pre-wrap text-sm font-medium text-fg">{submission.prompt}</p>
@@ -341,10 +349,16 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
               )}
               {submission.audioUrl && <audio controls preload="none" className="w-full max-w-md" aria-label={t("originalAudio")}
                 src={assessmentAudioPath(job.id, submission.questionId)}><track kind="captions" /></audio>}
+              {isStaff && submission.audioDurationMs != null && <p className="text-xs text-fg-muted">{t("audioDuration", { seconds: Math.round(submission.audioDurationMs / 1000) })}</p>}
               {!submission.originalResponse && !submission.audioUrl && (!submission.imageUrls || submission.imageUrls.length === 0) && <p className="text-sm text-fg-muted">{scoringUnavailable ? t("scoringUnavailable") : t("noResponse")}</p>}
-              {job.skill === "speaking" && <div className="rounded-field bg-bg-subtle p-3">
+              {isStaff && job.skill === "speaking" && <div className="rounded-field bg-bg-subtle p-3">
                 <h5 className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">{t("transcript")}</h5>
                 <p className="mt-1 whitespace-pre-wrap text-sm text-fg-muted">{submission.transcript?.text || (scoringUnavailable ? t("scoringUnavailable") : t("transcriptPending"))}</p>
+                {submission.transcriptStatus && <p className="mt-1 text-xs text-fg-subtle">{t(`transcriptionStates.${submission.transcriptStatus}`)}</p>}
+                {submission.transcript && <p className="mt-1 text-xs text-fg-subtle">
+                  {submission.transcript.provider} · {submission.transcript.model}
+                </p>}
+                {submission.transcript && <TranscriptCorrection job={job} attemptId={attemptId} submission={submission} />}
                 {submission.transcript?.confidence != null && <p className="mt-1 text-xs text-fg-subtle">{t("transcriptConfidence")}: {Math.round(submission.transcript.confidence * 100)}%</p>}
                 {!!submission.transcript?.segments.length && <details className="mt-2 text-xs text-fg-muted"><summary className="cursor-pointer">{t("segments")}</summary>
                   <ol className="mt-2 space-y-1">{submission.transcript.segments.map((segment, index) => <li key={index}>{segment.start.toFixed(1)}–{segment.end.toFixed(1)}s · {segment.text}</li>)}</ol>
@@ -425,6 +439,38 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
       />
     </Card>
   );
+}
+
+function TranscriptCorrection({ job, attemptId, submission }: { job: AssessmentJobView; attemptId: string; submission: AssessmentJobView["submissions"][number] }) {
+  const t = useTranslations("assessment");
+  const mutation = useReviewAssessment(attemptId, job.id);
+  const [draft, setDraft] = React.useState<{ text: string; version: number } | null>(null);
+  const [reason, setReason] = React.useState("");
+  const [error, setError] = React.useState(false);
+  const transcript = submission.transcript;
+  if (!transcript) return null;
+  return <details className="mt-2 text-sm">
+    <summary className="cursor-pointer">{t("transcriptCorrection")}</summary>
+    {transcript.correctedText && <p className="my-2 whitespace-pre-wrap">{transcript.correctedText}</p>}
+    <form className="mt-2 space-y-2" onSubmit={(event) => {
+      event.preventDefault();
+      const text = draft?.text.trim();
+      if (!draft || !text || !reason.trim()) return;
+      setError(false);
+      mutation.mutate({ action: "CORRECT_TRANSCRIPT", expectedVersion: draft.version, reason: reason.trim(), questionId: submission.questionId, transcript: text }, {
+        onSuccess: () => { setDraft(null); setReason(""); toast.success(t("reviewSaved")); },
+        onError: () => setError(true),
+      });
+    }}>
+      <label className="block">{t("correctedTranscript")}
+        <Textarea value={draft?.text ?? transcript.correctedText ?? transcript.text} maxLength={100000} required
+          onChange={(event) => setDraft({ text: event.target.value, version: draft?.version ?? job.version })} />
+      </label>
+      <label className="block">{t("reason")}<Input value={reason} onChange={(event) => setReason(event.target.value)} maxLength={2000} required /></label>
+      {error && <p role="alert">{t("reviewError")}</p>}
+      <Button type="submit" size="sm" loading={mutation.isPending} disabled={!draft}>{t("saveCorrection")}</Button>
+    </form>
+  </details>;
 }
 
 function FeedbackList({ title, values }: { title: string; values: string[] }) {
@@ -519,6 +565,11 @@ function OverallFeedback({ result, t }: { result: AssessmentResult; t: Translate
 function initialOverrideValues(job: AssessmentJobView): Record<string, Record<string, string>> {
   return Object.fromEntries(job.parts.map((part) => {
     const result = (job.finalResult ?? job.approvedFeedback ?? job.evaluation?.result)?.parts.find((item) => item.id === part.id);
+    if (job.teacherDraft) {
+      const draft = job.teacherDraft.parts.find((item) => item.id === part.id);
+      return [part.id, job.program === "MULTILEVEL" ? { rawScore: draft?.rawScore?.toString() ?? "" }
+        : Object.fromEntries(criterionKeys(job).map((key) => [key, draft?.criteria?.[key]?.toString() ?? ""]))];
+    }
     return [part.id, job.program === "MULTILEVEL" ? { rawScore: result?.rawScore == null ? "" : String(result.rawScore) }
       : Object.fromEntries(criterionKeys(job).map((key) => [key, result?.criteria[key] == null ? "" : String(result.criteria[key])]))];
   }));
@@ -527,37 +578,42 @@ function initialOverrideValues(job: AssessmentJobView): Record<string, Record<st
 export function AssessmentReviewForm({ job, attemptId }: { job: AssessmentJobView; attemptId: string }) {
   const t = useTranslations("assessment");
   const mutation = useReviewAssessment(attemptId, job.id);
-  const [action, setAction] = React.useState<AssessmentReviewAction>(canAcceptAssessment(job) ? "ACCEPT" : "OVERRIDE");
-  const [reason, setReason] = React.useState("");
+  const [action, setAction] = React.useState<AssessmentReviewAction>(canAcceptAssessment(job) && !job.teacherDraft ? "ACCEPT" : "OVERRIDE");
+  const [reason, setReason] = React.useState<string | null>(null);
+  const [comment, setComment] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [editingVersion, setEditingVersion] = React.useState<number | null>(null);
   const [confirmRegrade, setConfirmRegrade] = React.useState(false);
-  const [scores, setScores] = React.useState(() => initialOverrideValues(job));
-  const [feedback, setFeedback] = React.useState<AssessmentResult | null>(() => {
-    const value = job.approvedFeedback ?? job.finalResult ?? job.evaluation?.result;
-    return value ? structuredClone(value) : null;
-  });
+  const [editedScores, setScores] = React.useState<Record<string, Record<string, string>> | null>(null);
+  const scores = editedScores ?? initialOverrideValues(job);
+  const [editedFeedback, setFeedback] = React.useState<AssessmentResult | null>(null);
+  const feedback = editedFeedback ?? job.approvedFeedback ?? job.finalResult ?? job.evaluation?.result ?? null;
   const busy = ["PENDING", "PROCESSING", "RETRY"].includes(job.status);
+  const editingScores = action === "OVERRIDE" || action === "SAVE_DRAFT";
+  const stale = editingVersion != null && editingVersion !== job.version;
+  const reasonText = reason ?? job.teacherDraft?.reason ?? "";
+  const commentText = comment ?? job.teacherDraft?.comment ?? job.teacherComment ?? "";
 
   function updatePartFeedback<K extends keyof AssessmentPartFeedback>(partId: string, key: K, value: AssessmentPartFeedback[K]) {
-    setFeedback((current) => current ? { ...current, parts: current.parts.map((part) => part.id === partId ? { ...part, feedback: { ...part.feedback, [key]: value } } : part) } : current);
+    if (feedback) setFeedback({ ...feedback, parts: feedback.parts.map((part) => part.id === partId ? { ...part, feedback: { ...part.feedback, [key]: value } } : part) });
   }
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    if (reason.trim().length < 3) { setError(t("reasonRequired")); return; }
+    if (reasonText.trim().length < 3) { setError(t("reasonRequired")); return; }
     if (action === "ACCEPT" && !canAcceptAssessment(job)) { setError(t("acceptUnavailable")); return; }
     if (action === "REGRADE" && !confirmRegrade) { setError(t("regradeConfirm")); return; }
-    const input: AssessmentReviewInput = { action, expectedVersion: job.version, reason: reason.trim() };
-    if (action === "OVERRIDE") {
-      try { input.parts = overrideParts(job, scores); } catch { setError(t("invalidScore")); return; }
+    const input: AssessmentReviewInput = { action, expectedVersion: editingVersion ?? job.version, reason: reasonText.trim(), comment: commentText.trim() };
+    if (editingScores) {
+      try { input.parts = overrideParts(job, scores, action === "SAVE_DRAFT"); } catch { setError(t("invalidScore")); return; }
     }
     if (action === "EDIT_FEEDBACK") {
       if (!feedback) { setError(t("feedbackUnavailable")); return; }
       input.feedback = feedback;
     }
     mutation.mutate(input, {
-      onSuccess: () => toast.success(t("reviewSaved")),
+      onSuccess: () => { setEditingVersion(null); toast.success(t("reviewSaved")); },
       onError: (failure) => setError(failure instanceof ApiError && /CONFLICT|STALE/.test(failure.code) ? t("staleReview") : t("reviewError")),
     });
   }
@@ -567,7 +623,9 @@ export function AssessmentReviewForm({ job, attemptId }: { job: AssessmentJobVie
     if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); event.currentTarget.requestSubmit(); }
   };
 
-  return <form onSubmit={submit} onKeyDown={onKeyDown} className="space-y-3 rounded-card border border-border bg-bg-subtle p-4" aria-label={t("teacherReview")}>
+  return <form onSubmit={submit} onKeyDown={onKeyDown}
+    onChange={() => setEditingVersion((version) => version ?? job.version)}
+    className="space-y-3 rounded-card border border-border bg-bg-subtle p-4" aria-label={t("teacherReview")}>
     <div className="flex flex-wrap items-baseline justify-between gap-2">
       <h4 className="font-semibold">{t("teacherReview")}</h4>
       <p className="text-sm text-fg-subtle">{t("saveShortcut")}</p>
@@ -593,13 +651,13 @@ export function AssessmentReviewForm({ job, attemptId }: { job: AssessmentJobVie
       ))}
     </div>
     {action === "ACCEPT" && !canAcceptAssessment(job) && <p className="text-sm text-fg-muted">{t("acceptUnavailable")}</p>}
-    {action === "OVERRIDE" && <div className="space-y-3">
+    {editingScores && <div className="space-y-3">
       {job.skill === "speaking" && job.program !== "MULTILEVEL" && <p className="text-sm text-warning">{t("teacherPronunciation")}</p>}
       {job.parts.map((part) => <fieldset key={part.id} className="grid gap-2 rounded-control border border-border bg-surface p-3 sm:grid-cols-2 xl:grid-cols-4"><legend className="px-1 text-sm font-semibold">{part.task}</legend>
         {(job.program === "MULTILEVEL" ? ["rawScore"] : criterionKeys(job)).map((key) => <label key={key} className="flex items-center justify-between gap-3 text-sm sm:flex-col sm:items-start sm:gap-1">
           <span>{key === "rawScore" ? t("rawPart") : t(`criteria.${key}`)} (0–{job.program === "MULTILEVEL" ? part.max : 9})</span>
-          <Input type="number" min={0} max={job.program === "MULTILEVEL" ? part.max : 9} step={0.5} required value={scores[part.id]?.[key] ?? ""} className="w-24"
-            onChange={(event) => setScores((current) => ({ ...current, [part.id]: { ...current[part.id], [key]: event.target.value } }))} />
+          <Input type="number" min={0} max={job.program === "MULTILEVEL" ? part.max : 9} step={0.5} required={action === "OVERRIDE"} value={scores[part.id]?.[key] ?? ""} className="w-24"
+            onChange={(event) => setScores({ ...scores, [part.id]: { ...scores[part.id], [key]: event.target.value } })} />
         </label>)}
       </fieldset>)}
     </div>}
@@ -619,9 +677,16 @@ export function AssessmentReviewForm({ job, attemptId }: { job: AssessmentJobVie
       </label>)}
     </div> : <p className="text-sm text-fg-muted">{t("feedbackUnavailable")}</p>)}
     {action === "REGRADE" && <label className="flex items-start gap-2 text-sm text-fg-muted"><input type="checkbox" checked={confirmRegrade} onChange={(event) => setConfirmRegrade(event.target.checked)} className="mt-1" />{t("regradeConfirm")}</label>}
-    <label className="block space-y-1 text-sm"><span>{t("reason")}</span><Textarea value={reason} onChange={(event) => setReason(event.target.value)} minLength={3} maxLength={2000} required /></label>
+    {(editingScores || action === "ACCEPT") && <label className="block space-y-1 text-sm"><span>{t("teacherComment")}</span><Textarea value={commentText} onChange={(event) => setComment(event.target.value)} maxLength={2000} /></label>}
+    <label className="block space-y-1 text-sm"><span>{t("reason")}</span><Textarea value={reasonText} onChange={(event) => setReason(event.target.value)} minLength={3} maxLength={2000} required /></label>
+    {stale && <div role="status" className="flex flex-wrap items-center gap-2">
+      <p className="text-sm text-warning">{t("staleReview")}</p>
+      <Button type="button" size="sm" onClick={() => { setEditingVersion(job.version); setError(null); }}>{t("useLatestReviewVersion")}</Button>
+    </div>}
     {busy && <p role="status" className="text-sm text-fg-muted">{t("waitForWorker")}</p>}
     {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-    <Button type="submit" size="sm" loading={mutation.isPending} disabled={busy || (action === "ACCEPT" && !canAcceptAssessment(job)) || (action === "EDIT_FEEDBACK" && !feedback)}>{t("saveReview")}</Button>
+    <Button type="submit" size="sm" loading={mutation.isPending} disabled={stale || (busy && action === "REGRADE") || (action === "ACCEPT" && !canAcceptAssessment(job)) || (action === "EDIT_FEEDBACK" && !feedback)}>
+      {t(action === "SAVE_DRAFT" ? "actions.SAVE_DRAFT" : action === "OVERRIDE" || action === "ACCEPT" ? "finalizeGrade" : "saveReview")}
+    </Button>
   </form>;
 }

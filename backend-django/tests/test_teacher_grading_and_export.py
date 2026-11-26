@@ -182,13 +182,14 @@ class GroupExamExportServiceTests(SimpleTestCase):
         self.assertEqual(group_exam_export.compute_cefr_level(None, "multilevel"), "-")
         self.assertEqual(group_exam_export.compute_cefr_level(None, "multilevel", existing_cefr="b2"), "B2")
 
+    @patch("apps.core.group_exam_export.classroom_assessments")
     @patch("apps.core.group_exam_export.AssessmentJob.objects")
     @patch("apps.core.group_exam_export.classroom_attempts")
     @patch("apps.core.group_exam_export.StudentProfile.objects")
     @patch("apps.core.group_exam_export.MockExam.objects")
     @patch("apps.core.group_exam_export.Group.objects")
     def test_get_group_exam_export_data(
-        self, mock_group_qs, mock_exam_qs, mock_roster_qs, mock_attempts_qs, mock_jobs_qs
+        self, mock_group_qs, mock_exam_qs, mock_roster_qs, mock_attempts_qs, mock_jobs_qs, mock_classroom_assessments
     ):
         mock_group = MagicMock(id="group-1", teacher_id="teacher-001")
         mock_group.name = "IELTS Intensive Morning"
@@ -205,6 +206,7 @@ class GroupExamExportServiceTests(SimpleTestCase):
 
         att = MagicMock(
             id="att-1",
+            unconfirmed_classroom_grade=False,
             student_id="u-1",
             status="completed",
             overall_band=7.0,

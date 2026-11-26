@@ -158,6 +158,7 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
   );
   const targetSkill = (exam?.sections[0]?.skill || attempt.singleSection || (attempt.practiceScope?.skills?.[0])) as MockSkill | undefined;
   const partialPractice = attempt.flowMode === "partial_practice" || isSingleSection || isPartialPractice(attempt);
+  const isFullTest = attempt.flowMode === "full_test" && !isSingleSection;
   const versioned = !!attempt.specificationVersion;
 
   // Simulator Mode ('cdi' | 'dtm') + CDI Contrast Theme + Notes Drawer + Fullscreen
@@ -300,7 +301,6 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
   // Timed = exam-strict playback (full_test ham, single_skill ham).
   // Eslatma: `strict` clipboard/contextmenu bloklashni ham yoqadi — Timed
   // Reading/Writing single_skill da ham ataylab bloklanadi (exam sharti, izchil).
-  const isFullTest = (attempt.flowMode ?? "single_skill") === "full_test" && !isSingleSection;
   const strict = attempt.mode === "timed";
 
   // Boshlang'ich javoblar + speaking audio holati (attempt'dan)
@@ -338,6 +338,9 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
 
   const resolvedSectionIndex = React.useMemo(() => {
     if (!exam?.sections || exam.sections.length === 0) return 0;
+    if (isFullTest && attempt.currentSkill) {
+      return Math.max(0, exam.sections.findIndex((section) => section.skill === attempt.currentSkill));
+    }
     if (typeof window !== "undefined") {
       const urlSkill = new URLSearchParams(window.location.search).get("skill");
       if (urlSkill) {
@@ -351,13 +354,10 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
     }
     const listeningIdx = exam.sections.findIndex((s) => s.skill === "listening");
     return listeningIdx >= 0 ? listeningIdx : 0;
-  }, [exam?.sections, attempt.currentSkill]);
+  }, [exam?.sections, attempt.currentSkill, isFullTest]);
 
-  const activeSection = isSingleSection
-    ? 0
-    : selectedSection !== null
-    ? selectedSection
-    : resolvedSectionIndex;
+  const lockedSection = isFullTest && Boolean(attempt.currentSkill);
+  const activeSection = isSingleSection ? 0 : lockedSection ? resolvedSectionIndex : selectedSection ?? resolvedSectionIndex;
   // The microphone check is done once per attempt (remembered for the browser session), not on every visit
   // to the Speaking tab or after a reload. Read after mount so server and client render the same markup.
   const [micChecked, setMicCheckedState] = React.useState(false);
@@ -401,7 +401,7 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
     const section = attempt.sections?.find((item) => item.skill === attempt.currentSkill);
     return new Set(sectionGroupsOf(section).flatMap((group) => (group.questions ?? []).map((question) => question.id)));
   }, [attempt.sections, attempt.currentSkill]);
-  const canSaveQuestion = React.useCallback((id: string) => !isFullTest || activeQuestionIds.has(id), [activeQuestionIds, isFullTest]);
+  const canSaveQuestion = React.useCallback((id: string) => !lockedSection || activeQuestionIds.has(id), [activeQuestionIds, lockedSection]);
   const saveItems = React.useCallback(() =>
     [...edits.current].filter(([id]) => canSaveQuestion(id) && !conflicts.current.has(id))
       .sort(([, left], [, right]) => left.editedAt - right.editedAt), [canSaveQuestion]);
@@ -911,13 +911,14 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
     <button
       key={s.id}
       type="button"
+      disabled={lockedSection && i !== activeSection}
       onClick={() => {
         flush();
         setActiveSection(i);
       }}
       aria-current={i === activeSection}
       className={cn(
-        "inline-flex items-center justify-center rounded-md font-medium transition-colors touch-manipulation cursor-pointer",
+        "inline-flex items-center justify-center rounded-md font-medium transition-colors touch-manipulation cursor-pointer disabled:cursor-not-allowed disabled:opacity-60",
         kind === "compact" ? "min-h-[32px] px-2.5 text-xs" : "min-h-[40px] rounded-full px-4 text-sm",
         i === activeSection
           ? "bg-brand text-brand-fg"

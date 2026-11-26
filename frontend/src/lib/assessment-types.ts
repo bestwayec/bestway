@@ -59,7 +59,9 @@ export interface AssessmentJobView {
   promptVersion: string;
   practiceMode?: "PARTIAL";
   rawMax?: number;
-  evaluation: { result: AssessmentResult } | null;
+  evaluation: { result: AssessmentResult; provider?: string; model?: string } | null;
+  teacherDraft?: { parts: NonNullable<AssessmentReviewInput["parts"]>; reason: string; comment: string };
+  teacherComment?: string | null;
   approvedFeedback: AssessmentResult | null;
   finalResult?: AssessmentResult | null;
   submissions: Array<{
@@ -70,13 +72,19 @@ export interface AssessmentJobView {
     originalResponse: string;
     wordCount: number;
     audioUrl: string | null;
+    audioDurationMs?: number | null;
     imageUrls?: string[];
     imageKeys?: string[];
     ocrText?: string;
     teacherScore?: number | null;
     teacherFeedback?: string | null;
+    transcriptStatus?: string | null;
     transcript: {
       text: string;
+      correctedText?: string | null;
+      provider?: string;
+      model?: string;
+      durationMs?: number | null;
       confidence: number | null;
       segments: Array<{ start: number; end: number; text: string; confidence: number | null }>;
       pronunciationEvidence: PronunciationEvidence;
@@ -88,7 +96,7 @@ export interface AssessmentJobView {
       } | null;
     } | null;
   }>;
-  parts: Array<{ id: string; max: number; task: string; context: string }>;
+  parts: Array<{ id: string; max: number; task: string; context: string; imageGroupId?: string }>;
 }
 
 export interface AttemptAssessments {
@@ -129,11 +137,14 @@ export interface TeacherGradeAttemptInput {
   criteriaScores?: Record<string, number>;
 }
 
-export type AssessmentReviewAction = "ACCEPT" | "OVERRIDE" | "EDIT_FEEDBACK" | "REGRADE" | "NEEDS_REVIEW";
+export type AssessmentReviewAction = "ACCEPT" | "OVERRIDE" | "SAVE_DRAFT" | "CORRECT_TRANSCRIPT" | "EDIT_FEEDBACK" | "REGRADE" | "NEEDS_REVIEW";
 export interface AssessmentReviewInput {
   action: AssessmentReviewAction;
   expectedVersion: number;
   reason: string;
+  comment?: string;
+  questionId?: string;
+  transcript?: string;
   parts?: Array<{ id: string; rawScore?: number; criteria?: Record<string, number> }>;
   feedback?: AssessmentResult;
 }

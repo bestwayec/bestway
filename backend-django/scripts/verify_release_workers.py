@@ -9,7 +9,8 @@ import subprocess
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from threading import Thread
+from threading import Event, Thread
+from types import SimpleNamespace
 from urllib.parse import parse_qsl, unquote, urlencode, urlparse, urlunparse
 from uuid import uuid4
 
@@ -27,6 +28,8 @@ schema = 'release_worker_' + uuid4().hex[:12]
 db = psycopg.connect(base, autocommit=True)
 report = dict(gates=[], provider='loopback fixture ONLY', liveProviders='UNVERIFIED')
 fixture = dict(status=200, result=None, calls=0)
+provider_entered = Event()
+provider_release = Event()
 
 
 class Provider(BaseHTTPRequestHandler):
@@ -34,14 +37,22 @@ class Provider(BaseHTTPRequestHandler):
         pass
 
     def do_POST(self):
-        assert self.path == '/responses'
+        assert self.path == '/chat/completions'
         payload = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
-        assert payload['model'] == 'local-fixture'
+        assert payload['model'] == 'deepseek/deepseek-v4.1-flash-1017:free'
         fixture['calls'] += 1
-        body = json.dumps(dict(status='completed', output=[dict(type='message', status='completed', role='assistant',
-            content=[dict(type='output_text', text=json.dumps(fixture['result']))])], usage=dict(input_tokens=10, output_tokens=20))).encode()
-        self.send_response(fixture['status']); self.send_header('Content-Type', 'application/json')
-        self.send_header('Content-Length', str(len(body))); self.end_headers(); self.wfile.write(body)
+        if fixture.get('block'):
+            provider_entered.set()
+            assert provider_release.wait(20)
+        body = json.dumps(dict(choices=[dict(finish_reason='stop', message=dict(role='assistant',
+            content=json.dumps(fixture['result'])))], usage=dict(prompt_tokens=10, completion_tokens=20))).encode()
+        self.send_response(fixture['status'])
+        if fixture['status'] == 429:
+            self.send_header('Retry-After', '67')
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
 
 server = ThreadingHTTPServer(('127.0.0.1', 0), Provider)
@@ -59,14 +70,19 @@ try:
     db.execute(sql.SQL('SET search_path TO {}').format(sql.Identifier(schema)))
     env = dict(os.environ, DATABASE_URL=urlunparse(parsed._replace(query=urlencode(dict(query, schema=schema)))),
         DJANGO_SETTINGS_MODULE='config.settings.local', JWT_SECRET='local-worker-verification-only',
-        DEEPSEEK_API_KEY='local-fixture-not-a-live-key', DEEPSEEK_MODEL='local-fixture',
-        DEEPSEEK_ADJUDICATOR_MODEL='local-fixture', DEEPSEEK_BASE_URL=f'http://127.0.0.1:{server.server_port}',
+        ASSESSMENT_PROVIDER='openrouter', OPENROUTER_API_KEY='local-fixture-only',
+        OPENROUTER_EVAL_MODEL='deepseek/deepseek-v4.1-flash-1017:free',
+        OPENROUTER_BASE_URL=f'http://127.0.0.1:{server.server_port}',
         ASSESSMENT_ADJUDICATION_ENABLED='false', ASSESSMENT_WORKER_ENABLED='true', REFERENCE_DB_TIMEZONE='UTC',
         STT_BASE_URL=f'http://127.0.0.1:{server.server_port}', STT_API_KEY='', STT_MODEL='')
     os.environ.update(env)
     import django
     django.setup()
-    from apps.core import assessment_results as rubric
+    from concurrent.futures import ThreadPoolExecutor
+    from django.db import connections
+    from apps.core import assessment, assessment_results as rubric
+    from apps.legacy_schema.models import AssessmentJob, AuditLog
+    from common.api.exceptions import ContractAPIException
     from apps.core.mock_import_validate import canonical_checksum
     student, exam, section, group, question, attempt = [str(uuid4()) for _ in range(6)]
     db.execute('INSERT INTO "User" (id,name,phone,"passwordHash",role,"updatedAt") VALUES (%s,\'Local worker\',\'+worker-fixture\',\'unused\',\'student\',NOW())', (student,))
@@ -103,24 +119,92 @@ try:
         return db.execute('SELECT status,"attemptCount","failureCode","finalScore" FROM "AssessmentJob" WHERE id=%s', (identifier,)).fetchone()
 
     first = seed(1); worker()
-    assert state(first) == ('SUCCEEDED',1,None,6), state(first)
-    assert db.execute('SELECT status FROM "MockAttempt" WHERE id=%s',(attempt,)).fetchone() == ('completed',)
+    assert state(first) == ('NEEDS_REVIEW',1,'TEACHER_CONFIRMATION_REQUIRED',None), state(first)
+    assert db.execute('SELECT status FROM "MockAttempt" WHERE id=%s',(attempt,)).fetchone() == ('grading',)
     assert fixture['calls'] == 1
-    report['gates'].append('PASS actual management worker + real loopback provider HTTP + persisted final score/attempt')
+    report['gates'].append('PASS actual worker + loopback OpenRouter HTTP persists an advisory result without a final grade')
     worker(); assert fixture['calls'] == 1 and state(first)[1] == 1
     report['gates'].append('PASS new process/restart does not redeliver completed job')
     fixture['status'] = 429
     retry = seed(2); worker(); assert state(retry)[:3] == ('RETRY',1,'PROVIDER_RATE_LIMITED'),state(retry)
     assert db.execute('SELECT status FROM "AssessmentEvaluation" WHERE "jobId"=%s',(retry,)).fetchall() == [('FAILED',)]
+    assert db.execute('SELECT "retryAt" - "updatedAt" FROM "AssessmentJob" WHERE id=%s',(retry,)).fetchone()[0].total_seconds() >= 67
     fixture['status'] = 200
     db.execute('UPDATE "AssessmentJob" SET "retryAt"=\'2000-01-01\' WHERE id=%s',(retry,))
-    worker(); assert state(retry) == ('SUCCEEDED',2,None,6),state(retry)
+    worker(); assert state(retry) == ('NEEDS_REVIEW',2,'TEACHER_CONFIRMATION_REQUIRED',None),state(retry)
     report['gates'].append('PASS 429 failure ledger, durable retry and recovery in a fresh worker process')
     expired = seed(3,'PROCESSING',attemptCount=1,leaseToken='expired',leaseExpiresAt='2000-01-01')
     db.execute('INSERT INTO "AssessmentEvaluation" (id,"jobId",role,"attemptNumber","inputHash",provider,model) VALUES (%s,%s,\'PRIMARY\',1,%s,\'fixture\',\'fixture\')',(str(uuid4()),expired,canonical_checksum(snapshot)))
     before = fixture['calls']; worker()
     assert state(expired)[:3] == ('NEEDS_REVIEW',1,'PROVIDER_OUTCOME_UNCERTAIN') and fixture['calls'] == before
     report['gates'].append('PASS crashed STARTED provider ledger is not automatically billed again after restart')
+    # The provider is in flight while a teacher commits. Worker and review
+    # use separate real connections and both check the lease/version.
+    staff = str(uuid4())
+    db.execute("""INSERT INTO "User" (id,name,phone,"passwordHash",role,"updatedAt")
+        VALUES (%s,'Synthetic grade reviewer','+worker-reviewer','unused','admin',NOW())""", (staff,))
+    reviewer = SimpleNamespace(id=staff, role='admin')
+    race = seed(4)
+    fixture['block'] = True
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        running = pool.submit(worker)
+        assert provider_entered.wait(20), 'Provider was not entered'
+        try:
+            current = AssessmentJob.objects.get(id=race)
+            assert current.status == 'PROCESSING'
+            review = dict(action='OVERRIDE', expectedVersion=current.version, reason='Reviewed the original',
+                parts=[dict(id=snapshot['parts'][0]['id'], criteria={k:7 for k in rubric.keys(snapshot)})])
+            draft = assessment.review(reviewer, race, dict(review, action='SAVE_DRAFT', parts=[
+                dict(id=snapshot['parts'][0]['id'], criteria={'ta':7}),
+            ]))
+            assert state(race)[0] == 'PROCESSING' and state(race)[3] is None
+            assert AuditLog.objects.filter(entity_id=race, action='assessment.save_draft').exists()
+            final = assessment.review(reviewer, race, dict(review, expectedVersion=draft['version']))
+        finally:
+            provider_release.set()
+        running.result(timeout=30)
+        assert state(race) == ('SUCCEEDED',1,None,7), state(race)
+        assert db.execute('SELECT response,score FROM "MockAnswer" WHERE "attemptId"=%s',(attempt,)).fetchone() == ('Original essay',7)
+        assert not db.execute("SELECT 1 FROM \"AssessmentEvaluation\" WHERE \"jobId\"=%s AND status='SUCCEEDED'",(race,)).fetchone()
+        report['gates'].append('PASS teacher saves draft and finalizes during real provider request; late completion preserves student response and teacher grade')
+
+        def revise():
+            try:
+                assessment.review(reviewer, race, dict(review, expectedVersion=final['version']))
+                return 'ok'
+            except ContractAPIException as error:
+                return error.contract_code
+            finally:
+                connections.close_all()
+
+        revisions = [pool.submit(revise), pool.submit(revise)]
+        assert sorted(f.result(timeout=20) for f in revisions) == ['ASSESSMENT_STALE_VERSION', 'ok']
+        report['gates'].append('PASS two teacher revisions on the same version produce one commit and one stale conflict')
+    fixture['block'] = False
+    from unittest.mock import patch
+
+    from apps.core import assessment_provider_policy as policy
+    from apps.core.assessment_results import ProviderError
+
+    def rejected(code, request):
+        try:
+            request()
+        except ProviderError as error:
+            assert error.code == code
+        else:
+            raise AssertionError(f'Expected {code}')
+
+    with patch.dict(os.environ, dict(ASSESSMENT_DAILY_BUDGET='4', ASSESSMENT_PAID_DAILY_REQUESTS='2',
+            ASSESSMENT_PAID_DAILY_BUDGET_MICROUSD='100')):
+        policy.reserve_request('openrouter', policy.FREE_MODEL)
+        policy.reserve_request('openrouter', 'approved-fixture', paid_microusd=60)
+        rejected('ASSESSMENT_PAID_BUDGET_EXHAUSTED',
+            lambda: policy.reserve_request('openrouter', 'approved-fixture', paid_microusd=41))
+        policy.reserve_request('groq', 'fixture')
+        policy.reserve_request('groq', 'fixture')
+        rejected('ASSESSMENT_DAILY_BUDGET_EXHAUSTED', lambda: policy.reserve_request('groq', 'fixture'))
+        assert AuditLog.objects.filter(entity=policy.USAGE_ENTITY).count() == 4
+    report['gates'].append('PASS PostgreSQL daily request and paid amount reservations reject exhausted budgets')
     worker('run_game_scheduler'); worker('run_game_scheduler')
     report['gates'].append('PASS actual game scheduler startup/restart commands (monthly rollover covered separately by PostgreSQL contracts)')
 except Exception as error:

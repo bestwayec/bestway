@@ -33,15 +33,16 @@ export function criterionKeys(job: AssessmentJobView): string[] {
 }
 
 /** Validate teacher inputs only; scoring/conversion happens exclusively on the backend. */
-export function overrideParts(job: AssessmentJobView, values: Record<string, Record<string, string>>): NonNullable<AssessmentReviewInput["parts"]> {
+export function overrideParts(job: AssessmentJobView, values: Record<string, Record<string, string>>, partial = false): NonNullable<AssessmentReviewInput["parts"]> {
   return job.parts.map((part) => {
     const fields = job.program === "MULTILEVEL" ? ["rawScore"] : criterionKeys(job);
-    const scores = Object.fromEntries(fields.map((key) => {
+    const scores = Object.fromEntries(fields.flatMap((key) => {
       const raw = values[part.id]?.[key]?.trim();
+      if (!raw && partial) return [];
       const score = raw ? Number(raw) : NaN;
       const max = job.program === "MULTILEVEL" ? part.max : 9;
       if (!Number.isFinite(score) || score < 0 || score > max || !Number.isInteger(score * 2)) throw new Error("INVALID_ASSESSMENT_SCORE");
-      return [key, score];
+      return [[key, score]];
     }));
     return job.program === "MULTILEVEL" ? { id: part.id, rawScore: scores.rawScore } : { id: part.id, criteria: scores };
   });

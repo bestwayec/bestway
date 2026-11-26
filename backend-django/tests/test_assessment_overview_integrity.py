@@ -22,7 +22,8 @@ def job(skill='speaking', status='SUCCEEDED', **overrides):
 
 
 def transcript(audio_hash='current-hash', text='Verified words', confidence=None, diagnostics='UNAVAILABLE'):
-    return SimpleNamespace(question_id='q1', audio_hash=audio_hash, text=text, confidence=confidence,
+    return SimpleNamespace(id='transcript', status='SUCCEEDED', provider='local', model='fixture', duration_ms=1000,
+                           question_id='q1', audio_hash=audio_hash, text=text, confidence=confidence,
                            segments=[], pronunciation_evidence=diagnostics)
 
 
@@ -44,7 +45,8 @@ class AssessmentOverviewIntegrityTests(SimpleTestCase):
             ts = stack.enter_context(patch.object(assessment.SpeechTranscript.objects, 'filter'))
             ts.return_value.order_by.return_value = list(transcripts)
             audit = stack.enter_context(patch.object(assessment.AuditLog.objects, 'filter'))
-            audit.return_value.values_list.return_value = list(reviewed)
+            audit.return_value.order_by.return_value = [SimpleNamespace(entity_id=identifier, action='assessment.accept',
+                new_value={}, created_at=attempt.started_at) for identifier in reviewed]
             return assessment.for_attempt(SimpleNamespace(role='teacher'), 'attempt')
 
     def test_wrong_hash_missing_hash_and_blank_transcript_are_not_presented(self):

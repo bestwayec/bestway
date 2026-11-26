@@ -26,7 +26,7 @@ from apps.legacy_schema.models import (
 from common.api.exceptions import ContractAPIException
 
 from .mock_scoring import MULTILEVEL_BELOW_B1, cefr_band, multilevel_level
-from .teacher_analytics import classroom_attempts, comparable_score, skill_score, valid_score
+from .teacher_analytics import classroom_assessments, classroom_attempts, comparable_score, skill_score, valid_score
 
 
 def fail(code: str, message: str, status: int = 400):
@@ -115,6 +115,7 @@ def get_group_exam_export_data(actor: User, group_id: str, exam_id: str) -> Dict
             attempts_by_student[att.student_id] = att
 
     attempt_ids = [att.id for att in attempts_by_student.values()]
+    classroom_assessments(list(attempts_by_student.values()))
 
     # 3. Assessment jobs (AI evaluations)
     jobs = list(
@@ -147,8 +148,8 @@ def get_group_exam_export_data(actor: User, group_id: str, exam_id: str) -> Dict
             w_job = jobs_by_attempt_skill.get((att.id, "writing"))
             s_job = jobs_by_attempt_skill.get((att.id, "speaking"))
 
-            w_score = skill_score(att, "writing") if att.status == "completed" else None
-            s_score = skill_score(att, "speaking") if att.status == "completed" else None
+            w_score = comparable_score(att, "writing")
+            s_score = comparable_score(att, "speaking")
             if w_score is not None:
                 writing_scores_list.append(w_score)
             if s_score is not None:

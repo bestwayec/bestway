@@ -1402,6 +1402,8 @@ export interface GroupAnalyticsStudent {
   status: AttemptStatus | null;
 }
 
+export type GroupGradingStage = "fullyGraded" | "awaitingTranscription" | "awaitingAi" | "awaitingTeacher";
+
 export interface GroupAnalyticsResponse {
   groupId: string;
   groupName: string;
@@ -1422,6 +1424,17 @@ export interface GroupAnalyticsResponse {
   totalMockAttempts: number;
   totalEssays: number;
   students: GroupAnalyticsStudent[];
+  gradingQueue?: {
+    counts: Record<GroupGradingStage | "notStarted" | "inProgress" | "submitted", number>;
+    rows: Array<{
+      attemptId: string;
+      studentId: string;
+      name: string;
+      exam: string;
+      track: string;
+      skills: Partial<Record<"writing" | "speaking", { state: GroupGradingStage; failureCode: string | null }>>;
+    }>;
+  };
   weakTopicsHeatmap: Array<{
     track: string; skill: string; questionType: string; accuracy: number | null;
     correct: number; incorrect: number; unanswered: number; affectedStudentsCount: number;
