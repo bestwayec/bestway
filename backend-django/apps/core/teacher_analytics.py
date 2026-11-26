@@ -9,7 +9,7 @@ from django.db.models.fields.json import KeyTextTransform
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
-from apps.legacy_schema.models import Attendance, MockAnswer, MockAttempt, MockExamType, MockQuestion, StudentProfile
+from apps.legacy_schema.models import AssessmentJob, Attendance, AuditLog, MockAnswer, MockAttempt, MockExamType, MockQuestion, SpeechTranscript, StudentProfile
 from common.api.exceptions import ContractAPIException
 from .groups import get_group
 from .homework_scoring import ASSIGNMENT_KEY
@@ -87,16 +87,92 @@ def skill_score(attempt, skill):
 
 
 def comparable_score(attempt, skill=""):
-    if attempt.status != "completed" or attempt.flow_mode != "full_test" or is_partial(attempt):
+    if attempt.status != "completed" or attempt.flow_mode != "full_test" or is_partial(attempt) or getattr(attempt, "unconfirmed_classroom_grade", False):
         return None
     maximum = 75 if attempt.exam.type == "multilevel" else 9
     value = skill_score(attempt, skill) if skill else attempt.overall_score if maximum == 75 else attempt.overall_band
     return value if valid_score(value, maximum) else None
 
 
+def classroom_assessments(attempts):
+    """Load only the latest subjective revisions and their review state."""
+    jobs = AssessmentJob.objects.filter(attempt_id__in=[a.id for a in attempts]).order_by(
+        "attempt_id", "skill", "-generation", "-created_at", "-id",
+    ).distinct("attempt_id", "skill").values("id", "attempt_id", "skill", "status", "final_score_source",
+        "failure_code")
+    by_attempt = defaultdict(list)
+    for job in jobs:
+        by_attempt[job["attempt_id"]].append(job)
+    audited = set(AuditLog.objects.filter(entity="AssessmentJob",
+        entity_id__in=[j["id"] for rows in by_attempt.values() for j in rows],
+        action__in=("assessment.accept", "assessment.override")).values_list("entity_id", flat=True))
+    for attempt in attempts:
+        for job in by_attempt[attempt.id]:
+            job["finalized"] = job["final_score_source"] == "TEACHER" or (job["status"] == "SUCCEEDED" and job["id"] in audited)
+        attempt.unconfirmed_classroom_grade = any(not j["finalized"] for j in by_attempt[attempt.id])
+    return by_attempt
+
+
+def grading_queue(attempts, eligible, names, profiles, actor, skill):
+    by_attempt = classroom_assessments(attempts)
+    latest = {}
+    for attempt in attempts:
+        latest.setdefault(attempt.student_id, attempt)
+    active_statuses = ("PENDING", "PROCESSING", "RETRY")
+    speech_jobs = {
+        job["id"] for attempt in latest.values() for job in by_attempt[attempt.id]
+        if job["skill"] == "speaking" and not job["finalized"] and job["status"] in active_statuses
+    }
+    transcripts = defaultdict(set)
+    for job_id, question, digest in SpeechTranscript.objects.filter(
+        job_id__in=speech_jobs, status="SUCCEEDED",
+    ).values_list("job_id", "question_id", "audio_hash"):
+        transcripts[job_id].add((question, digest))
+    pending_speech = set()
+    for job_id, snapshot in AssessmentJob.objects.filter(id__in=speech_jobs).values_list("id", "input_snapshot"):
+        audio = {(r["questionId"], r["audioHash"]) for p in snapshot["parts"] for r in p["responses"] if r.get("audioHash")}
+        if audio - transcripts[job_id]:
+            pending_speech.add(job_id)
+    rows = []
+    counts = Counter(dict(notStarted=len(set(eligible) - latest.keys()), inProgress=0, submitted=0,
+        awaitingTranscription=0, awaitingAi=0, awaitingTeacher=0, fullyGraded=0))
+    for attempt in latest.values():
+        if attempt.status == "in_progress":
+            counts["inProgress"] += 1
+            continue
+        counts["submitted"] += 1
+        jobs = [job for job in by_attempt[attempt.id] if not skill or job["skill"] == skill]
+        if not jobs and attempt.status == "completed":
+            counts["fullyGraded"] += 1
+        elif jobs and all(job["finalized"] for job in jobs):
+            counts["fullyGraded"] += 1
+        elif not jobs:
+            counts["awaitingTeacher"] += 1
+        states = {}
+        for job in jobs:
+            active = job["status"] in active_statuses
+            if job["finalized"]:
+                state = "fullyGraded"
+            elif active:
+                state = "awaitingTranscription" if job["id"] in pending_speech else "awaitingAi"
+            else:
+                state = "awaitingTeacher"
+            states[job["skill"]] = dict(state=state, failureCode=job["failure_code"])
+        outstanding = {entry["state"] for entry in states.values()} - {"fullyGraded"}
+        for state in outstanding:
+            counts[state] += 1
+        if actor.role != "teacher" or attempt.student_id in profiles:
+            rows.append(dict(attemptId=attempt.id, studentId=attempt.student_id, name=names[attempt.student_id],
+                exam=attempt.exam.title, track=attempt.exam.type, status=attempt.status, skills=states))
+    return dict(counts=counts, rows=rows)
+
+
 def own_exam_benchmark(attempt):
     """A fixed, comparable classroom aggregate, available only for a learner's own result."""
     if comparable_score(attempt) is None or not attempt.submitted_at:
+        return None
+    classroom_assessments([attempt])
+    if comparable_score(attempt) is None:
         return None
     started = attempt.started_at
     membership = ClassroomEnrollment.objects.filter(student_id=attempt.student_id, started_at__lte=started).filter(
@@ -113,6 +189,7 @@ def own_exam_benchmark(attempt):
                 .order_by("-submitted_at", "-id")[:ATTEMPT_LIMIT + 1])
     if len(rows) > ATTEMPT_LIMIT:
         return None
+    classroom_assessments(rows)
     scores = [comparable_score(row) for row in latest_attempts(rows, "", "latest").values()]
     return dict(students=len(scores), median=round(median(scores), 1)) if len(scores) >= 5 else None
 
@@ -227,7 +304,8 @@ def get_group_analytics(actor, group_id, params=None):
         rows = rows.filter(status=options["status"])
     skill = options["skill"]
     if skill:
-        rows = rows.filter(Q(raw_scores__has_key=skill) | Q(status="in_progress", current_skill=skill))
+        rows = rows.filter(Q(raw_scores__has_key=skill) | Q(submitted_sections__contains=[skill]) |
+            Q(status="in_progress", current_skill=skill))
     attempts = list(rows.select_related("exam", "student__user")
                     .order_by(Coalesce("submitted_at", "started_at").desc(), "-id")[:ATTEMPT_LIMIT + 1])
     if len(attempts) > ATTEMPT_LIMIT:
@@ -247,6 +325,7 @@ def get_group_analytics(actor, group_id, params=None):
         by_student[attempt.student_id].append(attempt)
     for student, name in StudentProfile.objects.filter(user_id__in=eligible - names.keys()).values_list("user_id", "user__name"):
         names[student] = name
+    queue = grading_queue(attempts, eligible, names, profiles, actor, skill)
     chosen = latest_attempts(attempts, skill, options["policy"])
     comparable = defaultdict(list)
     for attempt in chosen.values():
@@ -318,8 +397,8 @@ def get_group_analytics(actor, group_id, params=None):
     topic_rows, question_rows = objective_metrics(attempts, skill, bool(options["exam_id"] or assignment))
     counted = eligible if assignment else eligible | by_student.keys()
     submitted = {a.student_id for a in attempts if a.submitted_at or a.status in ("grading", "completed")}
-    graded = {a.student_id for a in attempts if a.status == "completed"}
-    pending = {a.student_id for a in attempts if a.status == "grading"} - graded
+    graded = {a.student_id for a in attempts if a.status == "completed" and not getattr(a, "unconfirmed_classroom_grade", False)}
+    pending = {a.student_id for a in attempts if a.status == "grading" or getattr(a, "unconfirmed_classroom_grade", False)} - graded
     averages = {track: round(mean(values), 2) for track, values in scale_scores.items()}
     skills = {}
     for track in MockExamType.values:
@@ -355,7 +434,7 @@ def get_group_analytics(actor, group_id, params=None):
                 examHistory=[dict(track=track, examId=exam, title=assessments[exam], specificationVersion=spec,
                                   scoreVersion=version, average=round(mean(values), 2), attempts=len(values))
                              for (track, exam, spec, version), values in exam_trends.items()],
-                ranking=ranking, skills=skills, rankingPolicy=options["policy"],
+                ranking=ranking, skills=skills, rankingPolicy=options["policy"], gradingQueue=queue,
                 assessments=[dict(id=key, title=title) for key, title in sorted(assessments.items(), key=lambda item: item[1])],
                 assignments=list(assignments.values("id", "title", "exam_id")[:100]),
                 history=[dict(track=track, month=month, average=round(mean(values), 2), attempts=len(values))

@@ -23,13 +23,13 @@ def test_incomplete_provider_results_fail_closed(mutation):
     elif mutation == 'score': del result['parts'][0]['rawScore']
     elif mutation == 'evidence': del result['parts'][0]['evidence']
     else: del result['confidence']
-    with patch.dict('os.environ', {'ASSESSMENT_PROVIDER':'openrouter', 'OPENROUTER_API_KEY':'fixture', 'OPENROUTER_MODEL':'fixture'}, clear=True), patch.object(providers, 'provider_json', return_value=chat(result)):
+    with patch.dict('os.environ', {'ASSESSMENT_PROVIDER':'openrouter', 'OPENROUTER_API_KEY':'fixture', 'OPENROUTER_MODEL':'fixture', 'OPENROUTER_BASE_URL':'http://localhost'}, clear=True), patch.object(providers, 'provider_json', return_value=chat(result)):
         with pytest.raises(ProviderError): providers.assess(input, 'PRIMARY')
 
 
 def test_valid_provider_result_remains_verified():
     input, result = fixture('MULTILEVEL')
-    with patch.dict('os.environ', {'ASSESSMENT_PROVIDER':'openrouter', 'OPENROUTER_API_KEY':'fixture', 'OPENROUTER_MODEL':'fixture'}, clear=True), patch.object(providers, 'provider_json', return_value=chat(result)):
+    with patch.dict('os.environ', {'ASSESSMENT_PROVIDER':'openrouter', 'OPENROUTER_API_KEY':'fixture', 'OPENROUTER_MODEL':'fixture', 'OPENROUTER_BASE_URL':'http://localhost'}, clear=True), patch.object(providers, 'provider_json', return_value=chat(result)):
         output = providers.assess(input, 'PRIMARY')
         assert output['provider'] == 'openrouter'
         assert output['result']['parts'][0]['rawScore'] == 3
@@ -42,13 +42,17 @@ def test_gemini_failure_never_becomes_success(code):
         with pytest.raises(ProviderError, match=code): providers._assess_gemini(input, 'PRIMARY')
 
 
-def test_local_stt_wins_over_remote_key_and_explicit_fallback():
-    with patch.dict('os.environ', {'STT_PROVIDER':'faster-whisper','OPENROUTER_API_KEY':'fixture'}, clear=True), patch('apps.core.assessment_local_stt.transcribe', side_effect=ProviderError('STT_LOCAL_MODEL_UNAVAILABLE')), patch.object(providers, '_transcribe_openrouter', return_value={'text':'remote'}) as remote:
-        with pytest.raises(ProviderError, match='STT_LOCAL_MODEL_UNAVAILABLE'): providers.transcribe(Path('fixture'), 'audio/webm')
-        remote.assert_not_called()
-        with patch.dict('os.environ', {'STT_ALLOW_REMOTE_FALLBACK':'true'}):
-            assert providers.transcribe(Path('fixture'), 'audio/webm')['text'] == 'remote'
-            remote.assert_called_once()
+def test_local_fallback_requires_opt_in_and_never_dispatches_tts():
+    with patch.dict('os.environ', {'STT_PROVIDER':'groq'}, clear=True), \
+         patch('apps.core.assessment_local_stt.transcribe', return_value={'text':'local'}) as local, \
+         patch.object(providers, '_transcribe_openrouter') as legacy:
+        with pytest.raises(ProviderError, match='STT_NOT_CONFIGURED'):
+            providers.transcribe(Path('fixture'), 'audio/webm')
+        local.assert_not_called()
+        with patch.dict('os.environ', {'STT_ALLOW_LOCAL_FALLBACK':'true'}):
+            assert providers.transcribe(Path('fixture'), 'audio/webm')['text'] == 'local'
+            local.assert_called_once_with(Path('fixture'), 'audio/webm', 'en', None, fallback=True)
+        legacy.assert_not_called()
 
 
 @pytest.mark.parametrize('mode', ['missing_hash','missing_file','bad_hash','empty_transcript','timeout','valid'])
@@ -65,8 +69,7 @@ def test_audio_integrity_before_evaluation(mode):
         rows = Mock(); rows.order_by.return_value.first.return_value = None
         speech = Mock(return_value=dict(text='' if mode == 'empty_transcript' else 'real transcript', segments=[],confidence=.9,provider='local',model='fixture',durationMs=1000))
         if mode == 'timeout': speech.side_effect=ProviderError('STT_LOCAL_TIMEOUT',True,False)
-        with patch.object(worker, 'refresh'), patch.object(worker, 'storage_path', return_value=path), patch('apps.core.mock_media.resolve_key',return_value=path), patch.object(worker.SpeechTranscript.objects, 'filter', return_value=rows), patch.object(worker.SpeechTranscript.objects, 'create',return_value=SimpleNamespace(id='t')), patch.object(worker.transaction, 'atomic'), patch.object(worker.service,'require_lease'), patch.object(worker.MockAnswer.objects,'filter') as answers, patch.object(worker.Answer.objects,'filter') as legacy, patch.object(worker.MockAttempt.objects,'filter') as attempts:
-            answers.return_value.first.return_value = None; legacy.return_value.first.return_value = None; attempts.return_value.first.return_value = None
+        with patch.object(worker, 'refresh'), patch.object(worker, 'storage_path', return_value=path), patch('apps.core.mock_media.resolve_key',return_value=path), patch.object(worker.SpeechTranscript.objects, 'filter', return_value=rows), patch.object(worker.SpeechTranscript.objects, 'create',return_value=SimpleNamespace(id='t')), patch.object(worker.transaction, 'atomic'), patch.object(worker.service,'require_lease'):
             if mode == 'valid':
                 worker.transcribe(job,input,speech); assert response['transcript'] == 'real transcript'
             else:
@@ -87,7 +90,7 @@ def test_cached_transcript_is_not_trusted_if_audio_changed():
 
 def test_transient_failure_retries_but_uncertain_failure_needs_review():
     from apps.core import assessment
-    job=SimpleNamespace(id='job',lease_token='lease',attempt_count=1)
+    job=SimpleNamespace(id='job',lease_token='lease',attempt_count=1,final_score_source=None)
     with patch.object(assessment.AssessmentJob.objects,'filter') as jobs:
         assessment.fail_job(job,'STT_LOCAL_TIMEOUT',True,False)
         assert jobs.return_value.update.call_args.kwargs['status']=='RETRY'
@@ -123,7 +126,7 @@ def test_actual_silent_pcm_is_detected_without_inventing_a_transcript():
 
 def test_silence_and_empty_transcript_remain_distinct_review_reasons():
     from apps.core import assessment
-    job = SimpleNamespace(id='job', lease_token='lease', attempt_count=1)
+    job = SimpleNamespace(id='job', lease_token='lease', attempt_count=1, final_score_source=None)
     with patch.object(assessment.AssessmentJob.objects, 'filter') as jobs:
         for code in ('STT_NO_SPEECH', 'STT_EMPTY_TRANSCRIPT', 'STT_AUDIO_UNAVAILABLE'):
             assessment.fail_job(job, code, False, False)

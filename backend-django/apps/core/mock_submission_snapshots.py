@@ -41,8 +41,12 @@ def build_input(exam, attempt, skill, groups, answers, hash_audio):
             key = answer.get('audioKey')
             if key:
                 mime = {'.m4a':'audio/mp4','.mp4':'audio/mp4','.ogg':'audio/ogg','.wav':'audio/wav','.aac':'audio/aac','.webm':'audio/webm'}.get(Path(key).suffix.lower(), 'audio/mpeg')
-                response.update(audioKey=key, audioHash=hash_audio(key), mimeType=mime)
+                response.update(audioKey=key, audioHash=hash_audio(key), mimeType=mime, transcriptionLanguage='en')
             phase = (attempt.media_state or {}).get(question['id'], {})
+            if key:
+                measured = phase.get('audioDurationMs') if phase.get('durationVerifiedHash') == response['audioHash'] else phase.get('recordingDurationMs')
+                if isinstance(measured, int) and measured > 0:
+                    response['durationMs'] = measured
             try:
                 start, end = parse_datetime(phase.get('prepEndsAt', '')), parse_datetime(phase.get('expiresAt', ''))
                 duration = (end-start).total_seconds()*1000 if start and end else 0
@@ -54,7 +58,7 @@ def build_input(exam, attempt, skill, groups, answers, hash_audio):
             responses.append(response)
         task = '\n'.join(filter(None, [group['title'], group['instructions']]))
         context = '\n'.join(filter(None, [group['passageText'], group['contentHtml']]))
-        images = dict(imageKeys=[group['imageKey']]) if group.get('imageKey') else {}
+        images = dict(imageKeys=[group['imageKey']], imageGroupId=group['id']) if group.get('imageKey') else {}
         if program == 'MULTILEVEL':
             spec = (SPECS.get(attempt.specification_version) or SPECS[CURRENT_SPEC])[skill]['parts']
             source_index=group.get('sourcePartIndex',index)
@@ -145,9 +149,8 @@ def enqueue(attempt, wanted=None):
             policy = 'MANUAL_ONLY'
         else:
             policy = os.environ.get('ASSESSMENT_POLICY', 'PRACTICE_AUTO_AI')
-        if policy not in ('MANUAL_ONLY','PRACTICE_AUTO_AI','FULL_MOCK_AI_WITH_REVIEW'):
-            policy = 'MANUAL_ONLY' if is_partial(attempt) else 'PRACTICE_AUTO_AI'
-        if (exam.profile=='full_mock' or attempt.flow_mode=='full_test') and policy=='PRACTICE_AUTO_AI':
+        # Preserve legacy policies in stored history. Every new AI job is advisory.
+        if policy != 'MANUAL_ONLY':
             policy = 'FULL_MOCK_AI_WITH_REVIEW'
         manual_failure='PARTIAL_PRACTICE_MANUAL_REVIEW' if is_partial(attempt) and policy=='MANUAL_ONLY' else ('MANUAL_POLICY' if policy=='MANUAL_ONLY' else None)
         failure = blueprint_failure(value) or manual_failure

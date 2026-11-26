@@ -15,7 +15,7 @@ from .mock_attempt_views import success
 
 
 def validate_review(data):
-    actions=['ACCEPT','OVERRIDE','EDIT_FEEDBACK','REGRADE','NEEDS_REVIEW']
+    actions=['ACCEPT','OVERRIDE','SAVE_DRAFT','CORRECT_TRANSCRIPT','EDIT_FEEDBACK','REGRADE','NEEDS_REVIEW']
     if data.get('action') not in actions:invalid('action must be one of the following values: '+', '.join(actions))
     version=js_number(data.get('expectedVersion'))
     if not version>=1:invalid('expectedVersion must not be less than 1')
@@ -24,6 +24,8 @@ def validate_review(data):
     reason=data.get('reason')
     if not isinstance(reason,str) or js_length(reason)>2000:invalid('reason must be shorter than or equal to 2000 characters')
     if reason=='':invalid('reason should not be empty')
+    if 'comment' in data and (not isinstance(data['comment'],str) or js_length(data['comment'])>2000):
+        invalid('comment must be shorter than or equal to 2000 characters')
     if data.get('parts') is not None:
         if not isinstance(data['parts'],list) or len(data['parts'])>8:invalid('parts must contain no more than 8 elements')
         for part in data['parts']:
@@ -35,22 +37,17 @@ def validate_review(data):
             if identifier=='':invalid('id should not be empty')
             if part.get('criteria') is not None and not isinstance(part['criteria'],dict):invalid('criteria must be an object')
     if data.get('feedback') is not None and not isinstance(data['feedback'],dict):invalid('feedback must be an object')
+    if data['action'] == 'CORRECT_TRANSCRIPT':
+        if not isinstance(data.get('questionId'), str) or not 0 < js_length(data['questionId']) <= 100:
+            invalid('questionId must identify the Speaking response')
+        if not isinstance(data.get('transcript'), str) or not data['transcript'].strip() or js_length(data['transcript']) > 100000:
+            invalid('transcript must be nonempty and at most 100000 characters')
     return data
 
 @api_view(['GET'])
 @permission_classes([Authenticated])
 def attempt(request,attempt_id):
-    result = assessment.for_attempt(request.user, attempt_id)
-    try:
-        from apps.legacy_schema.models import AssessmentJob
-        pending_jobs = AssessmentJob.objects.filter(attempt_id=attempt_id, status__in=['PENDING', 'RETRY'])
-        if pending_jobs.exists():
-            from common.background import start_thread
-            from . import assessment_worker
-            start_thread(assessment_worker.tick, name='bestway-assessment-tick')
-    except Exception:
-        pass
-    return success(result)
+    return success(assessment.for_attempt(request.user, attempt_id))
 
 
 @api_view(['POST'])
@@ -92,7 +89,9 @@ def teacher_grade(request, attempt_id):
 
 @api_view(['POST'])
 @permission_classes([roles('teacher','admin','super_admin')])
-def review(request,job_id):return success(assessment.review(request.user,job_id,validate_review(payload(request,{'action','expectedVersion','reason','parts','feedback'}))),201)
+def review(request,job_id):
+    allowed = {'action','expectedVersion','reason','parts','feedback','questionId','transcript','comment'}
+    return success(assessment.review(request.user,job_id,validate_review(payload(request,allowed))),201)
 
 @api_view(['GET'])
 @permission_classes([Authenticated])

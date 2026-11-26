@@ -207,7 +207,7 @@ def certificate_data(actor,attempt_id):
         if job.skill in seen:
             continue
         seen.add(job.skill)
-        if job.status != 'SUCCEEDED' or job.final_score is None:
+        if job.final_score is None or (job.status != 'SUCCEEDED' and job.final_score_source != 'TEACHER'):
             fail('ASSESSMENT_NEEDS_REVIEW', 'Baholash tasdiqlanmaguncha sertifikat berilmaydi', 409)
         # Internal result certificate (owner decision B): only once the teacher's grade is final.
         if internal and job.skill in internal and job.final_score_source != 'TEACHER':

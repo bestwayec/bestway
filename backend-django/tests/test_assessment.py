@@ -69,7 +69,7 @@ class AssessmentProviderTests(SimpleTestCase):
     def test_deepseek_payload_redacts_identity_and_storage_and_caps_unseen_images(self):
         input,result=fixture();input['parts'][0]['imageKeys']=['private/image']
         output=dict(status='completed',output=[dict(type='message',status='completed',role='assistant',content=[dict(type='output_text',text=json.dumps(result))])],usage=dict(input_tokens=12,output_tokens=13))
-        with patch.dict(os.environ,dict(DEEPSEEK_API_KEY='fixture-key',DEEPSEEK_MODEL='fixture-model')),patch.object(providers,'provider_json',return_value=output) as http:
+        with patch.dict(os.environ,dict(ASSESSMENT_PROVIDER='deepseek',DEEPSEEK_API_KEY='fixture-key',DEEPSEEK_MODEL='fixture-model',DEEPSEEK_BASE_URL='http://localhost/v1')),patch.object(providers,'provider_json',return_value=output) as http:
             value=providers.assess(input,'PRIMARY');body=json.loads(http.call_args.args[1]);payload=body['input'][0]['content'][0]['text']
             for private in ('private-id','private/key','private-hash','private/image'):self.assertNotIn(private,payload)
             self.assertEqual(value['result']['confidence'],.79);self.assertEqual(value['inputTokens'],12)

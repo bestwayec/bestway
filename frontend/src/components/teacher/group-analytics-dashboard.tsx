@@ -9,9 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/feedback";
 import { useGroupAnalytics } from "@/hooks/use-mock";
 import { api } from "@/lib/api-client";
+import type { GroupGradingStage } from "@/lib/types";
 
 const TRACKS = { ielts_academic: "IELTS Academic", ielts_general: "IELTS General", multilevel: "Multilevel" };
 const SKILLS = ["listening", "reading", "writing", "speaking"] as const;
+const QUEUE_STATES = ["awaitingTranscription", "awaitingAi", "awaitingTeacher", "fullyGraded"] as const;
 const PAGE_SIZE = 20;
 const selectClass = "min-h-10 max-w-full rounded-field border border-border bg-surface px-2 text-sm text-fg";
 const tableClass = "w-full border-collapse text-left text-sm [&_td]:border-t [&_td]:border-border [&_td]:px-2 [&_td]:py-2 [&_th]:px-2 [&_th]:py-2";
@@ -26,6 +28,8 @@ export function GroupAnalyticsDashboard({ groupId, groupName, className }: {
   const format = useFormatter();
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
+  const [reviewStage, setReviewStage] = useState<GroupGradingStage | "">("");
+  const [queuePage, setQueuePage] = useState(0);
   const [sort, setSort] = useState("name");
   const [page, setPage] = useState(0);
   const [exportError, setExportError] = useState(false);
@@ -37,6 +41,7 @@ export function GroupAnalyticsDashboard({ groupId, groupName, className }: {
 
   function update(key: string, value: string) {
     setPage(0);
+    setQueuePage(0);
     setFilters((previous) => ({ ...previous, ...(key === "examId" ? { assignmentId: "" } : key === "assignmentId" ? { examId: "" } : {}), [key]: value }));
   }
 
@@ -66,6 +71,11 @@ export function GroupAnalyticsDashboard({ groupId, groupName, className }: {
     return a.name.localeCompare(b.name);
   }) ?? [];
   const rank = data?.ranking.filter((student) => matches(student.name)) ?? [];
+  const queue = data?.gradingQueue;
+  const queueRows = queue?.rows.filter((row) => matches(row.name) &&
+    (!reviewStage || Object.values(row.skills).some((entry) => entry.state === reviewStage))) ?? [];
+  const lastQueuePage = Math.max(0, Math.ceil(queueRows.length / PAGE_SIZE) - 1);
+  const queueIndex = Math.min(queuePage, lastQueuePage);
   const assessments = new Map([...(base.data?.assessments ?? []), ...(data?.assessments ?? [])].map((exam) => [exam.id, exam.title]));
   const pages = Math.ceil(Math.max(students.length, rank.length) / PAGE_SIZE);
   const currentPage = Math.min(page, Math.max(0, pages - 1));
@@ -144,11 +154,43 @@ export function GroupAnalyticsDashboard({ groupId, groupName, className }: {
           ))}
           <div className="flex flex-wrap gap-2">
             <Input className="min-w-0 flex-1" aria-label={t("search")} placeholder={t("search")} value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(0); }} />
+              onChange={(e) => { setSearch(e.target.value); setPage(0); setQueuePage(0); }} />
             <select className={selectClass} aria-label={t("sort")} value={sort} onChange={(e) => { setSort(e.target.value); setPage(0); }}>
               <option value="name">{t("student")}</option><option value="attempts">{t("attempts")}</option><option value="activity">{t("activity")}</option>
             </select>
           </div>
+          {queue && <section className="space-y-3">
+            <h3 className="font-semibold">{t("gradingQueue")}</h3>
+            <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {(["notStarted", "inProgress", "submitted", ...QUEUE_STATES] as const).map((stage) =>
+                <div key={stage} className="rounded-field border border-border p-2">
+                  <dt className="text-xs text-fg-muted">{t(stage)}</dt>
+                  <dd className="font-semibold tabular-nums">{queue.counts[stage]}</dd>
+                </div>)}
+            </dl>
+            <select aria-label={t("gradingStage")} className={selectClass} value={reviewStage}
+              onChange={(event) => { setReviewStage(event.target.value as GroupGradingStage | ""); setQueuePage(0); }}>
+              <option value="">{t("allStatuses")}</option>
+              {QUEUE_STATES.map((stage) => <option key={stage} value={stage}>{t(stage)}</option>)}
+            </select>
+            {queueRows.length ? <div className="overflow-x-auto"><table className={tableClass}>
+              <thead><tr>{[t("student"), t("assessment"), t("writing"), t("speaking"), t("review")].map((label) =>
+                <th scope="col" key={label}>{label}</th>)}</tr></thead>
+              <tbody>{queueRows.slice(queueIndex * PAGE_SIZE, (queueIndex + 1) * PAGE_SIZE).map((row) => <tr key={row.attemptId}>
+                <td>{row.name}</td><td>{row.exam} · {trackLabel(row.track)}</td>
+                {(["writing", "speaking"] as const).map((skill) => {
+                  const entry = row.skills[skill];
+                  return <td key={skill}>{entry ? <>{t(entry.state)}{entry.failureCode && <div className="text-xs text-fg-muted">{entry.failureCode}</div>}</> : "—"}</td>;
+                })}
+                <td><Link className="text-brand underline" href={`/mock/attempt/${encodeURIComponent(row.attemptId)}`}>{t("review")}</Link></td>
+              </tr>)}</tbody>
+            </table></div> : <p className="text-sm text-fg-muted">{t("noSubmissions")}</p>}
+            {lastQueuePage > 0 && <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" disabled={queueIndex === 0} onClick={() => setQueuePage(queueIndex - 1)}>{t("previous")}</Button>
+              <span className="text-sm">{queueIndex + 1}/{lastQueuePage + 1}</span>
+              <Button size="sm" variant="outline" disabled={queueIndex === lastQueuePage} onClick={() => setQueuePage(queueIndex + 1)}>{t("next")}</Button>
+            </div>}
+          </section>}
           {rank.length > 0 && <div className="overflow-x-auto">
             <table className={tableClass}>
               <caption className="py-2 text-left font-semibold">{t("ranking")} · {t(data.rankingPolicy)}</caption>

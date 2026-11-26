@@ -330,6 +330,7 @@ def classroom_assignments_view(request, group_id):
     if not isinstance(title, str) or not 1 <= len(title.strip()) <= 255:
         invalid("Vazifa nomi 1–255 belgi bo‘lishi kerak")
     deadline = data.get("deadline")
+    parsed = None
     if deadline is not None:
         try:
             parsed = parse_datetime(deadline) if isinstance(deadline, str) else None
@@ -357,6 +358,14 @@ def classroom_assignments_view(request, group_id):
             invalid("Lug‘at boshqa guruhga tegishli")
         if not vocab_set.words.filter(is_archived=False).exists():
             invalid("To‘plamda so‘zlar yo‘q")
+    if "exam_id" in data:
+        # homework_cohort holds the classroom lock for this request.
+        matching = HomeworkAssignment.objects.filter(cohort=cohort, exam_id=data["exam_id"],
+            title=title.strip(), min_pass_percent=score)
+        matching = matching.filter(deadline=parsed) if parsed else matching.filter(deadline__gt=timezone.now())
+        existing = matching.select_related("exam").first()
+        if existing:
+            return success(assignment_payload(existing), 201)
     return success(create_assignment(cohort, data, title.strip(), vocabulary_set=vocab_set), 201)
 
 

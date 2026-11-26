@@ -13,7 +13,7 @@ class FishAudioSTTAndDeepSeekEvaluatorTests(SimpleTestCase):
         with patch.dict(os.environ, {"OPENROUTER_API_KEY": "dummy-key"}, clear=True):
             provider, model = providers.assessment_identity("PRIMARY")
             self.assertEqual(provider, "openrouter")
-            self.assertEqual(model, "deepseek/deepseek-v4.1-flash")
+            self.assertEqual(model, "deepseek/deepseek-v4.1-flash-1017:free")
 
     def test_assessment_identity_honors_openrouter_eval_model(self):
         with patch.dict(os.environ, {
@@ -71,21 +71,11 @@ class FishAudioSTTAndDeepSeekEvaluatorTests(SimpleTestCase):
         self.assertEqual(result["pronunciationEvidence"], "UNAVAILABLE")
 
     @patch("apps.core.assessment_providers._transcribe_openrouter")
-    def test_transcribe_dispatches_to_openrouter(self, mock_or_transcribe):
-        mock_or_transcribe.return_value = {
-            "text": "Transcribed text",
-            "confidence": 0.95,
-            "segments": [],
-            "provider": "openrouter",
-            "model": "deepseek/deepseek-v4.1-flash",
-            "durationMs": 3000,
-            "pronunciationEvidence": "UNAVAILABLE",
-        }
-        mock_path = MagicMock()
-        with patch.dict(os.environ, {"STT_PROVIDER": "openrouter", "OPENROUTER_API_KEY": "dummy"}):
-            res = providers.transcribe(mock_path, "audio/webm", "en", duration_ms=3000)
-            self.assertEqual(res["text"], "Transcribed text")
-            mock_or_transcribe.assert_called_once()
+    def test_openrouter_is_not_a_speech_transcription_route(self, legacy):
+        with patch.dict(os.environ, {"STT_PROVIDER": "openrouter", "OPENROUTER_API_KEY": "dummy"}, clear=True):
+            with self.assertRaisesRegex(providers.ProviderError, 'STT_NOT_CONFIGURED'):
+                providers.transcribe(MagicMock(), 'audio/webm', 'en', duration_ms=3000)
+        legacy.assert_not_called()
 
     def test_assert_question_does_not_change_full_test_section(self):
         attempt = SimpleNamespace(

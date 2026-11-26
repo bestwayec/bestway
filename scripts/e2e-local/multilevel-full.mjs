@@ -414,7 +414,7 @@ async function student() {
       await page.locator(`[aria-label^="Task ${["1.1", "1.2", "2"][i]}"]`).first().click();
       const area = page.locator("main textarea").first();
       if (i === 0) {
-        await area.fill(texts[0].slice(0, 60)); await page.waitForTimeout(2500);
+        await area.pressSequentially(texts[0].slice(0, 60)); await page.waitForTimeout(2500);
         await page.context().setOffline(true);
         await area.pressSequentially(texts[0].slice(60), { delay: 2 });
         await page.getByText(/kept on this device/).first().waitFor();
@@ -423,7 +423,10 @@ async function student() {
         await page.reload({ waitUntil: "domcontentloaded" }); await dismissExamNotices(page);
         await page.locator(`[aria-label^="Task 1.1"]`).first().click();
         expect((await page.locator("main textarea").first().inputValue()) === texts[0], "the offline part of the essay was lost");
-      } else await area.fill(texts[i]);
+      } else {
+        await area.pressSequentially(texts[i]);
+        expect(await area.inputValue() === texts[i], `Writing Task ${i + 1} dropped keyboard input`);
+      }
     }
     await waitConfirmed(page, 73);
     await finishSection(page);

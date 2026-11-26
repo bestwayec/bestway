@@ -30,8 +30,8 @@ def integer(name,default,minimum,maximum):
     return value
 
 
-def configuration():
-    model=os.environ.get('STT_MODEL') or 'small.en'
+def configuration(*, fallback=False):
+    model=os.environ.get('STT_LOCAL_FALLBACK_MODEL' if fallback else 'STT_MODEL') or 'small.en'
     if model not in ('tiny.en','base.en','small.en'):raise ProviderError('STT_LOCAL_CONFIG_INVALID')
     return dict(model=model,cache=str(Path(os.environ.get('STT_LOCAL_MODEL_DIR') or '/app/model-cache')),
         threads=integer('STT_LOCAL_CPU_THREADS',1,1,2),beam=integer('STT_LOCAL_BEAM_SIZE',1,1,5),
@@ -178,7 +178,7 @@ def _request(config,request):
     finally:_lock.release()
 
 
-def transcribe(path,mime,language='en',duration_ms=None):
+def transcribe(path,mime,language='en',duration_ms=None,*,fallback=False):
     # duration_ms is legacy timer/metadata input. Only decoded samples establish
     # the actual duration returned to the assessment ledger.
     if not isinstance(mime,str) or not re.fullmatch(r'audio/(webm|ogg|wav|mpeg|mp4|x-wav|x-m4a|aac)(;.*)?',mime,re.IGNORECASE) or language!='en':
@@ -187,7 +187,8 @@ def transcribe(path,mime,language='en',duration_ms=None):
         path=Path(path)
         if not path.is_file() or not 0<path.stat().st_size<=MAX_BYTES:raise ProviderError('STT_INPUT_INVALID')
     except OSError:raise ProviderError('STT_AUDIO_UNAVAILABLE') from None
-    return _request(configuration(),dict(action='transcribe',path=str(path),allowDownload=False))
+    config = configuration(fallback=True) if fallback else configuration()
+    return _request(config,dict(action='transcribe',path=str(path),allowDownload=False))
 
 
 def warmup(allow_download=False):

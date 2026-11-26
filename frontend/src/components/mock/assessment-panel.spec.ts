@@ -46,7 +46,9 @@ describe("assessment feedback presentation", () => {
   it("keeps scores and teacher review usable without exposing calculation-policy banners", () => {
     const job = { ...speakingJob, practiceMode: "PARTIAL" as const, aiScore: 3 };
     const student = render(job);
-    expect(student).toContain("3 /5 raw");
+    expect(student).not.toContain("3 /5 raw");
+    expect(student).not.toContain("AI raw task/part estimate");
+    expect(student).not.toContain("Transcript 1");
     expect(student).toContain("Teacher review required");
     expect(student).not.toContain("35–50");
     expect(student).not.toContain("Original rubric scores are retained");
@@ -54,23 +56,24 @@ describe("assessment feedback presentation", () => {
     expect(student).not.toContain(en.assessment.policies.FULL_MOCK_AI_WITH_REVIEW);
     expect(student).not.toContain(en.assessment.holisticPart);
     const teacher = render(job, true);
-    expect(teacher).toContain("Save review");
+    expect(teacher).toContain("3 /5 raw");
+    expect(teacher).toContain("Finalize grade");
     expect(teacher).toContain("Override score");
     expect(teacher).toContain(en.assessment.holisticPart);
     expect(teacher).not.toContain("35–50");
   });
   it("keeps three original recordings with one formal holistic /5 part score", () => {
-    const html = render(speakingJob);
+    const html = render(speakingJob, true);
     expect((html.match(/<audio /g) ?? []).length).toBe(3);
     expect((html.match(/AI raw task\/part estimate/g) ?? []).length).toBe(1);
-    expect(html).not.toContain("One holistic part score covers all these recordings");
+    expect(html).toContain("One holistic part score covers all these recordings");
     expect(html).toContain("Estimated Multilevel Speaking Score");
     expect(html).toContain("61 /75");
     expect(html).toContain("Teacher review required");
     expect(html).toContain("The final result remains pending");
   });
   it("escapes transcripts and examples and restricts audio to the authorized proxy", () => {
-    const html = render(speakingJob);
+    const html = render(speakingJob, true);
     expect(html).toContain("&lt;img src=x onerror=unsafe()&gt;");
     expect(html).toContain("&lt;script&gt;unsafe()&lt;/script&gt;");
     expect(html).not.toContain("<script>");
@@ -79,7 +82,7 @@ describe("assessment feedback presentation", () => {
     expect(html).toContain("/api/backend/assessment/jobs/assessment-1/audio/q-1");
   });
   it("displays pronunciation limitations and separates original, transcript, feedback and example", () => {
-    const html = render(speakingJob);
+    const html = render(speakingJob, true);
     expect(html).toContain("A transcript cannot establish a pronunciation band");
     expect(html).toContain("Original submitted audio");
     expect(html).toContain("Transcript timing");
@@ -92,7 +95,7 @@ describe("assessment feedback presentation", () => {
   it("preserves writing content and word count independently from the learning example", () => {
     const writing = { ...speakingJob, skill: "writing" as const, submissions: [{ questionId: "writing-1", partId: "1.1", prompt: "Informal email", context: "Reply to your friend", originalResponse: "My original essay <b>keep it</b>", wordCount: 52, audioUrl: null, transcript: null }] };
     const before = JSON.stringify(writing);
-    const html = render(writing);
+    const html = render(writing, true);
     expect(html).toContain("My original essay &lt;b&gt;keep it&lt;/b&gt;");
     expect(html).toContain("52 words");
     expect(html).toContain("Improved example only");
@@ -106,9 +109,9 @@ describe("assessment feedback presentation", () => {
     expect(html).not.toContain("Override score");
     expect(html).not.toContain("Request re-grade");
   });
-  it("offers all five teacher actions with a reason and raw holistic override fields", () => {
+  it("offers teacher review actions with a reason and raw holistic override fields", () => {
     const html = render(speakingJob, true);
-    for (const action of ["Accept AI result", "Override score", "Edit / approve student feedback", "Request re-grade", "Mark needs review"]) expect(html).toContain(action);
+    for (const action of ["Accept AI result", "Override score", "Save draft", "Edit / approve student feedback", "Request re-grade", "Mark needs review"]) expect(html).toContain(action);
     expect(html).toContain("Review reason");
     expect(html).toContain("original AI evaluation");
   });
@@ -160,7 +163,7 @@ describe("assessment feedback presentation", () => {
 
 describe("assessment status resilience", () => {
   it("shows a failure fallback without hiding original recordings", () => {
-    const html = render({ ...speakingJob, status: "FAILED", evaluation: null, aiScore: null, submissions: speakingJob.submissions.map((submission) => ({ ...submission, transcript: null })) });
+    const html = render({ ...speakingJob, status: "FAILED", evaluation: null, aiScore: null, submissions: speakingJob.submissions.map((submission) => ({ ...submission, transcript: null })) }, true);
     expect(html).toContain("Failed — manual review pending");
     expect(html).toContain("Teacher review can complete this assessment");
     expect(html).toContain("No transcript");
@@ -187,7 +190,7 @@ describe("speaking scoring unavailable", () => {
   it("says scoring is not configured instead of 'no response' when STT is missing", () => {
     const job = { ...speakingJob, status: "NEEDS_REVIEW" as const, failureCode: "STT_NOT_CONFIGURED",
       submissions: speakingJob.submissions.map((s) => ({ ...s, audioUrl: null, transcript: null })) } as unknown as AssessmentJobView;
-    const html = render(job);
+    const html = render(job, true);
     expect(html).toContain("Automatic scoring is not configured");
     expect(html).not.toContain("No response was submitted");
     expect(html).not.toContain("No transcript is available yet");

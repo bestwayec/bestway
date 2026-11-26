@@ -12,9 +12,10 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlsplit, urlunsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
+from . import assessment_provider_policy as policy
 from .assessment_prompts import system_prompt
 from .assessment_quality import enabled
-from .assessment_results import ProviderError, schema, validate
+from .assessment_results import ProviderError, count_words, schema, validate
 from .assessment_results import keys as rubric_keys
 from .mock_scoring import js_round
 
@@ -53,9 +54,27 @@ def provider_json(url,body,headers,timeout_ms):
             except ValueError:raise ProviderError('PROVIDER_MALFORMED_JSON') from None
     except ProviderError:raise
     except HTTPError as error:
-        status=error.code;error.close()
+        status=error.code
+        retry_after=error.headers.get('Retry-After') if error.headers else None
+        error.close()
         if 300<=status<400:raise ProviderError('PROVIDER_NETWORK_FAILURE',True,True) from None
-        raise ProviderError('PROVIDER_AUTH_FAILED' if status in (401,403) else 'PROVIDER_RATE_LIMITED' if status==429 else 'PROVIDER_UNAVAILABLE' if status>=500 else 'PROVIDER_REQUEST_REJECTED',status==429 or status>=500,status==408) from None
+        if status == 404 and urlsplit(url).hostname == 'openrouter.ai':
+            raise ProviderError('PROVIDER_MODEL_UNAVAILABLE') from None
+        problem = ProviderError('PROVIDER_AUTH_FAILED' if status in (401,403) else 'PROVIDER_RATE_LIMITED' if status==429 else 'PROVIDER_UNAVAILABLE' if status>=500 else 'PROVIDER_REQUEST_REJECTED',
+            status==429 or status>=500,status==408)
+        if problem.transient and retry_after:
+            from datetime import UTC, datetime
+            from email.utils import parsedate_to_datetime
+            try:
+                seconds = int(retry_after) if retry_after.isdecimal() else (parsedate_to_datetime(retry_after) - datetime.now(UTC)).total_seconds()
+                if seconds > 86400:
+                    problem.transient = False
+                    problem.retry_after = 86400
+                else:
+                    problem.retry_after = max(0, math.ceil(seconds))
+            except (ValueError, TypeError, OverflowError):
+                pass
+        raise problem from None
     except TimeoutError:raise ProviderError('PROVIDER_TIMEOUT',True,True) from None
     except URLError as error:raise ProviderError('PROVIDER_TIMEOUT' if isinstance(error.reason,TimeoutError) else 'PROVIDER_NETWORK_FAILURE',True,True) from None
     except Exception:raise ProviderError('PROVIDER_NETWORK_FAILURE',True,True) from None
@@ -81,7 +100,7 @@ def assessment_identity(role,provider=None):
     if model is None and role=='ADJUDICATOR':
         model=os.environ.get(prefix+'_EVAL_MODEL') or os.environ.get(prefix+'_MODEL')
     if model is None:
-        if provider=='openrouter':model=(os.environ.get('OPENROUTER_EVAL_MODEL') or os.environ.get('OPENROUTER_MODEL','deepseek/deepseek-v4.1-flash')).strip() or 'deepseek/deepseek-v4.1-flash'
+        if provider=='openrouter':model=(os.environ.get('OPENROUTER_EVAL_MODEL') or os.environ.get('OPENROUTER_MODEL',policy.FREE_MODEL)).strip() or policy.FREE_MODEL
         elif provider=='xkiro':model=os.environ.get('XKIRO_MODEL','qwen/qwen3.8-max:free').strip() or 'qwen/qwen3.8-max:free'
         elif provider=='gemini':model=os.environ.get('GEMINI_MODEL',DEFAULT_GEMINI_MODEL).strip() or DEFAULT_GEMINI_MODEL
         else:model=''
@@ -408,10 +427,10 @@ def _sanitize_llm_result_for_validation(parsed, input):
     return {k: res[k] for k in allowed_keys if k in res}
 
 
-def _assess_single(input,role,provider=None):
+def _assess_single(input,role,provider=None,*,paid_model=None):
     provider,model=assessment_identity(role,provider)
-    if provider=='gemini':
-        return _assess_gemini(input,role,model=model)
+    if paid_model:
+        model = paid_model
     if provider not in ('deepseek','xkiro','openrouter'):raise ProviderError('PROVIDER_CONFIG_INVALID')
     prefix='OPENROUTER' if provider=='openrouter' else 'XKIRO' if provider=='xkiro' else 'DEEPSEEK'
     key=os.environ.get(prefix+'_API_KEY','').strip()
@@ -423,6 +442,12 @@ def _assess_single(input,role,provider=None):
     api_format='chat_completions' if provider in ('xkiro','openrouter') else os.environ.get('DEEPSEEK_API_FORMAT') or ('chat_completions' if enabled(input) and urlsplit(base).hostname=='api.deepseek.com' else 'responses')
     if api_format not in ('responses','chat_completions'):raise ProviderError('PROVIDER_CONFIG_INVALID')
     url=provider_url(base,'chat/completions' if api_format=='chat_completions' else 'responses')
+    remote = not policy.is_loopback(url)
+    if remote and not policy.enabled('ASSESSMENT_EXTERNAL_AI_ALLOWED'):
+        raise ProviderError('ASSESSMENT_EXTERNAL_AI_DISABLED')
+    if remote and (provider != 'openrouter' or urlsplit(url).hostname != 'openrouter.ai'):
+        raise ProviderError('PROVIDER_PRIVACY_ROUTE_REQUIRED')
+    route = policy.openrouter_route(model, bool(paid_model)) if remote else None
     payload={k:input[k] for k in ('program','skill','rubricVersion','specificationVersion','speakingProfileVersion','pronunciationEvidence')}
     if enabled(input):payload.update({k:input[k] for k in ('practiceMode','evaluationPolicy') if k in input})
     payload['parts']=[]
@@ -430,7 +455,8 @@ def _assess_single(input,role,provider=None):
         projected={k:part[k] for k in ('id','max','task','context')}
         projected['imageEvidence']='UNAVAILABLE_USE_ONLY_SUPPLIED_TEXT_DESCRIPTION' if part.get('imageKeys') else 'NOT_REQUIRED'
         projected.update({k:part[k] for k in ('prepSeconds','responseSeconds') if k in part})
-        projected['responses']=[dict(prompt=r['prompt'],partNumber=r['partNumber'],response=(r.get('transcript') or '') if input['skill']=='speaking' else r['originalResponse'],**({ 'durationMs':r['durationMs']} if 'durationMs' in r else {}),
+        projected['responses']=[dict(prompt=r['prompt'],partNumber=r['partNumber'],response=(r.get('transcript') or '') if input['skill']=='speaking' else r['originalResponse'],
+            **({'wordCount': count_words((r.get('transcript') or '') if input['skill']=='speaking' else r['originalResponse'])} if provider=='openrouter' else {}),**({'durationMs':r['durationMs']} if 'durationMs' in r else {}),
             **({k:r[k] for k in ('wordMin','wordMax','responseLimitMs','audioDurationMs','transcriptConfidence') if k in r} if enabled(input) else {})) for r in part['responses']]
         payload['parts'].append(projected)
     encoded=lambda value:json.dumps(value,ensure_ascii=False,separators=(',',':')).encode()
@@ -443,8 +469,9 @@ def _assess_single(input,role,provider=None):
         if provider in ('xkiro','openrouter'):
             chat=json.loads(body)
             if provider=='xkiro':chat['reasoning_effort']='none'
-            if provider=='openrouter':
-                chat['provider']={'sort':'latency','order':['Fireworks','Together','DeepSeek','Novita'],'allow_fallbacks':True}
+            if route:
+                chat['provider'] = route
+                chat['reasoning'] = {'enabled': False}
             chat['messages'][0]['content']+='\nBe concise, sharp, and fast. Keep explanations compact. Every native diagnostic and Multilevel holistic score must use increments of 0.5.'
             if enabled(input):
                 diagnostics=', '.join(k for k in rubric_keys(input) if k!='pronunciation')
@@ -456,7 +483,20 @@ def _assess_single(input,role,provider=None):
     if provider=='openrouter':
         req_headers['HTTP-Referer']='https://bestwayec.uz'
         req_headers['X-Title']='BestWay Exam'
-    response=record(provider_json(url,body,req_headers,bounded('ASSESSMENT_PROVIDER_TIMEOUT_MS',90000,1000,180000)))
+    if remote:
+        paid_microusd = 0
+        if paid_model:
+            ceilings = route['max_price']
+            # Each UTF-8 byte bounds at most one input token. Allow room for framing.
+            paid_microusd = math.ceil(ceilings['prompt'] * (len(body) + 4096) + ceilings['completion'] * json.loads(body)['max_tokens'])
+        policy.authorize_remote(url, provider, model, paid_microusd=paid_microusd)
+    timeout = bounded('ASSESSMENT_PROVIDER_TIMEOUT_MS', 90000, 1000, 180000)
+    try:
+        response = record(policy.request_remote(provider_json, url, body, req_headers, timeout, provider))
+    except ProviderError as error:
+        if paid_model and error.transient:
+            error.uncertain = True
+        raise
     if api_format=='chat_completions':
         choices=response.get('choices')
         if not isinstance(choices,list) or len(choices)!=1:raise ProviderError('PROVIDER_RESPONSE_INVALID')
@@ -477,7 +517,10 @@ def _assess_single(input,role,provider=None):
     try:parsed=json.loads(result_text)
     except ValueError:raise ProviderError('PROVIDER_MALFORMED_JSON') from None
     result=validate(parsed,input)
-    if any(p.get('imageKeys') for p in input['parts']):result['confidence']=min(result['confidence'],.79)
+    if any(p.get('imageKeys') for p in input['parts']):
+        result['confidence']=min(result['confidence'],.79)
+        result['priorityImprovements'] = result['priorityImprovements'][:7]
+        result['priorityImprovements'].append('Task image was unavailable to the advisory model. A teacher must review visual evidence.')
     if enabled(input) and input['skill']=='speaking':
         confidences=[r.get('transcriptConfidence') for p in input['parts'] for r in p['responses']]
         if any(type(c) not in (int,float) or not math.isfinite(c) for c in confidences):result['confidence']=min(result['confidence'],.79)
@@ -487,50 +530,19 @@ def _assess_single(input,role,provider=None):
     return dict(result=result,provider=provider,model=model,inputTokens=token(usage.get('prompt_tokens' if api_format=='chat_completions' else 'input_tokens')),outputTokens=token(usage.get('completion_tokens' if api_format=='chat_completions' else 'output_tokens')),latencyMs=js_round((time.monotonic()-started)*1000))
 
 
-def _is_fallback_eligible(error):
-    return (
-        error.code in ('PROVIDER_RATE_LIMITED','PROVIDER_UNAVAILABLE','PROVIDER_TIMEOUT','PROVIDER_NOT_CONFIGURED','PROVIDER_NETWORK_FAILURE','PROVIDER_AUTH_FAILED','PROVIDER_TRUNCATED_RESULT','PROVIDER_EMPTY_RESPONSE','PROVIDER_MALFORMED_JSON')
-        or (error.code=='PROVIDER_REQUEST_REJECTED' and error.uncertain)
-        or error.transient
-    )
+def assess(input, role):
+    try:
+        return _assess_single(input, role)
+    except ProviderError as error:
+        # Recurring quota errors share the same account, and an uncertain
+        # outcome may already have been billed. Only a missing model qualifies.
+        provider, _ = assessment_identity(role)
+        fallback = os.environ.get('ASSESSMENT_FALLBACK_MODEL', '').strip()
+        if (error.code != 'PROVIDER_MODEL_UNAVAILABLE' or provider != 'openrouter'
+                or not fallback or not policy.enabled('ASSESSMENT_ALLOW_PAID_FALLBACK')):
+            raise
+        return _assess_single(input, role, paid_model=fallback)
 
-
-def assess(input,role):
-    import logging
-    logger = logging.getLogger(__name__)
-    try:
-        return _assess_single(input,role)
-    except ProviderError as error:
-        if error.code == 'PROVIDER_CONFIG_INVALID' or error.code.startswith('RESULT_'):
-            raise
-        primary,_=assessment_identity(role)
-        fallback=os.environ.get('ASSESSMENT_FALLBACK_PROVIDER','').strip().lower()
-        if not fallback:
-            if primary=='openrouter' and os.environ.get('XKIRO_API_KEY'):fallback='xkiro'
-            elif primary=='xkiro' and os.environ.get('OPENROUTER_API_KEY'):fallback='openrouter'
-            elif primary=='deepseek' and os.environ.get('XKIRO_API_KEY'):fallback='xkiro'
-            elif primary=='deepseek' and os.environ.get('OPENROUTER_API_KEY'):fallback='openrouter'
-        should_fallback = bool(fallback and fallback != primary and _is_fallback_eligible(error))
-        if should_fallback:
-            try:
-                logger.warning('Assessment primary provider %s failed (%s), attempting 2nd-tier fallback %s',primary,error.code,fallback)
-                return _assess_single(input,role,provider=fallback)
-            except ProviderError as fallback_err:
-                if fallback_err.code.startswith('RESULT_'):
-                    raise fallback_err
-                # Proceed to 3rd-tier Gemini fallback when both primary and secondary fail
-                logger.warning('Assessment 2nd-tier fallback %s failed (%s), attempting 3rd-tier fallback gemini',fallback,fallback_err.code)
-                return _assess_single(input,role,provider='gemini')
-            except Exception:
-                logger.warning('Assessment 2nd-tier fallback %s errored, attempting 3rd-tier fallback gemini',fallback)
-                return _assess_single(input,role,provider='gemini')
-        # If no 2nd-tier fallback was configured, check if 3rd-tier Gemini fallback applies
-        gemini_configured = bool(os.environ.get('GEMINI_API_KEY','').strip())
-        primary_had_key = bool(os.environ.get(('OPENROUTER' if primary=='openrouter' else 'XKIRO' if primary=='xkiro' else 'DEEPSEEK')+'_API_KEY','').strip())
-        if primary != 'gemini' and _is_fallback_eligible(error) and (gemini_configured or (primary == 'openrouter' and primary_had_key)):
-            logger.warning('Assessment provider %s failed (%s), attempting 3rd-tier fallback gemini',primary,error.code)
-            return _assess_single(input,role,provider='gemini')
-        raise
 
 def _generate_heuristic_speech_diagnostics(text: str, duration_ms: int = 3000) -> dict:
     if not text or not str(text).strip():
@@ -825,20 +837,28 @@ def _transcribe_openrouter(path, mime, language='en', duration_ms=None):
 
 
 def transcribe(path,mime,language='en',duration_ms=None):
-    provider=os.environ.get('STT_PROVIDER','').strip().lower();key=os.environ.get('STT_API_KEY','').strip();model=os.environ.get('STT_MODEL','').strip()
+    provider=os.environ.get('STT_PROVIDER','groq').strip().lower()
+    key=os.environ.get('STT_API_KEY','').strip()
+    model=os.environ.get('STT_MODEL','').strip()
     if provider in ('faster_whisper','faster-whisper'):
         from .assessment_local_stt import transcribe as local_transcribe
+        return local_transcribe(path,mime,language,duration_ms)
+    if provider=='groq':
+        from .assessment_whisper import transcribe as whisper_transcribe
         try:
-            return local_transcribe(path,mime,language,duration_ms)
-        except ProviderError:
-            if os.environ.get('STT_ALLOW_REMOTE_FALLBACK','').strip().lower() not in ('1','true','yes'):
+            return whisper_transcribe(path, mime, language, duration_ms, transport=provider_json,
+                timeout=bounded('ASSESSMENT_STT_TIMEOUT_MS', 60000, 1000, 120000))
+        except ProviderError as error:
+            if error.code not in ('STT_NOT_CONFIGURED','STT_PLAN_UNVERIFIED','ASSESSMENT_EXTERNAL_AI_DISABLED',
+                    'PROVIDER_RATE_LIMITED','PROVIDER_UNAVAILABLE','PROVIDER_AUTH_FAILED') or not policy.enabled('STT_ALLOW_LOCAL_FALLBACK'):
                 raise
-            return _transcribe_openrouter(path,mime,language,duration_ms)
-    if provider in ('openrouter', 'fish-audio', 'fish_audio') or (not provider and os.environ.get('OPENROUTER_API_KEY')):
-        return _transcribe_openrouter(path,mime,language,duration_ms)
+            from .assessment_local_stt import transcribe as local_transcribe
+            return local_transcribe(path, mime, language, duration_ms, fallback=True)
     if provider!='deepgram' or not key or not model:
         raise ProviderError('STT_NOT_CONFIGURED')
     url=provider_url(os.environ.get('STT_BASE_URL') or 'https://api.deepgram.com/v1','listen')
+    if not policy.is_loopback(url):
+        raise ProviderError('PROVIDER_PRIVACY_ROUTE_REQUIRED')
     if not re.fullmatch(r'audio/(webm|ogg|wav|mpeg|mp4|x-wav|x-m4a)(;.*)?',mime,re.IGNORECASE) or not re.fullmatch(r'[a-z]{2,3}(-[a-z]{2,4})?',language,re.IGNORECASE):raise ProviderError('STT_INPUT_INVALID')
     try:
         if not path.is_file() or not 0<path.stat().st_size<=25*1024*1024:raise ProviderError('STT_INPUT_INVALID')

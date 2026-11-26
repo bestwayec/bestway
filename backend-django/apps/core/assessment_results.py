@@ -8,8 +8,9 @@ from .mock_scoring import convert_expert, js_round, multilevel_level, round_half
 
 
 class ProviderError(Exception):
-    def __init__(self, code, transient=False, uncertain=False):
+    def __init__(self, code, transient=False, uncertain=False, *, retry_after=0):
         self.code,self.transient,self.uncertain=code,transient,uncertain
+        self.retry_after = retry_after
         super().__init__(code)
 
 TEXT=['taskCoverage','grammar','vocabulary','fluencyCohesion','ideaDevelopment','register','spellingPunctuation','position','argumentBalance']
@@ -19,6 +20,11 @@ RESULT=['parts',*TOP,'grammarCorrections','vocabularyUpgrades','improvedExamples
 
 def keys(value):
     return ['taskCoverage','grammar','vocabulary','cohesion','ideaDevelopment'] if value['program']=='MULTILEVEL' else ['ta','cc','lr','gra'] if value['skill']=='writing' else ['fluency','lexical','grammar','pronunciation']
+
+
+def count_words(value):
+    """Match the Writing editor's whitespace and Unicode word-character rule."""
+    return sum(any(character.isalnum() for character in token) for token in value.split())
 
 def invalid():raise ProviderError('RESULT_SCHEMA_INVALID')
 def exact(value,required):
@@ -157,7 +163,7 @@ def provisional_skills(latest_jobs, reviewed_ids):
     """Writing/Speaking skills whose current score is still the AI's estimate (same rule as the
     attempt's teacherConfirmed): final only once a teacher scored it, or accepted/overrode the AI result."""
     return sorted({job.skill for job in latest_jobs
-        if not (job.status == 'SUCCEEDED' and (job.final_score_source == 'TEACHER' or job.id in reviewed_ids))})
+        if not (job.final_score_source == 'TEACHER' or (job.status == 'SUCCEEDED' and job.id in reviewed_ids))})
 
 
 def format_diagnostic_feedback(result, input=None):

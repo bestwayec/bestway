@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const OUT = join(here, "..", "..", ".local", "e2e");
+const OUT = process.env.BW_OUT || join(here, "..", "..", ".local", "e2e");
 mkdirSync(OUT, { recursive: true });
 const STATE_FILE = join(OUT, "ielts-full.json");
 
@@ -26,6 +26,7 @@ const WEB = process.env.BW_WEB || "http://localhost:3300";
 const PASSWORD = process.env.BW_PASSWORD || "LocalDev-2026!"; // synthetic, local only (seed_local_dev)
 const TEACHER = process.env.BW_TEACHER || "+998900000003";
 const STUDENT_IELTS = process.env.BW_STUDENT_IELTS || "+998900000011";
+const ASSIGNMENT = process.env.BW_ASSIGNMENT_ID;
 if (!["127.0.0.1", "localhost"].includes(new URL(WEB).hostname)) { console.error("Refusing non-loopback host"); process.exit(2); }
 
 const phases = process.argv.slice(2).length ? process.argv.slice(2) : ["build", "student", "grade"];
@@ -118,8 +119,11 @@ async function dismissExamNotices(page) {
   }
 }
 async function startSectionIfAsked(page) {
-  const now = page.getByRole("button", { name: /^Start .* now$/ });
-  if (await now.count()) { await now.first().click(); await page.waitForTimeout(1500); }
+  const now = page.getByRole("button", { name: /^Start .* now$/ }).first();
+  if (await now.waitFor({ timeout: 5000 }).then(() => true).catch(() => false)) {
+    await now.click();
+    await now.waitFor({ state: "hidden" });
+  }
 }
 const correct = (q) => (q.correctAnswers || [])[0];
 async function answerObjective(page, q) {
@@ -243,11 +247,24 @@ async function student() {
   await teacherView.context().close();
   const by = Object.fromEntries(exam.sections.map((s) => [s.skill, s]));
   const page = await session(STUDENT_IELTS);
+  let resumedSkill;
   // A re-run starts clean: hand in this exam's attempts an earlier run left open.
-  const mine = (await api(page, "GET", "/mock/attempts/mine")).data;
-  for (const open of (Array.isArray(mine) ? mine : mine?.items ?? []).filter((a) => a.examId === state.examId && a.status === "in_progress"))
-    await api(page, "POST", `/mock/attempts/${open.id}/submit`, { confirm: true, confirmed: true, force: true }, { allow: [400, 403, 404, 409] });
+  if (!ASSIGNMENT) {
+    const mine = (await api(page, "GET", "/mock/attempts/mine")).data;
+    for (const open of (Array.isArray(mine) ? mine : mine?.items ?? []).filter((a) => a.examId === state.examId && a.status === "in_progress"))
+      await api(page, "POST", `/mock/attempts/${open.id}/submit`, { confirm: true, confirmed: true, force: true }, { allow: [400, 403, 404, 409] });
+  }
   await step(page, "03-student-starts-on-ielts-track", async () => {
+    if (ASSIGNMENT) {
+      const { data } = await api(page, "POST", `/mock/exams/${state.examId}/start`, { mode: "timed", flow: "full_test", assignmentId: ASSIGNMENT });
+      state.attemptId = data.attemptId;
+      saveState();
+      await page.goto(`${WEB}/en/mock/attempt/${state.attemptId}`, { waitUntil: "networkidle" });
+      await dismissExamNotices(page);
+      await startSectionIfAsked(page);
+      resumedSkill = (await api(page, "GET", `/mock/attempts/${state.attemptId}`)).data.currentSkill;
+      return `assigned IELTS attempt ${state.attemptId}`;
+    }
     await page.goto(`${WEB}/en/mock`, { waitUntil: "networkidle" });
     const toIelts = page.getByTestId("exam-track-card-IELTS").getByRole("button", { name: /Switch to/ });
     if (await toIelts.count()) await toIelts.click();
@@ -264,14 +281,16 @@ async function student() {
     return `timed IELTS attempt ${state.attemptId}`;
   });
   await step(page, "04-listening-reading", async () => {
-    for (const [i, group] of by.listening.groups.entries()) {
-      await openBlock(page, i + 1);
-      const play = page.getByRole("button", { name: /Play audio/ }).first();
-      if (await play.count() && !(await play.isDisabled())) await play.click();
-      for (const q of group.questions) await answerObjective(page, q);
+    if (resumedSkill !== "reading") {
+      for (const [i, group] of by.listening.groups.entries()) {
+        await openBlock(page, i + 1);
+        const play = page.getByRole("button", { name: /Play audio/ }).first();
+        if (await play.count() && !(await play.isDisabled())) await play.click();
+        for (const q of group.questions) await answerObjective(page, q);
+      }
+      await waitConfirmed(page, 40);
+      await finishSection(page);
     }
-    await waitConfirmed(page, 40);
-    await finishSection(page);
     // Owner decision: IELTS Reading is numbered from 1 like the paper (stored numbers 41–80 are unchanged).
     expect(by.reading.groups[0].questions[0].displayNumber === 1, "reading display numbering");
     await page.getByRole("button", { name: /^Question 1, / }).first().waitFor();
@@ -288,7 +307,10 @@ async function student() {
     const essay = (words) => Array.from({ length: words }, (_, i) => ["museums", "visitors", "students", "history", "culture"][i % 5]).join(" ") + ".";
     for (const [i, group] of by.writing.groups.entries()) {
       await openBlock(page, i + 1);
-      await page.getByLabel(`Written response to question ${group.questions[0].displayNumber ?? group.questions[0].number}`).fill(essay(i ? 260 : 160));
+      const editor = page.getByLabel(`Written response to question ${group.questions[0].displayNumber ?? group.questions[0].number}`);
+      const response = essay(i ? 260 : 160);
+      await editor.pressSequentially(response);
+      expect(await editor.inputValue() === response, "Writing did not retain the keyboard input");
     }
     await waitConfirmed(page, 82);
     await finishSection(page);

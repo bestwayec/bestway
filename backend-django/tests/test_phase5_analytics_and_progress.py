@@ -92,6 +92,7 @@ class Phase5StudentProgressAndTeacherAnalyticsTests(SimpleTestCase):
 
         with patch.object(teacher_analytics, "get_group", return_value=fake_group), \
              patch.object(teacher_analytics, "classroom_attempts") as mock_attempts, \
+             patch.object(teacher_analytics, "classroom_assessments", return_value={a.id: [] for a in attempts}), \
              patch.object(teacher_analytics, "objective_metrics", return_value=([], [])), \
              patch("apps.core.teacher_analytics.HomeworkAssignment.objects.filter"), \
              patch("apps.core.teacher_analytics.StudentProfile.objects.filter") as mock_profiles, \

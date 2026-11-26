@@ -11,10 +11,8 @@ from django.db import close_old_connections, connections, transaction
 from django.utils import timezone
 
 from apps.legacy_schema.models import (
-    Answer,
     AssessmentEvaluation,
     AssessmentJob,
-    MockAnswer,
     MockAttempt,
     SpeechTranscript,
 )
@@ -33,6 +31,21 @@ def failure(error):return error if isinstance(error,results.ProviderError) else 
 def refresh(job):
     count=AssessmentJob.objects.filter(id=job.id,status='PROCESSING',lease_token=job.lease_token).update(lease_expires_at=timezone.now()+timedelta(minutes=10),updated_at=timezone.now())
     if not count:raise results.ProviderError('ASSESSMENT_STALE_LEASE')
+
+def current_speech_model(transcript):
+    from .assessment_local_stt import PROVIDER as LOCAL_PROVIDER
+    from .assessment_provider_policy import enabled as configured
+    from .assessment_whisper import GROQ_MODEL
+
+    provider = os.environ.get('STT_PROVIDER', 'groq').strip().lower()
+    model = os.environ.get('STT_MODEL', '').strip()
+    expected = {(provider, model or GROQ_MODEL)} if provider == 'groq' else {(provider, model)}
+    if provider in ('faster-whisper', 'faster_whisper'):
+        expected = {(LOCAL_PROVIDER, model or 'small.en')}
+    if provider == 'groq' and configured('STT_ALLOW_LOCAL_FALLBACK'):
+        expected.add((LOCAL_PROVIDER, os.environ.get('STT_LOCAL_FALLBACK_MODEL') or 'small.en'))
+    return (transcript.provider, transcript.model) in expected
+
 
 def transcribe(job,input,speech):
     for response in [r for p in input['parts'] for r in p['responses']]:
@@ -58,75 +71,39 @@ def transcribe(job,input,speech):
             raise
         except Exception:
             raise results.ProviderError('STT_AUDIO_UNAVAILABLE') from None
-        if audio_hash:
-            saved=SpeechTranscript.objects.filter(job_id=job.id,question_id=response['questionId'],audio_hash=audio_hash,status='SUCCEEDED').order_by('-completed_at').first()
-            if saved:
-                if not isinstance(saved.text, str) or not saved.text.strip():
-                    raise results.ProviderError('STT_EMPTY_TRANSCRIPT')
-                response['transcript']=saved.text
-                if enabled(input):response.update(transcriptConfidence=saved.confidence,audioDurationMs=saved.duration_ms)
-                continue
-            cached=SpeechTranscript.objects.filter(job__attempt_id=job.attempt_id,job__student_id=job.student_id,question_id=response['questionId'],audio_hash=audio_hash,status='SUCCEEDED').order_by('-completed_at').first()
-            now=timezone.now()
-            if cached:
-                if not isinstance(cached.text, str) or not cached.text.strip():
-                    raise results.ProviderError('STT_EMPTY_TRANSCRIPT')
-                values={k:getattr(cached,k) for k in ('text','segments','confidence','provider','model','duration_ms','pronunciation_evidence')}
-                SpeechTranscript.objects.create(id=str(uuid4()),job_id=job.id,question_id=response['questionId'],audio_hash=audio_hash,attempt_number=job.attempt_count,status='SUCCEEDED',uncertain=False,started_at=now,completed_at=now,**values)
-                response['transcript']=cached.text or ''
-                if enabled(input):response.update(transcriptConfidence=cached.confidence,audioDurationMs=cached.duration_ms)
-                continue
-        now=timezone.now()
+        saved = SpeechTranscript.objects.filter(
+            job_id=job.id, question_id=response['questionId'], audio_hash=audio_hash, status='SUCCEEDED',
+        ).order_by('-completed_at').first()
+        if saved:
+            if speech is providers.transcribe and not current_speech_model(saved):
+                raise results.ProviderError('ASSESSMENT_PROVIDER_CHANGED')
+            if not isinstance(saved.text, str) or not saved.text.strip():
+                raise results.ProviderError('STT_EMPTY_TRANSCRIPT')
+            response['transcript'] = saved.text
+            if enabled(input):
+                response.update(transcriptConfidence=saved.confidence, audioDurationMs=saved.duration_ms)
+            continue
+        now = timezone.now()
         with transaction.atomic():
-            service.require_lease(job)
+            service.require_lease(job, lock=True)
             SpeechTranscript.objects.filter(job_id=job.id,question_id=response['questionId'],attempt_number=job.attempt_count).delete()
             transcript=SpeechTranscript.objects.create(id=str(uuid4()),job_id=job.id,question_id=response['questionId'],audio_hash=audio_hash or 'nohash',attempt_number=job.attempt_count,status='STARTED',
-                provider=os.environ.get('STT_PROVIDER','deepgram'),model=os.environ.get('STT_MODEL','UNCONFIGURED'),pronunciation_evidence='UNAVAILABLE',uncertain=False,started_at=now)
+                provider=os.environ.get('STT_PROVIDER','groq'),model=os.environ.get('STT_MODEL','UNCONFIGURED'),pronunciation_evidence='UNAVAILABLE',uncertain=False,started_at=now)
         try:
-            output=speech(path,mime_type,'en',response.get('durationMs'))
+            output=speech(path,mime_type,response.get('transcriptionLanguage', 'en'),response.get('durationMs'))
             if not isinstance(output.get('text'), str) or not output['text'].strip():
                 raise results.ProviderError('STT_EMPTY_TRANSCRIPT')
-            diag = output.get('speech_diagnostics') or {}
-            import json as _json
-            diag_str = _json.dumps(diag, ensure_ascii=False) if diag else 'UNAVAILABLE'
-            SpeechTranscript.objects.filter(id=transcript.id,status='STARTED').update(
-                status='SUCCEEDED',
-                text=output['text'],
-                segments=output['segments'],
-                confidence=output['confidence'],
-                provider=output['provider'],
-                model=output['model'],
-                duration_ms=output['durationMs'],
-                pronunciation_evidence=diag_str,
-                completed_at=timezone.now()
-            )
-            response['transcript']=output['text']
-            if enabled(input):response.update(transcriptConfidence=output['confidence'],audioDurationMs=output['durationMs'])
-            try:
-                qid = response['questionId']
-                ans = MockAnswer.objects.filter(attempt_id=job.attempt_id, question_id=qid).first()
-                if ans:
-                    r_scores = ans.rubric_scores if isinstance(ans.rubric_scores, dict) else {}
-                    r_scores['transcript'] = output['text']
-                    r_scores['speech_diagnostics'] = diag
-                    r_scores['speechDiagnostics'] = diag
-                    MockAnswer.objects.filter(id=ans.id).update(response=output['text'], rubric_scores=r_scores)
-                reg_ans = Answer.objects.filter(attempt_id=job.attempt_id, question_id=qid).first()
-                if reg_ans:
-                    hl = reg_ans.highlights if isinstance(reg_ans.highlights, dict) else {}
-                    hl['transcript'] = output['text']
-                    hl['speech_diagnostics'] = diag
-                    Answer.objects.filter(id=reg_ans.id).update(answer=output['text'], highlights=hl)
-                attempt = MockAttempt.objects.filter(id=job.attempt_id).first()
-                if attempt:
-                    m_state = attempt.media_state if isinstance(attempt.media_state, dict) else {}
-                    trans_map = m_state.setdefault('transcripts', {})
-                    trans_map[qid] = output['text']
-                    diag_map = m_state.setdefault('speech_diagnostics', {})
-                    diag_map[qid] = diag
-                    MockAttempt.objects.filter(id=attempt.id).update(media_state=m_state)
-            except Exception:
-                pass
+            with transaction.atomic():
+                service.require_lease(job, lock=True)
+                SpeechTranscript.objects.filter(id=transcript.id, status='STARTED').update(
+                    status='SUCCEEDED', text=output['text'], segments=output['segments'],
+                    confidence=output['confidence'], provider=output['provider'], model=output['model'],
+                    duration_ms=output['durationMs'], pronunciation_evidence='UNAVAILABLE',
+                    completed_at=timezone.now(),
+                )
+            response['transcript'] = output['text']
+            if enabled(input):
+                response.update(transcriptConfidence=output['confidence'], audioDurationMs=output['durationMs'])
         except Exception as error:
             problem=failure(error)
             SpeechTranscript.objects.filter(id=transcript.id,status='STARTED').update(status='FAILED',failure_code=problem.code,uncertain=problem.uncertain,completed_at=timezone.now())
@@ -192,13 +169,20 @@ def build_zero_result(input_data):
 
 def rate(job,input,role,grader):
     refresh(job)
+    input_hash = canonical_checksum(input)
+    provider, model = providers.assessment_identity(role)
     cached=AssessmentEvaluation.objects.filter(job_id=job.id,role=role,status='SUCCEEDED').order_by('-completed_at').first()
-    if cached:return cached.id,results.validate(cached.result,input)
+    if cached:
+        identity = (cached.provider, cached.model)
+        if cached.input_hash != input_hash or (grader is providers.assess and identity not in (
+            (provider, model), ('SYSTEM_FALLBACK', 'ZERO_FALLBACK'),
+        )):
+            raise results.ProviderError('ASSESSMENT_PROVIDER_CHANGED')
+        return cached.id,results.validate(cached.result,input)
     with transaction.atomic():
-        service.require_lease(job)
-        provider,model=providers.assessment_identity(role)
+        service.require_lease(job, lock=True)
         AssessmentEvaluation.objects.filter(job_id=job.id,role=role,attempt_number=job.attempt_count).delete()
-        evaluation=AssessmentEvaluation.objects.create(id=str(uuid4()),job_id=job.id,role=role,attempt_number=job.attempt_count,input_hash=canonical_checksum(input),provider=provider,
+        evaluation=AssessmentEvaluation.objects.create(id=str(uuid4()),job_id=job.id,role=role,attempt_number=job.attempt_count,input_hash=input_hash,provider=provider,
             model=model or 'UNCONFIGURED',status='STARTED',uncertain=False,started_at=timezone.now())
     try:
         from .assessment_quality import normalized, response_text
@@ -206,8 +190,8 @@ def rate(job,input,role,grader):
         if not has_any_evidence:
             output = {
                 'result': build_zero_result(input),
-                'provider': provider or 'SYSTEM_FALLBACK',
-                'model': model or 'ZERO_FALLBACK',
+                'provider': 'SYSTEM_FALLBACK',
+                'model': 'ZERO_FALLBACK',
                 'confidence': 1.0,
                 'inputTokens': 0,
                 'outputTokens': 0,
@@ -224,7 +208,8 @@ def rate(job,input,role,grader):
                     p_res['rawScore'] = 0.0
                     for k in criteria_keys:
                         if k in p_res.get('criteria', {}):
-                            p_res['criteria'][k] = 0.0
+                            if k != 'pronunciation' or input['pronunciationEvidence'] != 'UNAVAILABLE':
+                                p_res['criteria'][k] = 0.0
                         if k in p_res.get('evidence', {}):
                             p_res['evidence'][k] = 'Javob taqdim etilmadi (0 ball)'
                     if 'evidenceQuotes' in p_res:
@@ -248,13 +233,16 @@ def rate(job,input,role,grader):
                             'againstCovered': False,
                         }
         result=results.validate(output['result'],input)
-        AssessmentEvaluation.objects.filter(id=evaluation.id,status='STARTED').update(status='SUCCEEDED',result=result,provider=output['provider'],model=output['model'],confidence=result['confidence'],input_tokens=output['inputTokens'],output_tokens=output['outputTokens'],latency_ms=output['latencyMs'],completed_at=timezone.now())
-        if role=='PRIMARY':AssessmentJob.objects.filter(id=job.id,status='PROCESSING',lease_token=job.lease_token).update(ai_score=results.score(input,result)['score'],confidence=result['confidence'],selected_evaluation_id=evaluation.id,updated_at=timezone.now())
+        with transaction.atomic():
+            service.require_lease(job, lock=True)
+            AssessmentEvaluation.objects.filter(id=evaluation.id,status='STARTED').update(status='SUCCEEDED',result=result,provider=output['provider'],model=output['model'],confidence=result['confidence'],input_tokens=output['inputTokens'],output_tokens=output['outputTokens'],latency_ms=output['latencyMs'],completed_at=timezone.now())
         return evaluation.id,result
     except Exception as error:
         problem=failure(error);AssessmentEvaluation.objects.filter(id=evaluation.id,status='STARTED').update(status='FAILED',failure_code=problem.code,uncertain=problem.uncertain,completed_at=timezone.now());raise problem from None
 
 def _notify_assessment_finished(job):
+    if job.status != 'SUCCEEDED' or job.final_score_source != 'TEACHER':
+        return
     try:
         from apps.core import telegram_delivery
         if hasattr(telegram_delivery, 'notify_submission_result'):
@@ -281,7 +269,7 @@ def run_once(grader=None,speech=None):
         input=copy.deepcopy(job.input_snapshot)
         if input['skill']=='speaking':transcribe(job,input,speech)
         selected,primary=rate(job,input,'PRIMARY',grader);result=primary;adjudicated=False
-        if os.environ.get('ASSESSMENT_ADJUDICATION_ENABLED')!='false' and results.adjudicate(input,result,service.threshold()):
+        if os.environ.get('ASSESSMENT_ADJUDICATION_ENABLED') == 'true' and results.adjudicate(input,result,service.threshold()):
             selected,other=rate(job,input,'ADJUDICATOR',grader);result=results.combine(primary,other,input)
             disagreement=False
             for part in primary['parts']:
@@ -297,7 +285,9 @@ def run_once(grader=None,speech=None):
             pass
         _notify_assessment_finished(job)
     except Exception as error:
-        problem=failure(error);service.fail_job(job,problem.code,problem.transient,problem.uncertain)
+        problem = failure(error)
+        retry = {'retry_after': problem.retry_after} if getattr(problem, 'retry_after', 0) else {}
+        service.fail_job(job, problem.code, problem.transient, problem.uncertain, **retry)
     return True
 
 def _process_one(grader, speech):
@@ -314,7 +304,7 @@ def tick():
     if os.environ.get('ASSESSMENT_WORKER_ENABLED')=='false' or not _tick_lock.acquire(blocking=False):return
     try:
         from concurrent.futures import ThreadPoolExecutor, as_completed
-        max_workers = 2
+        max_workers = int(service.setting('ASSESSMENT_WORKER_CONCURRENCY', 2, 1, 4))
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             while True:
                 futures = [executor.submit(_process_one, providers.assess, providers.transcribe) for _ in range(max_workers)]

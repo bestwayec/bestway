@@ -12,7 +12,7 @@ from rest_framework.test import APIClient
 from apps.core.homework_scoring import ASSIGNMENT_KEY
 from apps.core.models import ClassroomEnrollment, Cohort, HomeworkAssignment
 from apps.legacy_schema.models import (
-    Attendance, Group, MockAnswer, MockAttempt, MockExam, MockQuestion, MockQuestionGroup, MockSection,
+    AssessmentJob, Attendance, AuditLog, Group, MockAnswer, MockAttempt, MockExam, MockQuestion, MockQuestionGroup, MockSection, SpeechTranscript,
     StudentProfile, User,
 )
 
@@ -23,7 +23,7 @@ REPORT = "/v1/groups/exam4-p3-group"
 @pytest.fixture
 def classroom():
     models = (User, Group, StudentProfile, Attendance, MockExam, MockSection, MockQuestionGroup,
-              MockQuestion, MockAttempt, MockAnswer)
+              MockQuestion, MockAttempt, MockAnswer, AssessmentJob, AuditLog, SpeechTranscript)
     existing = set(connection.introspection.table_names())
     created = []
     for model in models:
@@ -131,6 +131,21 @@ def analysis(actor, **params):
     result = request(actor, "analytics", **params)
     assert result.status_code == 200, result.content
     return result.json()["data"]
+
+def test_repeated_exam_assignment_returns_same_record(classroom):
+    owner, outsider, _, _, exam, _ = classroom
+    url = f"{REPORT}/assignments"
+    client = APIClient()
+    data = dict(title="Repeat-safe assigned exam", exam_id=exam.id,
+                deadline=(timezone.now() + timedelta(days=2)).isoformat())
+    client.force_authenticate(SimpleNamespace(id=owner.id, role=owner.role, is_authenticated=True))
+    first = client.post(url, data, format="json")
+    second = client.post(url, data, format="json")
+    assert first.status_code == second.status_code == 201
+    assert first.json()["data"]["id"] == second.json()["data"]["id"]
+    assert HomeworkAssignment.objects.filter(title=data["title"]).count() == 1
+    client.force_authenticate(SimpleNamespace(id=outsider.id, role=outsider.role, is_authenticated=True))
+    assert client.post(url, data, format="json").status_code == 403
 
 
 def test_report_scope_scales_best_ties_and_zero(classroom):

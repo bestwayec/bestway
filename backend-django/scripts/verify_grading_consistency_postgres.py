@@ -43,6 +43,7 @@ from apps.legacy_schema.models import (
     MockAnswer,
     MockAttempt,
     MockExam,
+    SpeechTranscript,
 )
 
 prefix='grading-'+uuid4().hex[:12]
@@ -112,7 +113,8 @@ try:
         check(attempt.overall_score is None and attempt.cefr_level is None and attempt.standard_scores=={},'partial practice has no invented overall or CEFR result')
         student=request('student','/v1/assessment/attempts/'+attempt.id)
         teacher=request('teacher','/v1/assessment/attempts/'+attempt.id)
-        check(student==teacher,'teacher and student receive identical authorized final score projections')
+        check([j['finalScore'] for j in student['assessments']]==[j['finalScore'] for j in teacher['assessments']],
+            'teacher and student receive identical authorized final scores')
         check({j['skill']:j['finalScore'] for j in student['assessments']}==dict(writing=12,speaking=4),'both assessment panels expose the saved teacher raw scores')
         check(all(key not in j for j in student['assessments'] for key in ('practiceGrade','aiPracticeGrade','teacherPracticeGrade','gradingPolicy')),
             'both panels expose the saved raw marks as the result: no internal practice grade')
@@ -152,7 +154,7 @@ try:
         ai_attempt=MockAttempt.objects.select_related('exam').get(id=ai_id)
         mock_submission_snapshots.enqueue(ai_attempt)
         ai_jobs={j.skill:j for j in AssessmentJob.objects.filter(attempt_id=ai_id)}
-        check(all(j.policy_mode=='PRACTICE_AUTO_AI' and j.status=='PENDING' for j in ai_jobs.values()),'configured scoped practice queues actual AI assessments')
+        check(all(j.policy_mode=='FULL_MOCK_AI_WITH_REVIEW' and j.status=='PENDING' for j in ai_jobs.values()),'configured scoped practice queues actual AI assessments')
         def grader(input,role):
             rated=assessment_results.empty(input);rated['confidence']=.95
             for part in rated['parts']:
@@ -206,29 +208,51 @@ try:
 
         for job in ai_jobs.values():run_fixture(job)
         ai_attempt.refresh_from_db()
-        check(ai_attempt.status=='completed' and all(j.final_score_source=='AI' and j.status=='SUCCEEDED' for j in ai_jobs.values()),'mocked providers finish scoped AI jobs through the real worker and answer projection')
-        check(ai_attempt.raw_scores['writing']['score']==7.5 and ai_attempt.raw_scores['speaking']['score']==2.5,'native evidence scores remain distinct from displayed internal policy')
-        check(all('practiceGrade' not in ai_attempt.raw_scores[skill] for skill in ('writing','speaking')),'student main result stores no internal grade, only the AI raw evidence')
-        check(ai_attempt.overall_score is None and ai_attempt.cefr_level is None,'AI scoped practice never invents overall or CEFR certification')
+        check(ai_attempt.status=='grading' and all(j.final_score is None and j.status=='NEEDS_REVIEW' for j in ai_jobs.values()),
+            'mocked providers produce advisory evaluations and no final grade')
+        check(not MockAnswer.objects.filter(attempt_id=ai_id,is_graded=True).exists(), 'AI leaves submitted answers ungraded')
         ai_student=request('student','/v1/assessment/attempts/'+ai_id)
         ai_teacher=request('teacher','/v1/assessment/attempts/'+ai_id)
-        check(all(job['evaluation'] for job in ai_teacher['assessments']), 'teacher can review provider evaluations')
-        check(all(job['evaluation'] is None for job in ai_student['assessments']), 'provider evaluations stay private after results publish')
-        published_teacher = {
-            **ai_teacher,
-            'assessments': [{**job, 'evaluation': None} for job in ai_teacher['assessments']],
-        }
-        check(ai_student==published_teacher, 'teacher and student see the same published AI results')
-        check(MockAnswer.objects.get(attempt_id=ai_id,question_id=writing[0]).response==original,'AI grading preserves the original candidate response')
+        check(all(j['evaluation'] for j in ai_teacher['assessments']), 'teacher can review provider evaluations')
+        check(all(j['evaluation'] is None and j['aiScore'] is None for j in ai_student['assessments']),
+            'provider evaluations and scores are private')
+        check(MockAnswer.objects.get(attempt_id=ai_id,question_id=writing[0]).response==original,
+            'AI grading preserves the original essay')
+        check(MockAnswer.objects.get(attempt_id=ai_id,question_id=speaking[0]).response=='',
+            'transcription preserves the original audio-only response')
+        speech_job=ai_jobs['speaking']
+        speech_review='/v1/assessment/jobs/'+speech_job.id+'/review'
+        audio_path=speech_review.rsplit('/', 1)[0]+'/audio/'+speaking[0]
+        request('other_teacher',audio_path,None,403)
+        request('other_teacher','/v1/assessment/attempts/'+ai_id,None,403)
+        recorded=SpeechTranscript.objects.get(job_id=speech_job.id,question_id=speaking[0],status='SUCCEEDED')
+        original_transcript=recorded.text
+        request('teacher',speech_review,dict(action='CORRECT_TRANSCRIPT',expectedVersion=speech_job.version,
+            reason='Verified with original audio', questionId=speaking[0], transcript='A teacher-verified correction.'),201)
+        recorded.refresh_from_db()
+        check(recorded.text==original_transcript,'teacher transcript correction preserves the provider original')
+        staff_speech=next(j for j in request('teacher','/v1/assessment/attempts/'+ai_id)['assessments'] if j['skill']=='speaking')
+        check(staff_speech['submissions'][0]['transcript']['correctedText']=='A teacher-verified correction.',
+            'staff can see the separate corrected transcript')
+        student_speech=next(j for j in request('student','/v1/assessment/attempts/'+ai_id)['assessments'] if j['skill']=='speaking')
+        check(student_speech['submissions'][0]['transcript'] is None, 'student projections hide private transcripts')
+        speech_job.refresh_from_db()
+        request('teacher',speech_review,dict(action='ACCEPT',expectedVersion=speech_job.version,reason='Reviewed Speaking evidence'),201)
+        speech_job.refresh_from_db()
+        check(speech_job.final_score_source=='TEACHER' and speech_job.final_score==2.5,'explicit acceptance is a teacher grade')
         ai_job=ai_jobs['writing'];review='/v1/assessment/jobs/'+ai_job.id+'/review'
-        request('teacher',review,dict(action='OVERRIDE',expectedVersion=ai_job.version,reason='Teacher heard and reviewed the work',parts=[dict(id=p['id'],rawScore=4) for p in ai_job.input_snapshot['parts']]),201)
+        request('teacher',review,dict(action='OVERRIDE',expectedVersion=ai_job.version,reason='Reviewed the writing rubric',
+            parts=[dict(id=p['id'],rawScore=4) for p in ai_job.input_snapshot['parts']], comment='Teacher feedback.'),201)
         ai_job.refresh_from_db();ai_attempt.refresh_from_db()
         final=request('student','/v1/assessment/attempts/'+ai_id)['assessments']
         writing_view=next(j for j in final if j['skill']=='writing')
-        check(writing_view['finalScore']==12 and writing_view['teacherScore']==12 and writing_view['aiScore']==7.5,
-            'teacher native override updates the final score while preserving the separate AI proposal')
-        check(ai_attempt.raw_scores['writing']['score']==12 and 'practiceGrade' not in ai_attempt.raw_scores['writing'],'teacher override and student main result share exactly one persisted score')
-        request('teacher',review,dict(action='REGRADE',expectedVersion=ai_job.version,reason='Obtain an independent proposal without overwriting teacher work'),201)
+        check(writing_view['finalScore']==12 and writing_view['teacherScore']==12 and writing_view['aiScore'] is None
+            and ai_job.ai_score==7.5 and writing_view['teacherComment']=='Teacher feedback.',
+            'manual override releases the teacher score and comment while preserving the separate advisory score')
+        check(ai_attempt.raw_scores['writing']['score']==12 and 'practiceGrade' not in ai_attempt.raw_scores['writing'],
+            'teacher override and student main result share exactly one persisted score')
+        request('teacher',review,dict(action='REGRADE',expectedVersion=ai_job.version,
+            reason='Obtain an independent proposal without overwriting teacher work'),201)
         later=AssessmentJob.objects.filter(attempt_id=ai_id,skill='writing').order_by('-generation').first()
         run_fixture(later)
         check(later.final_score_source=='TEACHER' and later.final_score==12 and 'practiceGrade' not in later.final_result,
@@ -238,7 +262,6 @@ try:
         # An empty STT response is even weaker evidence. Neither is a grade.
         from apps.core.assessment_local_stt import _decode_audio
         from apps.core.assessment_results import ProviderError
-        from apps.legacy_schema.models import SpeechTranscript
 
         def speech_case(label, audio_kind, stt):
             attempt_id=prefix+'-'+label+'-attempt'

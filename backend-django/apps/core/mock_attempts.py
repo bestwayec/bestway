@@ -309,6 +309,13 @@ def start(actor, exam_id, data):
             fail('MOCK_CONTENT_CONFLICT', 'Exam content changed. Reload before starting or resuming', 409)
         if not current.is_published and not current.is_demo:
             fail('MOCK_EXAM_NOT_PUBLISHED', 'Bu imtihon hali ochilmagan')
+        if assignment:
+            assigned_attempt = MockAttempt.objects.filter(exam_id=exam_id, student_id=actor.id,
+                media_state__contains={ASSIGNMENT_KEY: assignment.id}).order_by('-started_at').first()
+            if assigned_attempt:
+                return start_response(assigned_attempt, current, True)
+            if partial and current.profile == 'full_mock':
+                fail('MOCK_ASSIGNMENT_FULL_TEST_REQUIRED', 'Complete the assigned full examination', 409)
         # Legacy practice clients may omit skills. Infer only validated authored
         # skills, after the same full-content readiness check used by Start.
         # Explicit selections retain their narrower partial-practice contract.
