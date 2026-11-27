@@ -6,9 +6,11 @@ import { Maximize2, ShieldAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { FULLSCREEN_GUARD_EVENT } from "@/lib/microphone";
+import { api } from "@/lib/api-client";
 
 interface QueuedGuardEvent {
   event: string;
+  eventId?: string;
   observedAt: string;
   offlineSynced: boolean;
 }
@@ -100,6 +102,7 @@ export function ExamLocker({
   // Paused while the app itself leaves full screen for a moment (microphone permission prompt).
   const guardPausedRef = React.useRef(false);
   const lastViolationTimeRef = React.useRef(0);
+  const guardRequestInFlight = React.useRef(false);
 
   // Keep callback refs stable
   const onAnomalyRef = React.useRef(onAnomaly);
@@ -108,21 +111,20 @@ export function ExamLocker({
   }, [onAnomaly]);
 
   const flushGuardQueue = React.useCallback(async () => {
-    if (!active || typeof window === "undefined" || navigator.onLine === false) return;
-    const queued = readGuardQueue(attemptId);
+    if (!active || guardRequestInFlight.current || typeof window === "undefined" || navigator.onLine === false) return;
+    const cutoff = Date.now() - 15 * 60_000;
+    const queued = readGuardQueue(attemptId).filter((item) => Date.parse(item.observedAt) > cutoff);
     if (queued.length === 0) return;
+    guardRequestInFlight.current = true;
+    const sent = new Set(queued.map((item) => item.eventId ?? `${item.event}:${item.observedAt}`));
     try {
-      const res = await fetch(`/api/backend/mock/attempts/${encodeURIComponent(attemptId)}/guard-events`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ events: queued }),
-      });
-      if (res.ok) {
-        writeGuardQueue(attemptId, []);
-      }
+      await api.post(`/mock/attempts/${encodeURIComponent(attemptId)}/guard-events`, { events: queued });
+      writeGuardQueue(attemptId, readGuardQueue(attemptId).filter((item) =>
+        !sent.has(item.eventId ?? `${item.event}:${item.observedAt}`)));
     } catch {
       // keep queued for the next reconnect
+    } finally {
+      guardRequestInFlight.current = false;
     }
   }, [active, attemptId]);
 
@@ -142,6 +144,7 @@ export function ExamLocker({
         const queued = readGuardQueue(attemptId);
         queued.push({
           event: eventType,
+          eventId: window.crypto?.randomUUID?.(),
           observedAt: new Date().toISOString(),
           offlineSynced: true,
         });

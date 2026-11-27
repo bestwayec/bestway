@@ -24,6 +24,14 @@ function positions(q: MockAttemptQuestion) {
   return Math.max(1, (q.displayNumberEnd ?? q.displayNumber ?? q.number) - (q.displayNumber ?? q.number) + 1);
 }
 
+export function objectiveReviewCounts(groups: MockAttemptGroup[]) {
+  const counts = { correct: 0, wrong: 0, unanswered: 0, pending: 0 };
+  for (const question of groups.flatMap((group) => group.questions)) {
+    counts[reviewState(question)] += positions(question);
+  }
+  return counts;
+}
+
 export function filterReviewRows(
   questions: MockAttemptQuestion[],
   filter: ReviewFilter,
@@ -101,7 +109,7 @@ export function ResultReviewTable({
                 )}
               </div>
             </td>
-            <td className="hidden max-w-[28rem] px-3 py-2 text-fg-muted sm:table-cell">
+            <td className="max-w-[28rem] px-1.5 py-2 text-fg-muted sm:px-3">
               <span className="line-clamp-2" title={q.prompt}>
                 {q.prompt}
               </span>

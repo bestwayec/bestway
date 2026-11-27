@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api-client";
+import { useMe } from "@/hooks/use-me";
 
 type AccountSummary = {
   id: string;
@@ -40,7 +41,7 @@ type MergePreview = {
   identityBasis: string;
   blockers: Array<{ code: string; message: string }>;
   warnings: Array<{ code: string; message: string }>;
-  previewToken: string;
+  previewToken: string | null;
   source: AccountSummary;
   canonical: AccountSummary;
 };
@@ -58,9 +59,13 @@ type MergeHistoryItem = {
 export function AccountReconciliationPanel() {
   const t = useTranslations("studentManagement");
   const qc = useQueryClient();
+  const me = useMe();
+  const [reference, setReference] = React.useState("");
+  const [method, setMethod] = React.useState("checked_both_authenticated_accounts");
+  const [issuedId, setIssuedId] = React.useState("");
   const [sourceId, setSourceId] = React.useState("");
   const [canonicalId, setCanonicalId] = React.useState("");
-  const [verifiedOwnership, setVerifiedOwnership] = React.useState(false);
+  const [verificationId, setVerificationId] = React.useState("");
   const [transferTelegram, setTransferTelegram] = React.useState(false);
   const [reason, setReason] = React.useState("");
   const [confirmText, setConfirmText] = React.useState("");
@@ -71,12 +76,23 @@ export function AccountReconciliationPanel() {
     queryFn: () => api.get<{ duplicates: DuplicatePair[]; history: MergeHistoryItem[] }>("/users/reconciliation"),
   });
 
+  const verifyMut = useMutation({
+    mutationFn: () => api.post<{ verificationId: string }>("/users/reconciliation/verify-identity", {
+      sourceUserId: sourceId.trim(),
+      canonicalUserId: canonicalId.trim(),
+      method,
+      reference: reference.trim(),
+    }),
+    onSuccess: ({ verificationId }) => setIssuedId(verificationId),
+    onError: (err) => toast.error(err.message),
+  });
+
   const previewMut = useMutation({
     mutationFn: () =>
       api.post<MergePreview>("/users/reconciliation/preview", {
         sourceUserId: sourceId.trim(),
         canonicalUserId: canonicalId.trim(),
-        verifiedOwnership,
+        verificationId: verificationId.trim(),
         transferTelegram,
       }),
     onSuccess: (data) => setPreview(data),
@@ -91,7 +107,7 @@ export function AccountReconciliationPanel() {
         reason: reason.trim(),
         confirmText: confirmText.trim(),
         previewToken: preview?.previewToken ?? "",
-        verifiedOwnership,
+        verificationId: verificationId.trim(),
         transferTelegram,
       }),
     onSuccess: async () => {
@@ -138,6 +154,7 @@ export function AccountReconciliationPanel() {
                   onClick={() => {
                     setSourceId(pair.accounts[1].id);
                     setCanonicalId(pair.accounts[0].id);
+                    setVerificationId("");
                     setPreview(null);
                   }}
                 >
@@ -166,15 +183,31 @@ export function AccountReconciliationPanel() {
               aria-label={t("canonicalAccount")}
             />
           </div>
+          {me.data?.user.role === "super_admin" && (
+            <details className="space-y-2 rounded-field border border-border p-3 text-sm">
+              <summary className="cursor-pointer font-medium">{t("recordVerification")}</summary>
+              <p className="text-xs text-fg-muted">{t("verificationInstructions")}</p>
+              <div className="grid items-center gap-2 sm:grid-cols-2">
+                <select className="min-h-9 rounded-field border border-border bg-surface px-2" aria-label={t("verificationMethod")} value={method} onChange={(e) => setMethod(e.target.value)}>
+                  <option value="checked_both_authenticated_accounts">{t("checkedBothAccounts")}</option>
+                  <option value="checked_identity_record">{t("checkedIdentityRecord")}</option>
+                </select>
+                <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder={t("verificationReference")} aria-label={t("verificationReference")} />
+                <Button size="sm" variant="outline" loading={verifyMut.isPending} onClick={() => verifyMut.mutate()} disabled={!sourceId.trim() || !canonicalId.trim() || !reference.trim()}>
+                  {t("recordVerification")}
+                </Button>
+              </div>
+              {issuedId && <Input readOnly value={issuedId} aria-label={t("verificationId")} />}
+            </details>
+          )}
           <div className="flex flex-wrap items-center gap-4 text-xs text-fg-muted">
-            <label className="inline-flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={verifiedOwnership}
-                onChange={(e) => { setVerifiedOwnership(e.target.checked); setPreview(null); }}
-              />
-              {t("verifiedOwnershipLabel")}
-            </label>
+            <Input
+              value={verificationId}
+              onChange={(e) => { setVerificationId(e.target.value); setPreview(null); }}
+              placeholder={t("verificationId")}
+              aria-label={t("verificationId")}
+              className="w-full sm:max-w-xs"
+            />
             <label className="inline-flex items-center gap-2">
               <input
                 type="checkbox"
