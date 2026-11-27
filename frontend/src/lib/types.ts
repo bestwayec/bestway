@@ -1491,7 +1491,7 @@ export interface GroupAttendanceSummaryResponse {
   }>;
 }
 
-export type GuardIncidentStatus = "new" | "acknowledged" | "explained" | "flagged";
+export type GuardIncidentStatus = "open" | "acknowledged" | "explained" | "flagged";
 export type GuardIncidentSeverity = "info" | "warning" | "high" | "critical";
 
 export interface GuardAlertIncident {
@@ -1522,19 +1522,19 @@ export interface GuardAlertIncident {
 }
 
 export interface GroupLiveGuardStudent {
-  attemptId: string;
+  attemptId: string | null;
   studentId: string;
-  studentName: string;
-  examId: string;
-  examTitle: string;
+  name: string;
+  examTitle: string | null;
   status: string;
-  currentSkill: string;
-  questionProgress: string;
+  currentSkill: string | null;
+  answeredCount: number;
+  totalQuestions: number;
   lastActivityAt: string | null;
-  connectionStatus: "online" | "offline" | "idle";
+  connectionStatus: "online" | "offline" | "idle" | "finished";
   incidentCount: number;
-  unacknowledgedCount: number;
-  highestSeverity: GuardIncidentSeverity;
-  latestIncidentAt: string | null;
-  incidents: GuardAlertIncident[];
+  unreviewedCount: number;
+  timeline: Array<Pick<GuardAlertIncident, "id" | "eventType" | "occurrenceCount" | "status" | "offlineSynced" | "reviewNote"> & {
+    observedAt: string;
+  }>;
 }

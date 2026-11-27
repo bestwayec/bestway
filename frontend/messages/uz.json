@@ -3570,7 +3570,7 @@
       "offlineRecovered": "Oflayndan sinxronlandi",
       "timelineTitle": "Nazorat hodisalari jurnali",
       "statuses": {
-        "new": "Yangi",
+        "open": "Yangi",
         "acknowledged": "Tasdiqlandi",
         "explained": "Izohlandi",
         "flagged": "Belgilandi"

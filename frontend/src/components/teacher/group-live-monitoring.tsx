@@ -30,7 +30,7 @@ import { useTeacherGuardAlerts } from "@/components/app/guard-alerts-context";
 import { useGroupLiveMonitoring } from "@/hooks/use-group-monitoring";
 import { api } from "@/lib/api-client";
 import type { CheatAnomalyEvent, LiveMonitoringStudent } from "@/lib/group-monitoring-types";
-import type { GroupLiveGuardStudent, GuardAlertIncident, GuardIncidentStatus } from "@/lib/types";
+import type { GroupLiveGuardStudent, GuardIncidentStatus } from "@/lib/types";
 
 const SECTION_ICONS = [
   { match: "listen", label: "Listening", icon: Headphones, tone: "text-info" },
@@ -103,7 +103,7 @@ export function GroupLiveMonitoring({ groupId }: { groupId: string }) {
     return () => window.clearInterval(timer);
   }, [fetchGuardRoster]);
 
-  async function handleReviewIncident(incidentId: string, status: Exclude<GuardIncidentStatus, "new">) {
+  async function handleReviewIncident(incidentId: string, status: Exclude<GuardIncidentStatus, "open">) {
     setBusyIncidentId(incidentId);
     try {
       if (guardAlertsCtx) {
@@ -123,7 +123,7 @@ export function GroupLiveMonitoring({ groupId }: { groupId: string }) {
     return students.filter((st) => {
       const g = guardByAttempt[st.attemptId];
       if (filter === "flagged") return st.antiCheatCount > 0 || (g?.incidentCount ?? 0) > 0;
-      if (filter === "unreviewed") return (g?.unacknowledgedCount ?? 0) > 0;
+      if (filter === "unreviewed") return (g?.unreviewedCount ?? 0) > 0;
       if (filter === "offline") return g ? g.connectionStatus !== "online" : false;
       return true;
     });
@@ -289,9 +289,9 @@ export function GroupLiveMonitoring({ groupId }: { groupId: string }) {
                       >
                         <ShieldAlert className="size-3.5" aria-hidden />
                         <span>{t("recordedCount", { count: totalEvents })}</span>
-                        {(guardInfo?.unacknowledgedCount ?? 0) > 0 && (
+                        {(guardInfo?.unreviewedCount ?? 0) > 0 && (
                           <span className="rounded-full bg-warning px-1.5 py-0.2 text-[10px] font-bold text-bg">
-                            {guardInfo!.unacknowledgedCount}
+                            {guardInfo!.unreviewedCount}
                           </span>
                         )}
                       </button>
@@ -340,8 +340,8 @@ export function GroupLiveMonitoring({ groupId }: { groupId: string }) {
               </div>
 
               <div className="mt-4 max-h-60 divide-y divide-border overflow-y-auto rounded-xl border border-border bg-bg-subtle" tabIndex={0}>
-                {(guardByAttempt[selectedStudent.attemptId]?.incidents?.length ?? 0) > 0 ? (
-                  guardByAttempt[selectedStudent.attemptId].incidents.map((inc: GuardAlertIncident) => (
+                {(guardByAttempt[selectedStudent.attemptId]?.timeline?.length ?? 0) > 0 ? (
+                  guardByAttempt[selectedStudent.attemptId].timeline.map((inc) => (
                     <div key={inc.id} className="space-y-1.5 p-2.5 text-xs">
                       <div className="flex items-start justify-between gap-2">
                         <span className="font-medium text-fg">
@@ -350,8 +350,8 @@ export function GroupLiveMonitoring({ groupId }: { groupId: string }) {
                           {inc.offlineSynced ? ` · ${tg("offlineRecovered")}` : ""}
                         </span>
                         <span className="shrink-0 tabular-nums text-fg-muted">
-                          {inc.lastObservedAt
-                            ? new Date(inc.lastObservedAt).toLocaleTimeString([], {
+                          {inc.observedAt
+                            ? new Date(inc.observedAt).toLocaleTimeString([], {
                                 hour: "2-digit",
                                 minute: "2-digit",
                                 second: "2-digit",
@@ -361,10 +361,10 @@ export function GroupLiveMonitoring({ groupId }: { groupId: string }) {
                         </span>
                       </div>
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <Badge variant={inc.status === "flagged" ? "danger" : inc.status === "new" ? "warning" : "neutral"}>
+                        <Badge variant={inc.status === "flagged" ? "danger" : inc.status === "open" ? "warning" : "neutral"}>
                           {tg(`statuses.${inc.status}`)}
                         </Badge>
-                        {inc.status === "new" && (
+                        {inc.status === "open" && (
                           <>
                             <Button
                               type="button"

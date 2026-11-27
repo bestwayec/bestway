@@ -3570,7 +3570,7 @@
       "offlineRecovered": "Offline synced",
       "timelineTitle": "Guard incident timeline",
       "statuses": {
-        "new": "New",
+        "open": "New",
         "acknowledged": "Acknowledged",
         "explained": "Explained",
         "flagged": "Flagged"

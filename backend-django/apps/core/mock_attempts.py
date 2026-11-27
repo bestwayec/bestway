@@ -8,6 +8,7 @@ from __future__ import annotations
 import base64
 import binascii
 import json
+import logging
 from copy import copy
 from datetime import UTC, datetime, timedelta
 

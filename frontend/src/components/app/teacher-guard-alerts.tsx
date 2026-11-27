@@ -46,20 +46,16 @@ function playSoftPing() {
 }
 
 function eventLabel(tl: (key: string, values?: Record<string, string | number>) => string, eventType: string) {
-  const known = [
-    "tab_switch",
-    "window_blur",
-    "exit_fullscreen",
-    "fullscreen_exit",
-    "mouse_leave",
-    "copy_blocked",
-    "cut_blocked",
-    "paste_blocked",
-    "contextmenu_blocked",
-    "devtools_attempt",
-    "view_source_attempt",
-  ];
-  return known.includes(eventType) ? tl(`events.${eventType}`) : tl("events.other", { event: eventType });
+  const legacyCodes: Record<string, string> = {
+    WINDOW_FOCUS_LOST: "window_blur",
+    PAGE_HIDDEN: "tab_switch",
+    FULLSCREEN_EXITED: "fullscreen_exit",
+    POINTER_LEFT_WINDOW: "mouse_leave",
+    CLIPBOARD_ACTION_BLOCKED: "copy_blocked",
+    DEVTOOLS_OPENED: "devtools_attempt",
+  };
+  const label = legacyCodes[eventType];
+  return label ? tl(`events.${label}`) : tl("events.other", { event: eventType });
 }
 
 export function TeacherGuardAlertsProvider({
@@ -106,14 +102,14 @@ export function TeacherGuardAlertsProvider({
   }, []);
 
   const reviewIncident = React.useCallback(
-    async (incidentId: string, status: Exclude<GuardIncidentStatus, "new">, note = "") => {
+    async (incidentId: string, status: Exclude<GuardIncidentStatus, "open">, note = "") => {
       const updated = await api.post<GuardAlertIncident>(
         `/teacher/guard-alerts/${encodeURIComponent(incidentId)}/review`,
         { status, note },
       );
       setIncidents((prev) => {
         const next = prev.map((item) => (item.id === incidentId ? { ...item, ...updated } : item));
-        setUnreadCount(next.filter((item) => item.status === "new").length);
+        setUnreadCount(next.filter((item) => item.status === "open").length);
         return next;
       });
       toast.success(tg("acknowledgedToast"));
@@ -127,7 +123,7 @@ export function TeacherGuardAlertsProvider({
       const data = await api.get<GuardAlertsResponse>("/teacher/guard-alerts?limit=25");
       if (!data || !Array.isArray(data.incidents)) return;
       setIncidents(data.incidents);
-      setUnreadCount(typeof data.unreadCount === "number" ? data.unreadCount : data.incidents.filter((i) => i.status === "new").length);
+      setUnreadCount(typeof data.unreadCount === "number" ? data.unreadCount : data.incidents.filter((i) => i.status === "open").length);
 
       if (!hydratedRef.current) {
         hydratedRef.current = true;
@@ -139,7 +135,7 @@ export function TeacherGuardAlertsProvider({
       }
 
       const fresh = data.incidents.filter(
-        (item) => item.status === "new" && !seenIdsRef.current.has(item.id),
+        (item) => item.status === "open" && !seenIdsRef.current.has(item.id),
       );
       for (const item of data.incidents) {
         seenIdsRef.current.add(item.id);
@@ -229,7 +225,7 @@ export function GuardAlertsBell() {
 
   if (!ctx || !ctx.enabled) return null;
 
-  async function onReview(id: string, status: Exclude<GuardIncidentStatus, "new">) {
+  async function onReview(id: string, status: Exclude<GuardIncidentStatus, "open">) {
     setBusyId(id);
     try {
       await ctx?.reviewIncident(id, status);
@@ -296,7 +292,7 @@ export function GuardAlertsBell() {
                   key={inc.id}
                   className={cn(
                     "rounded-control border p-2.5 text-xs",
-                    inc.status === "new"
+                    inc.status === "open"
                       ? "border-warning-border bg-warning-bg"
                       : "border-border bg-bg-subtle",
                   )}
@@ -312,13 +308,13 @@ export function GuardAlertsBell() {
                         {inc.groupName || "—"} {inc.skill ? `· ${inc.skill}` : ""}
                       </p>
                     </div>
-                    <Badge variant={inc.status === "flagged" ? "danger" : inc.status === "new" ? "warning" : "neutral"}>
+                    <Badge variant={inc.status === "flagged" ? "danger" : inc.status === "open" ? "warning" : "neutral"}>
                       {tg(`statuses.${inc.status}`)}
                     </Badge>
                   </div>
 
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    {inc.status === "new" && (
+                    {inc.status === "open" && (
                       <>
                         <Button
                           type="button"

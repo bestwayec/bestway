@@ -223,6 +223,8 @@ def record_event(
     offline_synced: bool = False,
 ) -> dict:
     """Persist a bounded observation and alert the currently authorized supervisor."""
+    from .mock_attempts import aware
+
     if actor.role != "student" or actor.id != attempt.student_id:
         raise ContractAPIException("FORBIDDEN", "Ruxsat berilmagan", 403)
     attempt = MockAttempt.objects.select_for_update().select_related("exam").get(
@@ -233,11 +235,11 @@ def record_event(
     obs_dt = observed_at if observed_at is not None else now
     if not isinstance(obs_dt, datetime) or timezone.is_naive(obs_dt):
         raise ContractAPIException("VALIDATION_ERROR", "observedAt must include a time zone", 400)
-    ends = min((end for end in (
+    ends = min((aware(end) for end in (
         attempt.overall_deadline_at or attempt.deadline_at, attempt.submitted_at,
     ) if end is not None), default=None)
     if (
-        obs_dt < max(attempt.started_at - CLOCK_SKEW, now - RECOVERY_WINDOW)
+        obs_dt < max(aware(attempt.started_at) - CLOCK_SKEW, now - RECOVERY_WINDOW)
         or obs_dt > now + CLOCK_SKEW
         or (ends is not None and obs_dt > ends + CLOCK_SKEW)
         or (not offline_synced and attempt.status != "in_progress")
@@ -468,11 +470,13 @@ def review_incident(actor, incident_id: str, *, status: str, note: str = "") -> 
 
 
 def group_live_guard(actor, group_id: str) -> dict:
+    from .classroom_roster import assert_active
     from .groups import assert_manages_group, get_group
     from .teacher_analytics import classroom_attempts
 
     group = get_group(group_id)
     assert_manages_group(actor, group)
+    assert_active(group.id)
 
     students = list(member_profiles(group_id).select_related("user").order_by("user__name"))
     cutoff = timezone.now() - timedelta(hours=24)
@@ -499,7 +503,8 @@ def group_live_guard(actor, group_id: str) -> dict:
         .values_list("group__section__exam_id", "n")
     )
     incidents_by_attempt = {}
-    for inc in ExamIntegrityIncident.objects.filter(attempt_id__in=attempt_ids).order_by("-updated_at"):
+    scope = ExamIntegrityIncident.objects.filter(attempt_id__in=attempt_ids, group_id=group_id)
+    for inc in _teacher_alert_scope(scope, actor).order_by("-updated_at"):
         incidents_by_attempt.setdefault(inc.attempt_id, []).append({
             "id": inc.id,
             "eventType": inc.event_type,

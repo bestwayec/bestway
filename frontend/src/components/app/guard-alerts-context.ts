@@ -9,7 +9,7 @@ export interface GuardAlertsContextValue {
   unreadCount: number;
   muted: boolean;
   toggleMute: () => void;
-  reviewIncident: (incidentId: string, status: Exclude<GuardIncidentStatus, "new">, note?: string) => Promise<void>;
+  reviewIncident: (incidentId: string, status: Exclude<GuardIncidentStatus, "open">, note?: string) => Promise<void>;
   refresh: () => Promise<void>;
 }
 
