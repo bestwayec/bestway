@@ -17,8 +17,26 @@ Branch `feat/bestway-5-smart-classroom`, based on fetched `origin/main` at `910e
 
 See [Database audit](BESTWAY_5_DATABASE_AUDIT.md) and [Classroom architecture](BESTWAY_5_CLASSROOM_ARCHITECTURE.md).
 
-## Continue from this checkpoint
+## Pull Request
 
-1. Use the local browser script `scripts/e2e-local/classroom-invitations.mjs` with the synthetic PostgreSQL and Redis stack for invite regression checks.
-2. Complete account ownership reconciliation and historical teacher scoping. Preserve unresolved legacy cohort assignments until an authorized administrator confirms their ownership.
-3. Apply one server-side answer disclosure check across result surfaces and reuse the existing exam event stream for supervised teacher alerts. Complete the dashboard and result UI, then Telegram delivery and the integrated release gates.
+**PR #228**: https://github.com/bestwayec/bestway/pull/228
+- Base: `main` (`910e7d92`)
+- Head: `feat/bestway-5-smart-classroom` (`ebccb097`)
+- Status: **Open — awaiting owner review and merge**
+- 99 files changed, +7,290 / -623 lines, 4 Django migrations
+
+## Final Verification (2026-11-27)
+
+| Check | Result |
+| --- | --- |
+| Django pytest (33 tests) | ✅ 33 passed |
+| TypeScript `tsc --noEmit` | ✅ 0 errors |
+| ESLint | ✅ 0 errors (414 pre-existing warnings) |
+| Next.js production build | ✅ success |
+| Vitest focused specs | ✅ 8/8 passed |
+
+## Production Deployment Notes
+
+1. Run `python manage.py migrate core` to apply migrations 0029-0032
+2. Telegram bot commands `/bind` and `/unbind` require bot restart
+3. Redis required for exam guard event stream
