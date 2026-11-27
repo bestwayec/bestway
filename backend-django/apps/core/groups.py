@@ -500,21 +500,32 @@ def export_group_xlsx(actor, group_id) -> tuple[bytes, str]:
     elif actor.role not in ('admin', 'super_admin', 'teacher'):
         fail('FORBIDDEN', 'Ruxsat berilmagan', 403)
 
-    students = list(
-        StudentProfile.objects.filter(group_id=group_id)
-        .select_related('user')
-        .order_by('user__name')
-    )
-    student_ids = [s.user_id for s in students]
+    from .classroom_roster import member_profiles
+    from .teacher_analytics import classroom_attempts
 
     try:
         attempts = list(
-            MockAttempt.objects.filter(student_id__in=student_ids)
+            classroom_attempts(group_id)
             .select_related('exam', 'student__user')
             .order_by('student__user__name', '-finished_at', '-started_at')
         )
     except Exception:
         attempts = []
+
+    current_roster = list(
+        member_profiles(group_id)
+        .select_related('user')
+        .order_by('user__name')
+    )
+    roster_ids = {s.user_id for s in current_roster}
+    extra_ids = {a.student_id for a in attempts if a.student_id not in roster_ids}
+    extra_profiles = list(
+        StudentProfile.objects.filter(user_id__in=extra_ids)
+        .select_related('user')
+        .order_by('user__name')
+    ) if extra_ids else []
+    students = sorted([*current_roster, *extra_profiles], key=lambda s: (s.user.name or '').casefold())
+    student_ids = [s.user_id for s in students]
 
     attempt_ids = [a.id for a in attempts]
     feedback_by_attempt = {}

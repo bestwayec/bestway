@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Ban, BookOpen, Check, ChevronRight, Plus, Search, Star, Trash2, Users } from "lucide-react";
+import { Ban, BookOpen, Check, ChevronRight, GitMerge, Plus, Search, Star, Trash2, Users } from "lucide-react";
 import { DeleteStudentDialog } from "@/components/students/delete-student-dialog";
+import { AccountReconciliationPanel } from "@/components/students/account-reconciliation-panel";
 import type { UserListItem } from "@/lib/types";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -28,9 +29,14 @@ export function StudentsView() {
   const ts = useTranslations("student");
   const tst = useTranslations("staff");
   const { data: me } = useMe();
+  const qc = useQueryClient();
   const isSuper = me?.user.role === "super_admin";
+  const isAdmin = isSuper || me?.user.role === "admin";
   const [search, setSearch] = React.useState("");
   const [createOpen, setCreateOpen] = React.useState(false);
+  const [showReconciliation, setShowReconciliation] = React.useState(false);
+  const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
+  const [bulkGroupId, setBulkGroupId] = React.useState("");
   const [deleteTarget, setDeleteTarget] = React.useState<UserListItem | null>(null);
   const tf = useTranslations("studentManagement");
   const [page, setPage] = React.useState(1);
@@ -49,6 +55,19 @@ export function StudentsView() {
   const teachersQ = useTeachers();
   const approve = useApproveStudent();
   const deactivate = useDeactivateUser();
+  const bulkMut = useMutation({
+    mutationFn: (payload: { action: "approve" | "suspend" | "reactivate" | "add_to_group"; studentIds: string[]; groupId?: string }) =>
+      api.post<{ updated: number }>("/users/bulk", payload),
+    onSuccess: async (res) => {
+      toast.success(tf("bulkSuccess", { count: res.updated }));
+      setSelectedIds([]);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["users"] }),
+        qc.invalidateQueries({ queryKey: ["groups"] }),
+      ]);
+    },
+    onError: (err) => toast.error(err.message),
+  });
 
   const students = data?.data ?? [];
   const total = data?.meta?.total ?? 0;
@@ -74,6 +93,12 @@ export function StudentsView() {
         title={t("students")}
         actions={
           <>
+            {isAdmin && (
+              <Button size="sm" variant="outline" onClick={() => setShowReconciliation((v) => !v)}>
+                <GitMerge className="size-4" />
+                {tf("reconciliationTitle")}
+              </Button>
+            )}
             <ExportButton path="/stats/export/students" />
             <Button size="sm" onClick={() => setCreateOpen(true)}>
               <Plus />
@@ -82,6 +107,8 @@ export function StudentsView() {
           </>
         }
       />
+
+      {isAdmin && showReconciliation && <AccountReconciliationPanel />}
 
       <div className="relative mb-4">
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-fg-subtle" />
@@ -131,8 +158,63 @@ export function StudentsView() {
         <EmptyState icon={Users} title={t("empty")} />
       ) : (
         <div className="space-y-2">
+          {isAdmin && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-field border border-border bg-bg-subtle px-3 py-2 text-xs">
+              <label className="inline-flex items-center gap-2 font-medium text-fg">
+                <input
+                  type="checkbox"
+                  checked={students.length > 0 && students.every((s) => selectedIds.includes(s.id))}
+                  onChange={(e) => setSelectedIds(e.target.checked ? students.map((s) => s.id) : [])}
+                />
+                {tf("selectAll")}
+                {selectedIds.length > 0 && <Badge variant="brand">{tf("selectedCount", { count: selectedIds.length })}</Badge>}
+              </label>
+              {selectedIds.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Button size="sm" variant="outline" disabled={bulkMut.isPending} onClick={() => bulkMut.mutate({ action: "approve", studentIds: selectedIds })}>
+                    {tf("bulkApprove")}
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={bulkMut.isPending} onClick={() => bulkMut.mutate({ action: "reactivate", studentIds: selectedIds })}>
+                    {tf("bulkReactivate")}
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={bulkMut.isPending} onClick={() => bulkMut.mutate({ action: "suspend", studentIds: selectedIds })}>
+                    {tf("bulkSuspend")}
+                  </Button>
+                  <select
+                    value={bulkGroupId}
+                    onChange={(e) => setBulkGroupId(e.target.value)}
+                    aria-label={tf("group")}
+                    className="h-8 rounded-control border border-border bg-surface px-2 text-xs text-fg"
+                  >
+                    <option value="">{tf("choose")}</option>
+                    {(groupsQ.data ?? []).filter((g) => !g.archived).map((g) => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
+                  <Button
+                    size="sm"
+                    disabled={!bulkGroupId || bulkMut.isPending}
+                    onClick={() => bulkMut.mutate({ action: "add_to_group", studentIds: selectedIds, groupId: bulkGroupId })}
+                  >
+                    {tf("bulkAddToGroup")}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
           {students.map((s) => (
             <Card key={s.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
+              {isAdmin && (
+                <input
+                  type="checkbox"
+                  aria-label={tf("selectStudent", { name: s.name })}
+                  checked={selectedIds.includes(s.id)}
+                  onChange={(e) =>
+                    setSelectedIds((prev) => (e.target.checked ? [...prev, s.id] : prev.filter((id) => id !== s.id)))
+                  }
+                  className="size-4 shrink-0"
+                />
+              )}
               <Link
                 href={`/students/${s.id}`}
                 className="-m-1 flex min-w-0 flex-1 items-center gap-3 rounded-field p-1 hover:bg-surface-hover"

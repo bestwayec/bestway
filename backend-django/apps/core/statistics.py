@@ -92,8 +92,11 @@ def csv(headers,rows):
 
 
 def students_csv(group_id=None):
+    from .classroom_roster import active_enrollments
+
     rows=m.StudentProfile.objects.filter(user__is_active=True).select_related('user','group').order_by('user__name')
-    if group_id: rows=rows.filter(group_id=group_id)
+    if group_id:
+        rows = rows.filter(user_id__in=active_enrollments(group_id=group_id).values('student_id'))
     out=[]
     for row in rows:
         parent_ids=list(m.ParentStudent.objects.filter(student_id=row.user_id).values_list('parent_user_id',flat=True))
@@ -113,13 +116,20 @@ def payments_csv(year,month=None):
 
 
 def group_results_csv(group_id):
-    students = m.StudentProfile.objects.filter(group_id=group_id, user__is_active=True).select_related('user').order_by('user__name')
-    student_ids = [s.user_id for s in students]
-    attempts = (
-        m.MockAttempt.objects.filter(student_id__in=student_ids)
+    from .classroom_roster import member_profiles
+    from .teacher_analytics import classroom_attempts
+
+    attempts = list(
+        classroom_attempts(group_id)
         .select_related('exam', 'student__user')
         .order_by('student__user__name', '-finished_at', '-started_at')
     )
+    current_students = list(member_profiles(group_id).filter(user__is_active=True).select_related('user').order_by('user__name'))
+    current_ids = {s.user_id for s in current_students}
+    extra_ids = {a.student_id for a in attempts if a.student_id not in current_ids}
+    extra_students = list(m.StudentProfile.objects.filter(user_id__in=extra_ids).select_related('user')) if extra_ids else []
+    students = sorted([*current_students, *extra_students], key=lambda s: (s.user.name or '').casefold())
+    student_ids = [s.user_id for s in students]
     student_attempts = {}
     for att in attempts:
         student_attempts.setdefault(att.student_id, []).append(att)

@@ -4,10 +4,10 @@ Branch `feat/bestway-5-smart-classroom`, based on fetched `origin/main` at `910e
 
 | Phase | Status |
 | --- | --- |
-| 1. Universal Classroom and Administrator Management | Memberships, invitation and approval flows, admin roster controls, assignment scoping, and practice grants implemented. Historical teacher access, legacy reconciliation decisions, and verified account merging remain open. |
-| 2. Premium UI, Results, and Live Exam Guard | Pending. Existing Exam 4.1 safeguards still apply. |
-| 3. Telegram and Teacher Intelligence | Classroom enrollment command uses the shared invitation service. Live Telegram and remaining teacher intelligence work are pending. |
-| 4. Integration and delivery | Final integration PR and hosted CI pending. Manual merge belongs to the owner. |
+| 1. Universal Classroom and Administrator Management | Completed. Unified multi-group memberships across exports/payments/points/vocabulary/live-exam, historical teacher authorization, admin student management overview + bulk operations, and safe account reconciliation (`AccountReconciliationLog`, `core.0031`). |
+| 2. Premium UI, Results, and Live Exam Guard | In progress next. |
+| 3. Telegram and Teacher Intelligence | Classroom enrollment command uses the shared invitation service. Remaining teacher intelligence & Telegram classroom binding/reports pending. |
+| 4. Integration and delivery | Pending. |
 
 ## Verified locally
 

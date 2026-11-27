@@ -5,6 +5,7 @@ from apps.exams import analytics_service
 from apps.bamboozle import views as bamboozle_views
 from django.urls import path
 
+from . import account_reconciliation_views as reconciliation
 from . import article_views as articles
 from . import assessment_ranking_views as assessment_rankings
 from . import assessment_views as assessment
@@ -464,8 +465,13 @@ urlpatterns = [
     path('gallery/<str:identifier>/image', content.card_image), path('gallery/<str:identifier>', content.card),
     path('teachers', content.cards, {'teacher':True}), path('teachers/all', content.all_cards, {'teacher':True}),
     path('teachers/<str:identifier>/photo', content.card_image, {'teacher':True}), path('teachers/<str:identifier>', content.card, {'teacher':True}),
-    path("users", user_admin.users), path("users/<str:user_id>", user_admin.user),
+    path("users", user_admin.users), path("users/bulk", user_admin.bulk_users),
+    path("users/reconciliation", reconciliation.duplicates_view),
+    path("users/reconciliation/preview", reconciliation.preview_view),
+    path("users/reconciliation/merge", reconciliation.merge_view),
+    path("users/<str:user_id>", user_admin.user),
     path("users/<str:user_id>/memberships", user_admin.student_memberships),
+    path("users/<str:user_id>/overview", user_admin.student_overview),
     path("topics", topic_views.topics_view),
     path("topics/", topic_views.topics_view),
     path("topics/<str:topic_id>", topic_views.topic_detail_view),

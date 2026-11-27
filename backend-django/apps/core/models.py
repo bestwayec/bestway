@@ -1220,3 +1220,21 @@ class TelegramOutbox(models.Model):
         db_table = "TelegramOutbox"
         indexes = [models.Index(fields=["status", "next_attempt_at"], name="telegram_outbox_due"),
                    models.Index(fields=["recipient_id", "kind"], name="telegram_outbox_recipient")]
+
+
+class AccountReconciliationLog(models.Model):
+    """Immutable audit and recovery record of an administrator-executed account merge."""
+
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    canonical_user_id = models.CharField(max_length=255, db_index=True)
+    source_user_id = models.CharField(max_length=255, db_index=True)
+    actor_id = models.CharField(max_length=255)
+    reason = models.TextField()
+    identity_basis = models.CharField(max_length=64)
+    snapshot_before = models.JSONField(default=dict)
+    transferred_summary = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "AccountReconciliationLog"
+        ordering = ["-created_at"]

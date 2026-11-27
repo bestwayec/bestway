@@ -35,19 +35,21 @@ STAFF_ROLES = ("teacher", "admin", "super_admin")
 
 
 def student_visibility(user):
-    """Q filter of the sets a non-staff user may see: sets created by the teacher of
-    their own group, sets assigned to their group, and their own sets. Staff see all.
+    """Q filter of the sets a non-staff user may see: sets created by the teachers of
+    all their active groups, sets assigned to their groups, and their own sets. Staff see all.
     Returns None for staff (no filter)."""
-    from apps.legacy_schema.models import Group, StudentProfile
+    from apps.legacy_schema.models import Group
+    from .classroom_roster import student_group_ids
+
     if getattr(user, "role", None) in STAFF_ROLES:
         return None
     visible = Q(created_by_id=user.id)
-    group_id = StudentProfile.objects.filter(user_id=user.id).values_list("group_id", flat=True).first()
-    if group_id:
-        visible |= Q(group_id=group_id, is_public=True)
-        teacher_id = Group.objects.filter(id=group_id).values_list("teacher_id", flat=True).first()
-        if teacher_id:
-            visible |= Q(created_by_id=teacher_id, group_id__isnull=True, is_public=True)
+    group_ids = list(student_group_ids(user.id))
+    if group_ids:
+        visible |= Q(group_id__in=group_ids, is_public=True)
+        teacher_ids = list(Group.objects.filter(id__in=group_ids, teacher_id__isnull=False).values_list("teacher_id", flat=True).distinct())
+        if teacher_ids:
+            visible |= Q(created_by_id__in=teacher_ids, group_id__isnull=True, is_public=True)
     return visible
 
 

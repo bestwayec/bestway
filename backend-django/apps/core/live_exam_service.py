@@ -633,8 +633,10 @@ def get_monitor_data(actor, room_id: str) -> dict:
 
     # Also include unjoined group roster students if session is bound to a groupId
     if session.get("groupId"):
+        from .classroom_roster import member_profiles
+
         roster = list(
-            StudentProfile.objects.filter(group_id=session["groupId"])
+            member_profiles(session["groupId"])
             .select_related("user")
             .order_by("user__name")
         )

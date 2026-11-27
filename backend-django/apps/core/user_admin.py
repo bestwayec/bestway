@@ -189,7 +189,7 @@ def users(request):
     from .views import _lookup_user, _user_shape
     with connection.cursor() as cursor: items=[_user_shape(_lookup_user(cursor,user.id),True) for user in rows.order_by('-created_at')[start:start+q['limit']]]
     if request.user.role == 'teacher':
-        own = set(StudentProfile.objects.filter(group__teacher_id=request.user.id).values_list('user_id', flat=True))
+        own = set(active_enrollments(group__teacher_id=request.user.id).values_list('student_id', flat=True))
         for item in items:
             if item['id'] not in own:
                 item['phone'] = mask_phone(item.get('phone'))
@@ -332,8 +332,181 @@ def student_memberships(request, user_id):
     return success([
         {
             "groupId": row.group_id, "name": row.group.name,
+            "teacherId": row.group.teacher_id,
             "teacherName": row.group.teacher.name if row.group.teacher else None,
             "startedAt": row.started_at, "source": row.source, "archived": row.group_id in archived,
         }
         for row in rows
     ])
+
+
+@api_view(["GET"])
+@permission_classes([Authenticated])
+def student_overview(request, user_id):
+    """Comprehensive student overview for admin & authorized teachers: memberships, teachers, exams, attendance, homework, vocab, payments."""
+    from apps.legacy_schema.models import Attendance, MockAttempt, Payment
+    from .classroom_results import assignment_attempts
+    from .models import ClassroomArchive, HomeworkSubmission, UserWeakWord, VocabularyAttempt
+
+    require_role(request, "admin", "super_admin", "teacher")
+    target = User.objects.filter(id=user_id, role="student").first()
+    if target is None:
+        raise ContractAPIException("STUDENT_NOT_FOUND", "O'quvchi topilmadi", 404)
+    if request.user.role == "teacher" and not active_enrollments(student_id=user_id, group__teacher_id=request.user.id).exists():
+        raise ContractAPIException("FORBIDDEN", "Bu o'quvchi sizning guruhingizda emas", 403)
+
+    rows = list(active_enrollments(student_id=user_id).select_related("group__teacher").order_by("group__name", "group_id"))
+    archived = set(ClassroomArchive.objects.filter(group_id__in=[r.group_id for r in rows]).values_list("group_id", flat=True))
+    memberships = [
+        {
+            "groupId": r.group_id,
+            "name": r.group.name,
+            "teacherId": r.group.teacher_id,
+            "teacherName": r.group.teacher.name if r.group.teacher else None,
+            "startedAt": r.started_at,
+            "source": r.source,
+            "archived": r.group_id in archived,
+        }
+        for r in rows
+    ]
+    teachers_map = {}
+    for r in rows:
+        if r.group.teacher_id and r.group.teacher:
+            teachers_map[r.group.teacher_id] = {
+                "id": r.group.teacher_id,
+                "name": r.group.teacher.name,
+                "groupName": r.group.name,
+            }
+
+    attempts_qs = MockAttempt.objects.filter(student_id=user_id).select_related("exam").order_by("-started_at")
+    if request.user.role == "teacher":
+        attempts_qs = assignment_attempts(attempts_qs, teacher_id=request.user.id, include_practice_shares=True)
+    exams = [
+        {
+            "id": a.id,
+            "examId": a.exam_id,
+            "examTitle": a.exam.title if a.exam else "",
+            "examType": a.exam.type if a.exam else "",
+            "status": a.status,
+            "mode": a.mode,
+            "overallBand": a.overall_band,
+            "overallScore": a.overall_score,
+            "cefrLevel": a.cefr_level,
+            "startedAt": a.started_at,
+            "finishedAt": a.finished_at,
+        }
+        for a in attempts_qs[:25]
+    ]
+
+    att_qs = Attendance.objects.filter(student_id=user_id).select_related("group").order_by("-date")
+    if request.user.role == "teacher":
+        att_qs = att_qs.filter(group__teacher_id=request.user.id)
+    att_rows = list(att_qs[:30])
+    att_summary = {"present": 0, "absent": 0, "late": 0}
+    for row in att_rows:
+        if row.state in att_summary:
+            att_summary[row.state] += 1
+
+    hw_qs = HomeworkSubmission.objects.filter(student_id=user_id).select_related("assignment__cohort__classroom").order_by("-completed_at")
+    if request.user.role == "teacher":
+        hw_qs = hw_qs.filter(
+            Q(assignment__cohort__classroom__teacher_id=request.user.id)
+            | Q(assignment__cohort__teacher_id=request.user.id)
+        )
+    homework = [
+        {
+            "assignmentId": h.assignment_id,
+            "title": h.assignment.title if h.assignment else "",
+            "groupName": (h.assignment.cohort.classroom.name if h.assignment and h.assignment.cohort and h.assignment.cohort.classroom else (h.assignment.cohort.name if h.assignment and h.assignment.cohort else None)),
+            "status": h.status,
+            "scorePercent": h.score_percent,
+            "isPassed": h.is_passed,
+            "completedAt": h.completed_at,
+        }
+        for h in hw_qs[:25]
+    ]
+
+    vocab_qs = VocabularyAttempt.objects.filter(student_id=user_id).select_related("set").order_by("-completed_at")[:20]
+    vocabulary = [
+        {
+            "id": v.id,
+            "setId": v.set_id,
+            "setTitle": v.set.title if v.set else "",
+            "score": v.score,
+            "totalWords": v.total_words,
+            "percentage": v.percentage,
+            "mode": v.mode,
+            "completedAt": v.completed_at,
+        }
+        for v in vocab_qs
+    ]
+    weak_words_count = UserWeakWord.objects.filter(student_id=user_id, is_mastered=False).count()
+
+    year = timezone.localdate().year
+    payments = list(
+        Payment.objects.filter(student_id=user_id, year=year)
+        .order_by("month")
+        .values("month", "year", "state", "amount", "note")
+    )
+
+    return success({
+        "memberships": memberships,
+        "teachers": list(teachers_map.values()),
+        "exams": exams,
+        "attendance": {
+            "summary": att_summary,
+            "records": [
+                {"date": r.date, "state": r.state, "groupId": r.group_id, "groupName": r.group.name if r.group else None}
+                for r in att_rows
+            ],
+        },
+        "homework": homework,
+        "vocabulary": {"attempts": vocabulary, "weakWordsCount": weak_words_count},
+        "payments": payments,
+    })
+
+
+@api_view(["POST"])
+@permission_classes([Authenticated])
+@transaction.atomic
+def bulk_users(request):
+    require_role(request, "admin", "super_admin")
+    data = payload(request, {"action", "studentIds", "groupId"})
+    action = data.get("action")
+    student_ids = data.get("studentIds")
+    if action not in ("approve", "suspend", "reactivate", "add_to_group"):
+        invalid("Unsupported bulk action")
+    if not isinstance(student_ids, list) or not 1 <= len(student_ids) <= 100 or any(not isinstance(x, str) or not x for x in student_ids):
+        invalid("studentIds must contain between 1 and 100 user IDs")
+
+    unique_ids = sorted(set(student_ids))
+    if action == "suspend" and request.user.id in unique_ids:
+        raise ContractAPIException("FORBIDDEN", "O'z akkauntingizni bloklay olmaysiz", 403)
+
+    users_qs = User.objects.select_for_update().filter(id__in=unique_ids, role="student").order_by("id")
+    matched = list(users_qs)
+    if len(matched) != len(unique_ids):
+        raise ContractAPIException("STUDENT_NOT_FOUND", "Tanlangan o'quvchilardan biri topilmadi", 404)
+
+    updated = 0
+    if action == "approve":
+        updated = StudentProfile.objects.filter(user_id__in=unique_ids).update(is_approved=True)
+    elif action == "suspend":
+        updated = User.objects.filter(id__in=unique_ids).update(is_active=False, updated_at=timezone.now())
+        RefreshToken.objects.filter(user_id__in=unique_ids).delete()
+    elif action == "reactivate":
+        updated = User.objects.filter(id__in=unique_ids).update(is_active=True, updated_at=timezone.now())
+    elif action == "add_to_group":
+        group_id = data.get("groupId")
+        if not isinstance(group_id, str) or not group_id:
+            invalid("groupId is required")
+        from . import groups as group_service
+
+        group_service.get_group(group_id, lock=True)
+        assert_active(group_id)
+        for u in matched:
+            if group_service.add_member(group_id, u, source="staff"):
+                updated += 1
+
+    audit(request.user, f"users.bulk_{action}", "user", ",".join(unique_ids[:10]), new={"count": len(unique_ids), "updated": updated, "groupId": data.get("groupId")})
+    return success({"action": action, "updated": updated, "total": len(unique_ids)})

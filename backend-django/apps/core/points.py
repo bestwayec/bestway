@@ -16,9 +16,11 @@ from .system_settings import audit
 
 
 def assert_can_view(actor, student_id, *, started_at=None):
+    from .classroom_roster import active_enrollments
+
     if actor.role in ('admin', 'super_admin') or (actor.role == 'student' and actor.id == student_id): return
     if actor.role == 'parent' and ParentStudent.objects.filter(parent_user_id=actor.id, student_id=student_id).exists(): return
-    if actor.role == 'teacher' and StudentProfile.objects.filter(user_id=student_id, group__teacher_id=actor.id).exists():
+    if actor.role == 'teacher' and active_enrollments(student_id=student_id, group__teacher_id=actor.id).exists():
         from .classroom_roster import assert_teacher_attempt_period
 
         assert_teacher_attempt_period(actor, student_id, started_at)
@@ -37,10 +39,12 @@ def history(actor, student_id):
 
 
 def adjust(actor, student_id, data):
+    from .classroom_roster import active_enrollments
+
     student = StudentProfile.objects.filter(user_id=student_id).select_related('group', 'user').first()
     if student is None: raise ContractAPIException('STUDENT_NOT_FOUND', "O'quvchi topilmadi", 404)
     if actor.role == 'teacher':
-        if not student.group_id or student.group.teacher_id != actor.id:
+        if not active_enrollments(student_id=student_id, group__teacher_id=actor.id).exists():
             raise ContractAPIException('FORBIDDEN', "Bu o'quvchi sizning guruhingizda emas", 403)
         limit = game.setting('teacherPointLimit')
         if abs(data['change']) > game.numeric(limit):
@@ -86,9 +90,12 @@ def rank_rows(rows):
 
 
 def leaderboard(query):
+    from .classroom_roster import active_enrollments
+
     # Staff accounts that also own a StudentProfile (e.g. a super_admin testing the app) are not ranked.
     rows = StudentProfile.objects.filter(user__is_active=True, user__role='student').select_related('user')
-    if query.get('groupId'): rows = rows.filter(group_id=query['groupId'])
+    if query.get('groupId'):
+        rows = rows.filter(user_id__in=active_enrollments(group_id=query['groupId']).values('student_id'))
     # Moment the current total was reached = latest points change (or account creation).
     last_change = PointsLog.objects.filter(student_id=OuterRef('pk')).order_by('-created_at').values('created_at')[:1]
     rows = rows.annotate(reached_at=Coalesce(Subquery(last_change), F('created_at')))

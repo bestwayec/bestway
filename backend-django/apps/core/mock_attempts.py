@@ -879,7 +879,11 @@ def assert_view(actor, student_id, *, started_at=None):
         return
     with connection.cursor() as cursor:
         if actor.role == 'teacher':
-            cursor.execute('SELECT 1 FROM "StudentProfile" s JOIN "Group" g ON g.id=s."groupId" WHERE s."userId"=%s AND g."teacherId"=%s', [student_id, actor.id])
+            cursor.execute(
+                'SELECT 1 FROM core_classroomenrollment ce JOIN "Group" g ON g.id = ce.group_id '
+                'WHERE ce.student_id = %s AND ce.ended_at IS NULL AND g."teacherId" = %s',
+                [student_id, actor.id],
+            )
         elif actor.role == 'parent':
             cursor.execute('SELECT 1 FROM "ParentStudent" WHERE "parentUserId"=%s AND "studentId"=%s', [actor.id, student_id])
         else:

@@ -96,23 +96,30 @@ def get_group_exam_export_data(actor: User, group_id: str, exam_id: str) -> Dict
     if exam is None:
         fail("EXAM_NOT_FOUND", "Imtihon topilmadi", 404)
 
-    # 1. Group student roster
-    roster = list(
-        member_profiles(group.id)
-        .select_related("user")
-        .order_by("user__name", "user_id")
-    )
-    student_ids = [student.user_id for student in roster]
-
-    # 2. Latest attempt per student for this exam (in-memory grouping for SQLite/PostgreSQL compatibility)
+    # 1. Group student roster + historical participants who took this exam in this group
     attempts_qs = (
-        classroom_attempts(group_id).filter(exam_id=exam.id, student_id__in=student_ids)
+        classroom_attempts(group_id).filter(exam_id=exam.id)
         .select_related("exam").order_by("-started_at", "-id")
     )
     attempts_by_student: Dict[str, MockAttempt] = {}
     for att in attempts_qs:
         if att.student_id not in attempts_by_student:
             attempts_by_student[att.student_id] = att
+
+    current_roster = list(
+        member_profiles(group.id)
+        .select_related("user")
+        .order_by("user__name", "user_id")
+    )
+    roster_ids = {student.user_id for student in current_roster}
+    historical_ids = set(attempts_by_student.keys()) - roster_ids
+    historical_roster = list(
+        StudentProfile.objects.filter(user_id__in=historical_ids)
+        .select_related("user")
+        .order_by("user__name", "user_id")
+    ) if historical_ids else []
+    roster = sorted([*current_roster, *historical_roster], key=lambda s: ((s.user.name if s.user else "").casefold(), s.user_id))
+    student_ids = [student.user_id for student in roster]
 
     attempt_ids = [att.id for att in attempts_by_student.values()]
     classroom_assessments(list(attempts_by_student.values()))

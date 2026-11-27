@@ -548,10 +548,7 @@ def teacher_grade_attempt(actor, attempt_id: str, data: dict) -> dict:
         fail('MOCK_ATTEMPT_NOT_FOUND', 'Attempt not found', 404)
 
     if actor.role == 'teacher':
-        student = getattr(attempt, 'student', None)
-        student_group = getattr(student, 'group', None) if student else None
-        if not student_group or getattr(student_group, 'teacher_id', None) != actor.id:
-            fail('FORBIDDEN', 'Ushbu talaba sizning guruhingizga biriktirilmagan', 403)
+        authorize_attempt(actor, attempt, grade=True)
     if attempt.status == 'in_progress':
         fail('MOCK_ATTEMPT_NOT_SUBMITTED', 'Imtihon hali topshirilmagan', 409)
 
