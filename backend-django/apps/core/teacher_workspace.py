@@ -365,17 +365,7 @@ def assign_homework(actor, group_id, data: dict) -> dict:
                                               min_pass_percent=plan['minPassPercent']), plan['title'], vocabulary_set=vocab,
                                   vocabulary_mode=plan.get('vocabularyMode'))
         assignment_id = made['id']
-        transaction.on_commit(lambda: _notify_homework(assignment_id))
         return dict(created=True, kind=plan['type'], id=assignment_id, title=plan['title'], groupId=group.id)
-
-
-def _notify_homework(assignment_id):
-    try:
-        from . import telegram_notify
-        telegram_notify.homework_assigned(assignment_id)
-    except Exception:  # noqa: BLE001 - a notification problem never undoes an assignment
-        import logging
-        logging.getLogger(__name__).exception('homework notification failed')
 
 
 def assign_options(actor, group_id) -> dict:

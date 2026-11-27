@@ -1,42 +1,26 @@
 # BESTWAY 5.0 progress
 
-Branch `feat/bestway-5-smart-classroom`, based on fetched `origin/main` at `910e7d92bf3d1af5b619affd4cc0120d0eb2f8a0`. The commit containing this checkpoint is the Phase 1 foundation. Use `git log -1 --oneline` to identify it after checkout.
+Recovery of [PR #228](https://github.com/bestwayec/bestway/pull/228) began at the fetched head `b25f3d4` on `feat/bestway-5-smart-classroom` with base `main` at `910e7d92`. The pull request remains open for manual review.
 
-| Phase | Status |
+| Area | Recovery status |
 | --- | --- |
-| 1. Universal Classroom and Administrator Management | Completed. Unified multi-group memberships across exports/payments/points/vocabulary/live-exam, historical teacher authorization, admin student management overview + bulk operations, and safe account reconciliation (`AccountReconciliationLog`, `core.0031`). |
-| 2. Premium UI, Results, and Live Exam Guard | Completed. Server-side Answer Disclosure gating (`classroom_results.py`, `mock_attempts.py`, `mock_media.py`), Live Exam Guard 5.0 incident pipeline (`ExamIntegrityIncident`, `core.0032`, supervisor scoping, offline batch sync, bell/toast review drawer, group live guard monitor), interactive HeroShowcase & BentoFeatures landing upgrade, Vocabulary action bar wrap fix, Student multi-group dashboard & join modal, and Group Live Guard tab. |
-| 3. Telegram and Teacher Intelligence | Completed. Classroom Telegram group binding/disconnect service (`telegram_classroom_service.py`, `/bind`, `/unbind`, `GET/POST/DELETE /v1/groups/<id>/telegram-binding`) with immediate queued outbox invalidation, exam announcements, aggregate group reports with small-group privacy suppression (< 5) & Provisional labeling, configurable Asia/Tashkent student reminders adapting to deadline changes, private teacher monitoring in bot menu (`tk:<group_id>`), and finalized Writing/Speaking grade propagation into `HomeworkSubmission` & Telegram notifications (`homework_scoring.py`, `assessment.py`, `mock_grading.py`). |
-| 4. Integration and delivery | Completed. Cumulative verification passed across Django checks, Phase 1–4 pytest integration & acceptance suites, TypeScript, ESLint, Next.js build, and core Vitest component/i18n/design-system suites. Branch pushed and PR prepared for owner review. |
+| Classroom and administration | Multi-group access uses active memberships. An explicit transfer closes only the selected source. The PostgreSQL classroom journey and Chromium invitation and transfer checks passed. |
+| Result Center and disclosure | The existing review UI shows original evidence when authorized. The skill cards show objective answer counts and distinguish pending grading from a numeric mark. Newly assigned exams record a participant snapshot. |
+| Live Exam Guard | The server derives the supervisor from the assignment or live session. Focus and network observations have bounded recovery and are scoped to the current supervisor. |
+| Account reconciliation | A super administrator records an internal verification case for both student accounts. A different administrator can use that verification ID within 24 hours. The preview binds the actor, account pair, verification, options and current data. |
+| Telegram | Group bindings require a Telegram admin with a linked identity and confirmation in the target chat. Existing bindings require confirmation again. Reports omit named results and suppress the aggregate score for small groups. The PostgreSQL lifecycle suite verifies announcements, reminders, provisional and final reports using synthetic records. |
+| Delivery | Review GitHub for the exact-head status of required checks. Merge readiness depends on those checks and the critical acceptance tests. |
 
-## Verified locally
+## Answer release policy
 
-- The PostgreSQL upgrade fixture preserved Group and Cohort ownership, attendance, vocabulary progress, and historical exam answers. The backfilled active enrollment kept its unknown start date. The Prisma ledger and Django schema check passed.
-- Chromium confirmed invitation preview and join, approval authorization, repeated redemption, revocation, persistence after re-login, and one available place under simultaneous redemption by two learners.
-- The targeted PostgreSQL and Django tests for classroom analytics, result grants, group scores, and authorization passed. The full backend run before the last fixture correction had 1,717 passing, one failure caused by a stale mock target, and four intentional skips for the absent NestJS tree. The corrected target passed the focused rerun.
+A new assignment can release answers early when each participant has a finalized result and all relevant timed attempts have ended. A legacy assignment without a participant snapshot uses the published deadline and active attempts. An individual attempt with an extended timer can delay release past that deadline. A linked result whose assignment was removed keeps its answers restricted. Reopening or reviving a closed assigned examination is blocked after the published deadline.
+
+The assigned-exam workflow supports one attempt per participant. Separate scheduled retake slots, advance individual deadline overrides, and explicit excusal or withdrawal waivers have no assignment controls in this release. Membership removal does not shrink a saved participant snapshot.
+
+## Verification
+
+- Hosted CI on `e3fed55` passed Django pytest and the frontend job. The downstream PostgreSQL grading fixture then exposed a missing assignment link. The recovery updates those fixtures to exercise assignment-based access and checks the final SHA separately.
+- Focused local checks passed for classroom transfers, assignment-scoped assessment access, account verification, Telegram permissions and outbox invalidation, and live exam observation recovery.
+- Telegram delivery checks use mocked provider calls. Browser verification uses Chromium and synthetic accounts.
 
 See [Database audit](BESTWAY_5_DATABASE_AUDIT.md) and [Classroom architecture](BESTWAY_5_CLASSROOM_ARCHITECTURE.md).
-
-## Pull Request
-
-**PR #228**: https://github.com/bestwayec/bestway/pull/228
-- Base: `main` (`910e7d92`)
-- Head: `feat/bestway-5-smart-classroom` (`ebccb097`)
-- Status: **Open — awaiting owner review and merge**
-- 99 files changed, +7,290 / -623 lines, 4 Django migrations
-
-## Final Verification (2026-11-27)
-
-| Check | Result |
-| --- | --- |
-| Django pytest (33 tests) | ✅ 33 passed |
-| TypeScript `tsc --noEmit` | ✅ 0 errors |
-| ESLint | ✅ 0 errors (414 pre-existing warnings) |
-| Next.js production build | ✅ success |
-| Vitest focused specs | ✅ 8/8 passed |
-
-## Production Deployment Notes
-
-1. Run `python manage.py migrate core` to apply migrations 0029-0032
-2. Telegram bot commands `/bind` and `/unbind` require bot restart
-3. Redis required for exam guard event stream

@@ -255,6 +255,8 @@ def teacher_assignments_view(request):
 
 
 def create_assignment(cohort, data, title, *, vocabulary_set=None, vocabulary_mode=None):
+    from .telegram_notify import homework_assigned
+
     lesson_id = data.get("lesson_id")
     lesson = None
     if lesson_id:
@@ -292,6 +294,8 @@ def create_assignment(cohort, data, title, *, vocabulary_set=None, vocabulary_mo
         deadline=deadline,
         min_pass_percent=min_pass,
     )
+    if classrooms.is_linked(cohort):
+        transaction.on_commit(lambda: homework_assigned(assignment.id), robust=True)
 
     return assignment_payload(assignment)
 

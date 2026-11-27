@@ -138,8 +138,11 @@ def test_answer_disclosure_withholds_keys_until_all_submit_or_deadline(pg_guard_
     assert res1["answerDisclosure"]["disclosed"] is False
     assert "correctAnswers" not in res1["sections"][0]["groups"][0]["questions"][0]
 
-    # Once student 2 also submits, answers unlock even before deadline
-    MockAttempt.objects.create(
+    # A membership change cannot drop a participant from the exam's release policy.
+    groups.remove_student(admin, group.id, s2.id)
+    assert not c1.get(f"/v1/mock/attempts/{att1.id}").json()["data"]["answerDisclosure"]["disclosed"]
+
+    peer_attempt = MockAttempt.objects.create(
         id=str(uuid4()), exam=exam, student_id=s2.id, status="completed",
         mode="timed", flow_mode="full_test", started_at=timezone.now(),
         submitted_at=timezone.now(), finished_at=timezone.now(), anti_cheat_count=0,
@@ -148,6 +151,19 @@ def test_answer_disclosure_withholds_keys_until_all_submit_or_deadline(pg_guard_
     res2 = c1.get(f"/v1/mock/attempts/{att1.id}").json()["data"]
     assert res2["answerDisclosure"]["disclosed"] is True
     assert res2["sections"][0]["groups"][0]["questions"][0]["correctAnswers"] == ["SECRET_KEY"]
+
+    # An individual timer may still be running when the common deadline expires.
+    assignment.deadline = timezone.now() - timedelta(minutes=1)
+    assignment.save(update_fields=["deadline"])
+    MockAttempt.objects.filter(pk=peer_attempt.id).update(
+        status="in_progress", submitted_at=None, overall_deadline_at=timezone.now() + timedelta(minutes=30),
+    )
+    pending = c1.get(f"/v1/mock/attempts/{att1.id}").json()["data"]
+    assert pending["answerDisclosure"]["reason"] == "ACTIVE_ATTEMPT_BLOCKED"
+    assignment.delete()
+    missing = c1.get(f"/v1/mock/attempts/{att1.id}").json()["data"]
+    assert missing["answerDisclosure"]["reason"] == "ASSIGNMENT_UNAVAILABLE"
+    assert "correctAnswers" not in missing["sections"][0]["groups"][0]["questions"][0]
 
 
 def test_live_exam_guard_routing_correlation_ack_and_unauthorized_rejection(pg_guard_tables):

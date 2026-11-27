@@ -265,8 +265,10 @@ def speaking_start_view(request, attempt_id, question_id):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@exam_session.serialize
 def cheat_view(request, attempt_id):
     student(request)
+    exam_session.guard_observation(request, attempt_id)
     allowed = {
         'event', 'reason', 'type', 'anomaly', 'details', 'timestamp', 'time',
         'description', 'detail', 'meta', 'payload', 'window', 'count',

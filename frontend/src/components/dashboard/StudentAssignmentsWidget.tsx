@@ -104,11 +104,18 @@ export function StudentAssignmentsWidget({ groupName, cohortFilterId }: StudentA
   const [invitation, setInvitation] = React.useState<{ groupName: string; requiresApproval: boolean } | null>(null);
 
   React.useEffect(() => {
-    const code = new URLSearchParams(window.location.hash.slice(1)).get("join");
-    if (!code || !/^BW5-[A-F0-9]{24}$/i.test(code)) return;
-    window.history.replaceState(null, "", window.location.pathname + window.location.search);
-    setInviteCode(code.toUpperCase());
-    setJoinModalOpen(true);
+    function openInvitation() {
+      const code = new URLSearchParams(window.location.hash.slice(1)).get("join");
+      if (!code || !/^BW5-[A-F0-9]{24}$/i.test(code)) return;
+      window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
+      setInvitation(null);
+      setInviteCode(code.toUpperCase());
+      setJoinModalOpen(true);
+    }
+
+    openInvitation();
+    window.addEventListener("hashchange", openInvitation);
+    return () => window.removeEventListener("hashchange", openInvitation);
   }, []);
 
   const handleJoinCohort = async (e: React.FormEvent) => {

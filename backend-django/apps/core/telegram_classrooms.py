@@ -9,7 +9,7 @@ from . import telegram_delivery as api
 from . import telegram_links as links
 
 
-def command(chat_id, text, *, chat_type, sender_id=None, chat_title=""):
+def command(chat_id, text, *, chat_type, sender_id=None):
     if not text:
         return False
     command_name, *args = text.split(maxsplit=3)

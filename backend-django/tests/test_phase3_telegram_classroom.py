@@ -35,6 +35,7 @@ from apps.legacy_schema.models import (
     MockQuestionGroup,
     MockSection,
     Notification,
+    ParentStudent,
     SpeechTranscript,
     StudentProfile,
     User,
@@ -50,6 +51,7 @@ def pg_phase3_tables():
         Group,
         StudentProfile,
         Notification,
+        ParentStudent,
         AuditLog,
         MockExam,
         MockExamImport,
@@ -416,3 +418,71 @@ def test_teacher_bot_menu_includes_binding_and_monitoring(pg_phase3_tables):
     assert "Unreviewed guard alerts: 1" in sent_payloads[0][1]
     assert "Bot Student" in sent_payloads[1][1]
     assert "WINDOW_FOCUS_LOST" in sent_payloads[1][1]
+
+
+def test_exam_notifications_follow_submission_and_deadline(pg_phase3_tables):
+    from django.test import TestCase
+
+    from apps.core import homework_scoring
+    from apps.core.mock_submission_snapshots import notify as notify_hand_in
+
+    teacher = make_user("teacher", "Lifecycle Teacher", tg_chat="70051")
+    student = make_user("student", "Lifecycle Student", tg_chat="80051")
+    peer = make_user("student", "Lifecycle Peer", tg_chat="80052")
+    group = Group.objects.create(id=str(uuid4()), name="Lifecycle Cohort", teacher=teacher, created_at=timezone.now())
+    for member in (student, peer):
+        groups.add_student(teacher, group.id, member.id)
+    TelegramClassroomBinding.objects.create(
+        group=group, chat_id="-100880551", bound_by_id=teacher.id,
+        verified_telegram_id=teacher.telegram_chat_id, verified_at=timezone.now(),
+    )
+    exam = make_exam("Lifecycle IELTS")
+    client = APIClient()
+    client.force_authenticate(SimpleNamespace(id=teacher.id, name=teacher.name, role="teacher", is_authenticated=True))
+    deadline = timezone.now() + timedelta(minutes=45)
+    with TestCase.captureOnCommitCallbacks(execute=True):
+        result = client.post(f"/v1/groups/{group.id}/assignments", {
+            "title": "Lifecycle IELTS", "exam_id": exam.id, "deadline": deadline.isoformat(),
+        }, format="json")
+        assert result.status_code == 201, result.data
+    assignment_id = result.data["data"]["id"]
+    assert TelegramOutbox.objects.filter(dedupe_key__startswith=f"homework_assigned:{assignment_id}:").count() == 2
+    assert TelegramOutbox.objects.filter(group_id=group.id, dedupe_key__startswith=f"group_homework:{assignment_id}:").count() == 1
+
+    def hand_in(member, status):
+        now = timezone.now()
+        attempt = MockAttempt.objects.create(
+            id=str(uuid4()), exam=exam, student_id=member.id, status=status,
+            mode="timed", started_at=now, submitted_at=now, anti_cheat_count=0,
+            finished_at=now if status == "completed" else None,
+            raw_scores={"reading": {"score": 7, "max": 10}},
+            media_state={ASSIGNMENT_KEY: assignment_id},
+        )
+        notify_hand_in(attempt)
+        homework_scoring.propagate_attempt_finalization(attempt)
+        return attempt
+
+    pending = hand_in(student, "grading")
+    assert TelegramOutbox.objects.filter(dedupe_key__startswith=f"exam_grading:{pending.id}:").get().recipient_id == teacher.id
+    assert not TelegramOutbox.objects.filter(dedupe_key__startswith=f"hw_group_report:{assignment_id}:").exists()
+    notify.homework_deadline_sweep()
+    reminders = TelegramOutbox.objects.filter(dedupe_key__startswith=f"hw_deadline:{assignment_id}:")
+    assert list(reminders.values_list("recipient_id", flat=True)) == [peer.id]
+    notify.homework_deadline_sweep()
+    assert reminders.count() == 1
+
+    hand_in(peer, "completed")
+    reports = TelegramOutbox.objects.filter(group_id=group.id, dedupe_key__startswith=f"hw_group_report:{assignment_id}:")
+    assert reports.count() == 1
+    assert reports.get().dedupe_key.endswith(":provisional")
+    assert student.name not in reports.get().text and peer.name not in reports.get().text
+
+    pending.status = "completed"
+    pending.finished_at = timezone.now()
+    pending.save(update_fields=["status", "finished_at"])
+    homework_scoring.propagate_attempt_finalization(pending)
+    homework_scoring.propagate_attempt_finalization(pending)
+    assert reports.count() == 2
+    assert reports.filter(dedupe_key__endswith=":final").exists()
+    notify.homework_report_sweep(deadline + timedelta(seconds=1))
+    assert reports.count() == 2

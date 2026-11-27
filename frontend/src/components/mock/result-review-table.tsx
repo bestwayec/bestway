@@ -254,7 +254,7 @@ export function ResultReviewTable({
                   <thead className="text-xs text-fg-muted">
                     <tr className="border-b border-border">
                       <th scope="col" className="w-8 px-1.5 py-2 sm:w-12 sm:px-2">#</th>
-                      <th scope="col" className="hidden px-3 py-2 sm:table-cell">{t("question")}</th>
+                      <th scope="col" className="px-1.5 py-2 sm:px-3">{t("question")}</th>
                       <th scope="col" className="px-1.5 py-2 sm:px-3">{t("yourAnswer")}</th>
                       <th scope="col" className="px-1.5 py-2 sm:px-3">{t("key")}</th>
                       <th scope="col" className="w-8 px-1 py-2 sm:w-12 sm:px-3"><span className="sr-only">{t("mark")}</span></th>
