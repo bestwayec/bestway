@@ -7,6 +7,8 @@ from django.db import connection, transaction
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from common.api.exceptions import ContractAPIException
+
 from apps.core import account_reconciliation as recon
 from apps.core import assessment, groups, payments, points
 from apps.core.homework_scoring import ASSIGNMENT_KEY
@@ -179,12 +181,14 @@ def test_admin_bulk_actions_and_student_overview(pg_tables):
 
 def test_safe_account_reconciliation_blocks_conflicts_and_merges_cleanly(pg_tables):
     admin = make_user("admin", "Admin")
+    verifier = make_user("super_admin", "Independent verifier")
+    other_admin = make_user("admin", "Other admin")
     teacher_b = make_user("teacher", "Teacher B")
     student = make_user("student", "Student One")
     group_b = Group.objects.create(id=str(uuid4()), name="Multilevel B", teacher=teacher_b, created_at=timezone.now())
 
     dup_unverified = make_user("student", "Student One", phone="+998909998877")
-    preview_bad = recon.preview_merge(admin, dup_unverified.id, student.id)
+    preview_bad = recon.preview_merge(admin, dup_unverified.id, student.id, verified_ownership=True)
     assert preview_bad["canMerge"] is False
     assert any(b["code"] == "IDENTITY_UNVERIFIED" for b in preview_bad["blockers"])
 
@@ -201,7 +205,15 @@ def test_safe_account_reconciliation_blocks_conflicts_and_merges_cleanly(pg_tabl
         id=str(uuid4()), student_id=dup_phone.id, month=11, year=2026,
         state="unpaid", amount=0, method="manual", created_at=timezone.now(), updated_at=timezone.now(),
     )
-    preview_pay = recon.preview_merge(admin, dup_phone.id, student.id)
+    evidence = recon.record_verification(
+        verifier, dup_phone.id, student.id, method="checked_both_authenticated_accounts", reference="case-local-22",
+    )["verificationId"]
+    assert not recon.preview_merge(verifier, dup_phone.id, student.id, verification_id=evidence)["canMerge"]
+    invalid_option = auth_client(admin).post("/v1/users/reconciliation/preview", {
+        "sourceUserId": dup_phone.id, "canonicalUserId": student.id, "transferTelegram": "false",
+    }, format="json")
+    assert invalid_option.status_code == 400
+    preview_pay = recon.preview_merge(admin, dup_phone.id, student.id, verification_id=evidence)
     assert preview_pay["canMerge"] is False
     assert any(b["code"] == "PAYMENT_CONFLICT" for b in preview_pay["blockers"])
 
@@ -213,8 +225,16 @@ def test_safe_account_reconciliation_blocks_conflicts_and_merges_cleanly(pg_tabl
         created_at=timezone.now(), updated_at=timezone.now(),
     )
 
-    preview_ok = recon.preview_merge(admin, dup_phone.id, student.id)
+    preview_ok = recon.preview_merge(admin, dup_phone.id, student.id, verification_id=evidence)
     assert preview_ok["canMerge"] is True
+    options = dict(reason="Verified duplicate registration", confirm_text="MERGE", verification_id=evidence)
+    with pytest.raises(ContractAPIException, match="Avval|avval"):
+        recon.execute_merge(other_admin, dup_phone.id, student.id, preview_token=preview_ok["previewToken"], **options)
+    Attendance.objects.filter(student_id=dup_phone.id).update(state="absent")
+    with pytest.raises(ContractAPIException) as stale:
+        recon.execute_merge(admin, dup_phone.id, student.id, preview_token=preview_ok["previewToken"], **options)
+    assert stale.value.contract_code == "PREVIEW_STALE"
+    preview_ok = recon.preview_merge(admin, dup_phone.id, student.id, verification_id=evidence)
     merged = recon.execute_merge(
         admin,
         dup_phone.id,
@@ -222,6 +242,7 @@ def test_safe_account_reconciliation_blocks_conflicts_and_merges_cleanly(pg_tabl
         reason="Verified duplicate phone registration",
         confirm_text="MERGE",
         preview_token=preview_ok["previewToken"],
+        verification_id=evidence,
     )
     assert merged["merged"] is True
     assert User.objects.get(id=dup_phone.id).is_active is False

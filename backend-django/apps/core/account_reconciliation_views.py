@@ -19,7 +19,7 @@ def duplicates_view(request):
 @api_view(["POST"])
 @permission_classes([roles("admin", "super_admin")])
 def preview_view(request):
-    data = payload(request, {"sourceUserId", "canonicalUserId", "verifiedOwnership", "transferTelegram"})
+    data = payload(request, {"sourceUserId", "canonicalUserId", "verificationId", "verifiedOwnership", "transferTelegram"})
     source_id = data.get("sourceUserId")
     canonical_id = data.get("canonicalUserId")
     if not isinstance(source_id, str) or not source_id or not isinstance(canonical_id, str) or not canonical_id:
@@ -28,9 +28,23 @@ def preview_view(request):
         request.user,
         source_id,
         canonical_id,
-        verified_ownership=bool(data.get("verifiedOwnership")),
-        transfer_telegram=bool(data.get("transferTelegram")),
+        verified_ownership=data.get("verifiedOwnership", False),
+        transfer_telegram=data.get("transferTelegram", False),
+        verification_id=data.get("verificationId", ""),
     ))
+
+
+@api_view(["POST"])
+@permission_classes([roles("super_admin")])
+def verify_identity_view(request):
+    data = payload(request, {"sourceUserId", "canonicalUserId", "method", "reference"})
+    source_id = data.get("sourceUserId")
+    canonical_id = data.get("canonicalUserId")
+    if not isinstance(source_id, str) or not source_id or not isinstance(canonical_id, str) or not canonical_id:
+        invalid("sourceUserId and canonicalUserId are required")
+    return success(service.record_verification(
+        request.user, source_id, canonical_id, method=data.get("method"), reference=data.get("reference"),
+    ), 201)
 
 
 @api_view(["POST"])
@@ -42,6 +56,7 @@ def merge_view(request):
         "reason",
         "confirmText",
         "previewToken",
+        "verificationId",
         "verifiedOwnership",
         "transferTelegram",
     })
@@ -56,6 +71,7 @@ def merge_view(request):
         reason=str(data.get("reason") or ""),
         confirm_text=str(data.get("confirmText") or ""),
         preview_token=str(data.get("previewToken") or ""),
-        verified_ownership=bool(data.get("verifiedOwnership")),
-        transfer_telegram=bool(data.get("transferTelegram")),
+        verified_ownership=data.get("verifiedOwnership", False),
+        transfer_telegram=data.get("transferTelegram", False),
+        verification_id=data.get("verificationId", ""),
     ))

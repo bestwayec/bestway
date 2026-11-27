@@ -120,6 +120,11 @@ def locked(actor,attempt_id):
 @transaction.atomic
 def extend(actor,attempt_id,minutes):
     row=locked(actor,attempt_id); assert_in_progress(row)
+    from .classroom_results import _linked_assignments
+    now = timezone.now()
+    expiry = row.overall_deadline_at or row.deadline_at
+    if expiry and aware(expiry) <= now and _linked_assignments(row).filter(deadline__lte=now).exists():
+        fail('ASSIGNMENT_EXPIRED', 'The closed exam cannot be extended', 409)
     def shift(value): return aware(value)+timedelta(minutes=minutes) if value else value
     row.deadline_at=shift(row.deadline_at); row.overall_deadline_at=shift(row.overall_deadline_at)
     if row.section_deadlines is not None:
@@ -134,6 +139,9 @@ def extend(actor,attempt_id,minutes):
 def reopen(actor,attempt_id):
     row=locked(actor,attempt_id)
     if row.status!='grading': fail('MOCK_CANNOT_REOPEN','Faqat baholanayotgan urinish qayta ochiladi')
+    from .classroom_results import _linked_assignments
+    if _linked_assignments(row).filter(deadline__lte=timezone.now()).exists():
+        fail('ASSIGNMENT_EXPIRED', 'The closed exam cannot be reopened', 409)
     row.status='in_progress'; row.submitted_at=None; row.save(update_fields=['status','submitted_at'])
     audit_event(actor,'mock.attempt.reopen','mockAttempt',row.id)
     return dict(saved=True,status='in_progress')

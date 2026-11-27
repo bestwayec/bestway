@@ -17,7 +17,8 @@ from zoneinfo import ZoneInfo
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from apps.legacy_schema.models import User
+from apps.legacy_schema.models import Group, User
+from common.api.exceptions import ContractAPIException
 
 from . import telegram_delivery as api
 from . import telegram_state as state
@@ -71,7 +72,10 @@ def enqueue(user_id: str, kind: str, dedupe_key: str, text: str, keyboard=None, 
     if group_id or chat_target:
         if not group_id or not chat_target:
             return None
-        if not TelegramClassroomBinding.objects.filter(group_id=group_id, chat_id=chat_target, is_active=True, bot_can_post=True).exists():
+        if not TelegramClassroomBinding.objects.filter(
+            group_id=group_id, chat_id=chat_target, is_active=True, bot_can_post=True,
+            verified_telegram_id__isnull=False,
+        ).exists():
             return None
         send_after = now
     else:
@@ -128,12 +132,46 @@ def _renew_lease(row, now) -> bool:
 
 def _finish(row, status, error='', retry_in=None, now=None):
     now = now or timezone.now()
+    lease = row.locked_until
     row.status, row.last_error, row.locked_until = status, error[:60], None
     if status == 'sent':
         row.sent_at = now
     if status == 'pending':
         row.next_attempt_at = now + timedelta(seconds=retry_in or 60)
-    row.save(update_fields=['status', 'last_error', 'locked_until', 'sent_at', 'next_attempt_at', 'attempts'])
+    fields = ['status', 'last_error', 'locked_until', 'sent_at', 'next_attempt_at', 'attempts']
+    TelegramOutbox.objects.filter(pk=row.pk, status='sending', locked_until=lease).update(
+        **{field: getattr(row, field) for field in fields},
+    )
+
+
+def _send_group(row, now):
+    from .telegram_classroom_service import verify_current_binding
+
+    bindings = TelegramClassroomBinding.objects.filter(
+        group_id=row.group_id, chat_id=row.chat_id_override, is_active=True, bot_can_post=True,
+        verified_telegram_id__isnull=False,
+    )
+    binding = bindings.first() if row.group_id and row.chat_id_override else None
+    if binding is None:
+        return 'skipped', 'group_disconnected'
+    try:
+        verify_current_binding(binding)
+    except ContractAPIException as error:
+        if error.status_code >= 500:
+            return 'retry', None
+        return 'skipped', 'group_authority_revoked'
+
+    with transaction.atomic():
+        # Disconnect and rebind take the same lock. Recheck the verified revision and lease.
+        if not Group.objects.select_for_update().filter(pk=row.group_id).first():
+            return 'skipped', 'group_disconnected'
+        if not bindings.filter(pk=binding.pk, updated_at=binding.updated_at).exists():
+            return 'skipped', 'group_binding_changed'
+        if not _renew_lease(row, now):
+            return 'lost', None
+        return api.send_detailed(
+            binding.chat_id, row.text, dict(inline_keyboard=row.keyboard) if row.keyboard else None,
+        )
 
 
 def deliver_due(now=None, *, sleep=time.sleep, limit=MAX_PER_TICK) -> dict:
@@ -147,25 +185,22 @@ def deliver_due(now=None, *, sleep=time.sleep, limit=MAX_PER_TICK) -> dict:
             stats['lost'] = stats.get('lost', 0) + 1
             continue
         if row.group_id or row.chat_id_override:
-            binding_ok = bool(
-                row.group_id
-                and row.chat_id_override
-                and TelegramClassroomBinding.objects.filter(
-                    group_id=row.group_id,
-                    chat_id=str(row.chat_id_override),
-                    is_active=True,
-                    bot_can_post=True,
-                ).exists()
-            )
-            if not binding_ok:
-                _finish(row, 'skipped', 'group_disconnected', now=now)
-                stats['skipped'] += 1
-                continue
             chat = str(row.chat_id_override)
         else:
+            if row.dedupe_key.startswith('guard_alert:'):
+                from .live_exam_guard import private_teacher_access
+                from .models import ExamIntegrityIncident
+
+                incident = ExamIntegrityIncident.objects.select_related('attempt').filter(
+                    pk=row.dedupe_key.split(':', 2)[1],
+                ).first()
+                if not incident or not private_teacher_access(row.recipient_id, incident):
+                    _finish(row, 'skipped', 'supervisor_permission_revoked', now=now)
+                    stats['skipped'] += 1
+                    continue
             user = User.objects.filter(id=row.recipient_id, is_active=True).values('telegram_chat_id').first()
             chat = (user or {}).get('telegram_chat_id')
-            if not chat:
+            if not chat or not str(chat).isdigit() or int(chat) <= 0:
                 _finish(row, 'skipped', 'no_chat', now=now)
                 stats['skipped'] += 1
                 continue
@@ -181,21 +216,30 @@ def deliver_due(now=None, *, sleep=time.sleep, limit=MAX_PER_TICK) -> dict:
                 stats['deferred'] += 1
                 continue
         if chat in chats_used:                                          # at most one message per chat per tick
-            row.status, row.locked_until, row.next_attempt_at = 'pending', None, now + timedelta(seconds=2)
-            row.save(update_fields=['status', 'locked_until', 'next_attempt_at'])
+            _finish(row, 'pending', retry_in=2, now=now)
             stats['deferred'] += 1
             continue
         chats_used.add(chat)
         row.attempts += 1
-        outcome, detail = api.send_detailed(chat, row.text, dict(inline_keyboard=row.keyboard) if row.keyboard else None)
-        if outcome == 'sent':
+        if row.group_id or row.chat_id_override:
+            outcome, detail = _send_group(row, now)
+        else:
+            outcome, detail = api.send_detailed(chat, row.text, dict(inline_keyboard=row.keyboard) if row.keyboard else None)
+        if outcome == 'skipped':
+            row.attempts -= 1
+            _finish(row, 'skipped', detail, now=now)
+            stats['skipped'] += 1
+        elif outcome == 'lost':
+            stats['lost'] = stats.get('lost', 0) + 1
+        elif outcome == 'sent':
             _finish(row, 'sent', now=now)
             stats['sent'] += 1
         elif outcome == 'permanent' and detail == 'not_configured':     # worker without a bot token: keep everything queued
             row.attempts -= 1
             for rest in claimed[position:]:
-                rest.status, rest.locked_until = 'pending', None
-                rest.save(update_fields=['status', 'locked_until', 'attempts'] if rest is row else ['status', 'locked_until'])
+                TelegramOutbox.objects.filter(
+                    pk=rest.pk, status='sending', locked_until=rest.locked_until,
+                ).update(status='pending', locked_until=None, attempts=rest.attempts)
             logger.error('TELEGRAM_BOT_TOKEN is not configured: notifications stay queued')
             break
         elif outcome == 'permanent':
@@ -209,8 +253,9 @@ def deliver_due(now=None, *, sleep=time.sleep, limit=MAX_PER_TICK) -> dict:
             stats['retried'] += 1
             if detail:                                                  # Telegram flood control (429): stop this pass
                 for rest in claimed[position + 1:]:                     # hand the untouched claims back immediately
-                    rest.status, rest.locked_until = 'pending', None
-                    rest.save(update_fields=['status', 'locked_until'])
+                    TelegramOutbox.objects.filter(
+                        pk=rest.pk, status='sending', locked_until=rest.locked_until,
+                    ).update(status='pending', locked_until=None)
                 break
         sleep(PER_MESSAGE_PAUSE)
     return stats

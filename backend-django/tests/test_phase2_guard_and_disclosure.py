@@ -119,6 +119,7 @@ def test_answer_disclosure_withholds_keys_until_all_submit_or_deadline(pg_guard_
     assignment = HomeworkAssignment.objects.create(
         id=str(uuid4()), cohort=cohort, title="Assign 1", exam=exam,
         deadline=timezone.now() + timedelta(hours=4),
+        participant_ids=[s1.id, s2.id],
     )
 
     att1 = MockAttempt.objects.create(
@@ -172,13 +173,13 @@ def test_live_exam_guard_routing_correlation_ack_and_unauthorized_rejection(pg_g
     )
     attempt = MockAttempt.objects.create(
         id=str(uuid4()), exam=exam, student_id=student.id, status="in_progress",
-        mode="timed", flow_mode="full_test", current_skill="reading", started_at=timezone.now(),
+        mode="timed", flow_mode="full_test", current_skill="reading", started_at=timezone.now() - timedelta(minutes=5),
         anti_cheat_count=0, media_state={ASSIGNMENT_KEY: assign_a.id},
     )
 
     sc = auth_client(student)
     # Rapid blur + page_hidden within 5s must correlate into 1 incident with occurrenceCount=2
-    r_blur = sc.post(f"/v1/mock/attempts/{attempt.id}/guard-events", {"event": "window_blur", "skill": "reading"}, format="json")
+    r_blur = sc.post(f"/v1/mock/attempts/{attempt.id}/guard-events", {"event": "window_blur", "skill": "reading", "integrityMode": "practice"}, format="json")
     assert r_blur.status_code == 201
     r_hide = sc.post(f"/v1/mock/attempts/{attempt.id}/guard-events", {"event": "page_hidden", "skill": "reading"}, format="json")
     assert r_hide.status_code == 201
@@ -214,10 +215,23 @@ def test_live_exam_guard_routing_correlation_ack_and_unauthorized_rejection(pg_g
 
     # Offline batch recovery preserves observedAt
     past = (timezone.now() - timedelta(minutes=3)).isoformat()
-    r_batch = sc.post(
-        f"/v1/mock/attempts/{attempt.id}/guard-events",
-        {"events": [{"event": "network_disconnected", "observedAt": past, "skill": "reading", "offlineSynced": True}]},
-        format="json",
-    )
+    recovered = {
+        "events": [{
+            "event": "network_disconnected", "observedAt": past, "skill": "reading",
+            "offlineSynced": True, "eventId": str(uuid4()),
+        }],
+    }
+    path = f"/v1/mock/attempts/{attempt.id}/guard-events"
+    assert sc.post(path, recovered, format="json").status_code == 409
+    headers = {"HTTP_X_EXAM_SESSION": "guard-test-session"}
+    r_batch = sc.post(path, recovered, format="json", **headers)
     assert r_batch.status_code == 201
     assert r_batch.json()["data"]["recorded"] == 1
+    assert sc.post(path, recovered, format="json", **headers).json()["data"]["items"][0]["created"] is False
+    assert sc.post(path, {"event": "made_up"}, format="json", **headers).status_code == 400
+    assert sc.post(path, {"event": "page_hidden"}, format="json", HTTP_X_EXAM_SESSION="other-session").status_code == 409
+    Group.objects.filter(pk=group_a.id).update(teacher=teacher_b)
+    assert ta_client.get("/v1/teacher/guard-alerts").json()["data"]["incidents"] == []
+    assert ta_client.post(
+        f"/v1/teacher/guard-alerts/{incident_id}/review", {"status": "acknowledged"}, format="json",
+    ).status_code == 403

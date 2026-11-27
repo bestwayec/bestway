@@ -27,17 +27,26 @@ def command(chat_id, text, *, chat_type, sender_id=None, chat_title=""):
                 api.plain(chat_id, "Guruh ID sini ko'rsating: <code>/unbind GROUP_ID</code>")
                 return True
             try:
-                res = binding_service.disconnect_group_chat(actor, args[0])
+                res = binding_service.disconnect_group_chat(actor, args[0], expected_chat_id=str(chat_id))
                 api.plain(chat_id, f"🔌 Guruh Telegramdan uzildi (bekor qilingan xabarlar: {res['invalidatedCount']}).")
             except ContractAPIException as error:
                 api.plain(chat_id, escape(str(error.detail)))
             return True
-        if not args:
-            api.plain(chat_id, "Guruhni bog'lash uchun yuboring: <code>/bind GROUP_ID</code>")
+        if not args or (len(args) != 1 and (len(args) != 3 or args[1].lower() != "confirm")):
+            api.plain(chat_id, "Guruhni bog‘lash uchun yuboring <code>/bind GROUP_ID</code>")
             return True
         try:
-            binding_service.bind_group_chat(actor, args[0], str(chat_id), chat_title=chat_title)
-            api.plain(chat_id, "✅ Telegram guruh BestWay sinfiga muvaffaqiyatli bog'landi.")
+            if len(args) == 1:
+                token = binding_service.request_binding(actor, args[0], str(chat_id), sender_id=sender_id)
+                api.plain(
+                    str(sender_id),
+                    "Bog‘lanishni tasdiqlash uchun asl guruhda yuboring "
+                    f"<code>/bind {escape(args[0])} confirm {escape(token)}</code>",
+                )
+                api.plain(chat_id, "Tasdiqlash buyrug‘i shaxsiy chatga yuborildi.")
+            else:
+                binding_service.bind_group_chat(actor, args[0], str(chat_id), confirmation=args[2])
+                api.plain(chat_id, "✅ Telegram guruh BestWay sinfiga muvaffaqiyatli bog‘landi.")
         except ContractAPIException as error:
             api.plain(chat_id, escape(str(error.detail)))
         return True

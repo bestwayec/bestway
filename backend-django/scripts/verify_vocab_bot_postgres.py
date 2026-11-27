@@ -29,6 +29,7 @@ from django.db import connection
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from apps.core.models import ClassroomEnrollment
 from apps.core import vocabulary_bot as vb
 from apps.core import vocabulary_homework, vocabulary_review, vocabulary_service
 from apps.core import telegram_bot as bot
@@ -94,6 +95,8 @@ def mk_student(group_id, chat):
         cursor.execute('INSERT INTO "StudentProfile" ("userId","availablePrograms","activeProgram","isApproved","groupId","currentPoints","linkCode","createdAt","pointsPeriod","gameQualified","qualifiedAt") '
                        "VALUES (%s, ARRAY['IELTS']::\"ExamProgram\"[], 'IELTS', true, %s, 0, %s, NOW(), NULL, false, NULL)",
                        [student.id, group_id, 'TQ' + uuid4().hex[:8].upper()])
+    if group_id is not None:
+        ClassroomEnrollment.objects.create(group_id=group_id, student_id=student.id, started_at=timezone.now())
     return student
 
 
@@ -153,7 +156,7 @@ try:
         check('/takror' in last(CHAT)['text'] and '/natija' in last(CHAT)['text'], '/yordam lists the vocabulary commands')
         say(CHAT, '/lugat')
         listing = last(CHAT)
-        check(find_button(listing, f'vs:{vset.id}') and 'Unit 5 Travel' in texts() or find_button(listing, f'vs:{vset.id}'), '/lugat lists the student\'s own group set')
+        check(find_button(listing, f'vs:{vset.id}') and 'Unit 5 Travel' in texts() or find_button(listing, f'vs:{vset.id}'), f"/lugat lists the student\'s own group set: {listing}")
         check(not find_button(listing, f'vs:{private_set.id}'), 'a set of another teacher\'s group is not listed')
         mark()
         say(CHAT_B, '/lugat')
@@ -429,6 +432,7 @@ finally:
         cursor.execute('DELETE FROM "VocabularySet" WHERE created_by_id = ANY(%s)', [users])
         cursor.execute('DELETE FROM core_telegramdialogstate WHERE user_id = ANY(%s)', [users])
         cursor.execute('DELETE FROM core_telegrampreference WHERE user_id = ANY(%s)', [users])
+        ClassroomEnrollment.objects.filter(student_id__in=users).delete()
         cursor.execute('DELETE FROM "StudentProfile" WHERE "userId" = ANY(%s)', [users])
         cursor.execute('DELETE FROM "Group" WHERE id = ANY(%s)', [groups_made])
         cursor.execute('DELETE FROM "User" WHERE id = ANY(%s)', [users])

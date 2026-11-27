@@ -17,7 +17,8 @@ from django.db import close_old_connections, connection, transaction
 from rest_framework.test import APIClient
 from django.utils import timezone
 
-from apps.core.models import ClassroomEnrollment
+from apps.core.homework_scoring import ASSIGNMENT_KEY
+from apps.core.models import ClassroomEnrollment, Cohort, HomeworkAssignment
 from apps.legacy_schema.models import (
     AssessmentJob, AuditLog, Group, MockAnswer, MockAttempt, MockExam, MockQuestion, MockQuestionGroup,
     MockSection, StudentProfile, User,
@@ -34,10 +35,11 @@ def data(response, expected=200):
     return response.json().get("data")
 
 
-def verify_protected_review(teacher, other, student, teacher_id, exam_id, student_id, questions, attempts, now):
+def verify_protected_review(teacher, other, student, teacher_id, exam_id, student_id, questions, attempts, now, assignment_id):
     attempt = MockAttempt.objects.create(
         id=identifier(), exam_id=exam_id, student_id=student_id, status="in_progress",
         mode="practice", flow_mode="full_test", started_at=now, anti_cheat_count=0,
+        media_state={ASSIGNMENT_KEY: assignment_id},
     )
     attempts.append(attempt.pk)
     root = f"/v1/mock/attempts/{attempt.pk}"
@@ -183,6 +185,14 @@ def main():
                 is_published=True, is_demo=True, price=0, is_free_for_approved=True, content_version=1,
                 created_by_id=admin_id, assessment_policy="MANUAL_ONLY", created_at=now, updated_at=now,
             )
+            cohort = Cohort.objects.create(
+                teacher_id=teacher_id, classroom_id=groups[0], invite_code=uuid4().hex[:16],
+                name="Grading queue fixture",
+            )
+            assignment = HomeworkAssignment.objects.create(
+                cohort=cohort, exam_id=exam_id, title="Grading queue fixture",
+                deadline=now + timedelta(days=1), participant_ids=[student_id],
+            )
             for i, skill in enumerate(("writing", "writing", "speaking", "reading")):
                 section = MockSection.objects.create(
                     id=identifier(), exam_id=exam_id, skill=skill, title=skill, sort_order=i,
@@ -204,6 +214,7 @@ def main():
                     id="fixture_" + identifier(), exam_id=exam_id, student_id=student_id, status="grading",
                     mode="timed", flow_mode="full_test", started_at=now - timedelta(hours=1), submitted_at=now,
                     anti_cheat_count=0, submitted_sections=["writing", "speaking"],
+                    media_state={ASSIGNMENT_KEY: assignment.id},
                 ).pk)
             for question, response in zip(questions, ("First essay", "Second essay", "", "choice")):
                 MockAnswer.objects.create(
@@ -263,12 +274,12 @@ def main():
         assert saved["submissionStatus"] == "graded" and saved["status"] == "grading"
         assert len(data(teacher.get(root, {"status": "graded", "skill": "writing"}))) == 1
 
-        verify_protected_review(teacher, other, student, teacher_id, exam_id, student_id, questions, attempts, now)
+        verify_protected_review(teacher, other, student, teacher_id, exam_id, student_id, questions, attempts, now, assignment.id)
 
         StudentProfile.objects.filter(pk=student_id).update(group_id=groups[1])
         ClassroomEnrollment.objects.filter(student_id=student_id, ended_at__isnull=True).update(ended_at=now)
         ClassroomEnrollment.objects.create(student_id=student_id, group_id=groups[1], started_at=now)
-        assert not data(teacher.get(root)) and not data(other.get(root))
+        assert data(teacher.get(root)) and not data(other.get(root))
         path = root + "/" + speaking["id"] + "/grade"
         data(other.post(path, {"questionId": questions[2], "score": 4}, format="json"), 404)
         overview = "/v1/assessment/attempts/" + attempts[0]
@@ -284,6 +295,7 @@ def main():
             MockQuestion.objects.filter(pk__in=questions).delete()
             MockQuestionGroup.objects.filter(pk__in=question_groups).delete()
             MockSection.objects.filter(pk__in=sections).delete()
+            Cohort.objects.filter(classroom_id__in=groups).delete()
             MockExam.objects.filter(pk=exam_id).delete()
             ClassroomEnrollment.objects.filter(group_id__in=groups).delete()
             StudentProfile.objects.filter(pk__in=users).delete()

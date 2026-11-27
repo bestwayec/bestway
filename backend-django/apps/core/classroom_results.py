@@ -2,6 +2,8 @@
 from django.db import connection
 from django.db.models import Exists, OuterRef, Q
 from django.db.models.fields.json import KeyTextTransform
+from django.db.models.functions import Coalesce
+from django.utils import timezone
 
 from .homework_scoring import ASSIGNMENT_KEY
 from .models import HomeworkAssignment, HomeworkSubmission, PracticeResultShare
@@ -94,70 +96,104 @@ def is_personal_practice(attempt):
     )
 
 
-def answer_disclosure_status(actor, attempt, *, is_review_blocked=False):
-    """Server-authoritative answer key disclosure policy across APIs, review views, and exports."""
+def _linked_assignments(attempt):
+    submission_ids = HomeworkSubmission.objects.filter(
+        attempt_id=attempt.id, student_id=attempt.student_id, source="exam_attempt",
+    ).values("assignment_id")
+    assignments = HomeworkAssignment.objects.filter(exam_id=attempt.exam_id)
+    marker = (attempt.media_state or {}).get(ASSIGNMENT_KEY)
+    if marker is not None:
+        return assignments.filter(pk=marker)
+    return assignments.filter(pk__in=submission_ids)
+
+
+def _active_attempts(attempts, now):
+    return attempts.filter(status="in_progress").alias(
+        ends_at=Coalesce("overall_deadline_at", "deadline_at"),
+    ).filter(Q(ends_at__isnull=True) | Q(ends_at__gt=now))
+
+
+def _assignment_answer_window(assignment, now):
     from apps.legacy_schema.models import MockAttempt
-    from .classroom_roster import active_enrollments
-    from .models import CohortMembership, HomeworkAssignment
+
+    exam_attempts = MockAttempt.objects.filter(exam_id=assignment.exam_id)
+    assigned = exam_attempts.filter(
+        Q(media_state__contains={ASSIGNMENT_KEY: assignment.id})
+        | Q(id__in=HomeworkSubmission.objects.filter(
+            assignment=assignment, source="exam_attempt",
+        ).values("attempt_id")),
+    )
+    participants = assignment.participant_ids
+    # Keep timed opportunities open even when the published deadline has passed.
+    timed = exam_attempts.filter(mode="timed")
+    if participants is not None:
+        timed = timed.filter(student_id__in=participants)
+    if _active_attempts(assigned | timed, now).exists():
+        return "ACTIVE_ATTEMPT_BLOCKED"
+    if assignment.deadline <= now:
+        return None
+    # A legacy roster cannot reliably establish who still has a right to start.
+    if not participants:
+        return "AWAITING_COHORT_OR_DEADLINE"
+    submitted = assigned.filter(
+        status="completed", submitted_at__isnull=False,
+    ).values_list("student_id", flat=True)
+    if set(participants).issubset(submitted):
+        return None
+    return "AWAITING_COHORT_OR_DEADLINE"
+
+
+def practice_answers_available(attempt, *, now=None):
+    """An overlapping exam assignment reserves this exam's keys for its participant."""
+    from .classrooms import student_homework_scope
+
+    if ASSIGNMENT_KEY in (attempt.media_state or {}):
+        return False
+    if _linked_assignments(attempt).exists():
+        return False
+    assignments = HomeworkAssignment.objects.filter(
+        student_homework_scope(attempt.student_id), exam_id=attempt.exam_id,
+    )
+    # A snapshot remains relevant after a participant changes groups.
+    assignments = HomeworkAssignment.objects.filter(exam_id=attempt.exam_id).filter(
+        Q(participant_ids__contains=[attempt.student_id])
+        | Q(participant_ids__isnull=True, pk__in=assignments.values("pk")),
+    )
+    now = now or timezone.now()
+    return all(_assignment_answer_window(assignment, now) is None for assignment in assignments)
+
+
+def answer_disclosure_status(actor, attempt):
+    """Use the same release decision for answer keys, evidence, and audio review."""
+    from .mock_attempts import review_blocked
+
+    def decision(disclosed, reason, date=None):
+        return {"disclosed": disclosed, "reason": reason, "discloseAt": date}
 
     if getattr(actor, "role", None) in ("admin", "super_admin"):
-        return {"disclosed": True, "reason": "STAFF", "discloseAt": None}
+        return decision(True, "STAFF")
     if getattr(actor, "role", None) == "teacher":
-        if explicit_teacher_access(actor, attempt):
-            return {"disclosed": True, "reason": "STAFF", "discloseAt": None}
-        return {"disclosed": False, "reason": "FORBIDDEN", "discloseAt": None}
-
+        return decision(True, "STAFF") if explicit_teacher_access(actor, attempt) else decision(False, "FORBIDDEN")
     if attempt.status != "completed":
-        return {"disclosed": False, "reason": "ATTEMPT_IN_PROGRESS", "discloseAt": None}
-    if is_review_blocked:
-        return {"disclosed": False, "reason": "ACTIVE_ATTEMPT_BLOCKED", "discloseAt": None}
+        return decision(False, "ATTEMPT_IN_PROGRESS")
+    if review_blocked(attempt):
+        return decision(False, "ACTIVE_ATTEMPT_BLOCKED")
 
-    assignment_id = (attempt.media_state or {}).get(ASSIGNMENT_KEY)
-    if not assignment_id:
-        assignment_id = (
-            HomeworkSubmission.objects.filter(attempt_id=attempt.id, student_id=attempt.student_id, source="exam_attempt")
-            .values_list("assignment_id", flat=True)
-            .first()
-        )
-    if not assignment_id:
-        return {"disclosed": True, "reason": "PRACTICE_OR_SOLO", "discloseAt": None}
+    marker = (attempt.media_state or {}).get(ASSIGNMENT_KEY)
+    assignments = list(_linked_assignments(attempt))
+    if not assignments:
+        if marker is not None or HomeworkSubmission.objects.filter(
+            attempt_id=attempt.id, student_id=attempt.student_id, source="exam_attempt",
+        ).exists():
+            return decision(False, "ASSIGNMENT_UNAVAILABLE")
+        if not practice_answers_available(attempt):
+            return decision(False, "AWAITING_COHORT_OR_DEADLINE")
+        return decision(True, "PRACTICE_OR_SOLO")
 
-    assignment = HomeworkAssignment.objects.select_related("cohort").filter(pk=assignment_id).first()
-    if assignment is None:
-        return {"disclosed": True, "reason": "ASSIGNMENT_REMOVED", "discloseAt": None}
-
-    from django.utils import timezone as dj_timezone
-
-    now = dj_timezone.now()
-    if assignment.deadline and now >= assignment.deadline:
-        return {"disclosed": True, "reason": "DEADLINE_PASSED", "discloseAt": assignment.deadline}
-
-    # Before deadline: unlock early ONLY if all active eligible participants have submitted
-    # and no active retake / in-progress attempt exists on this assignment.
-    if assignment.cohort.classroom_id:
-        eligible_ids = set(active_enrollments(group_id=assignment.cohort.classroom_id).values_list("student_id", flat=True))
-    else:
-        eligible_ids = set(
-            CohortMembership.objects.filter(cohort_id=assignment.cohort_id, status="active")
-            .values_list("student_id", flat=True)
-        )
-
-    submitted_ids = set(
-        HomeworkSubmission.objects.filter(assignment_id=assignment.id).values_list("student_id", flat=True)
-    )
-    assigned_attempts = MockAttempt.objects.alias(
-        assignment_for_report=KeyTextTransform(ASSIGNMENT_KEY, "media_state"),
-    ).filter(exam_id=attempt.exam_id, assignment_for_report=assignment.id)
-    submitted_ids.update(
-        assigned_attempts.filter(status__in=("grading", "completed")).values_list("student_id", flat=True)
-    )
-    has_in_progress = assigned_attempts.filter(status="in_progress").exists()
-
-    if eligible_ids and eligible_ids.issubset(submitted_ids) and not has_in_progress:
-        return {"disclosed": True, "reason": "ALL_PARTICIPANTS_SUBMITTED", "discloseAt": assignment.deadline}
-
-    return {
-        "disclosed": False,
-        "reason": "AWAITING_COHORT_OR_DEADLINE",
-        "discloseAt": assignment.deadline,
-    }
+    now = timezone.now()
+    date = max(assignment.deadline for assignment in assignments)
+    for assignment in assignments:
+        reason = _assignment_answer_window(assignment, now)
+        if reason:
+            return decision(False, reason, date)
+    return decision(True, "DEADLINE_PASSED" if date <= now else "ALL_PARTICIPANTS_SUBMITTED", date)

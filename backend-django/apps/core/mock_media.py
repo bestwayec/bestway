@@ -359,9 +359,7 @@ def review_audio_view(request, attempt_id, group_id):
     Only the attempt's own viewers (assert_view), only once the result is released, only a
     part of that attempt's exam, and never while the student has an attempt of the same
     exam in progress (review must not replay the audio of a running exam)."""
-    from .classroom_results import assert_attempt_access
-    from .mock_attempts import review_blocked
-    from .mock_catalog import is_staff
+    from .classroom_results import answer_disclosure_status, assert_attempt_access
     actor = request.user
     attempt = MockAttempt.objects.select_related('exam').filter(id=attempt_id).first()
     if attempt is None:
@@ -370,16 +368,11 @@ def review_audio_view(request, attempt_id, group_id):
     group = _group_or_throw(group_id)
     if group.section.exam_id != attempt.exam_id or group.section.skill != 'listening':
         raise ContractAPIException('FILE_NOT_FOUND', 'Fayl topilmadi', 404)
-    if not is_staff(actor):
-        from .classroom_results import answer_disclosure_status
-
-        disclosure = answer_disclosure_status(actor, attempt, is_review_blocked=review_blocked(attempt))
-        if attempt.status != 'completed':
-            raise ContractAPIException('REVIEW_NOT_AVAILABLE', 'The review opens when the result is released', 403)
-        if review_blocked(attempt):
-            raise ContractAPIException('REVIEW_BLOCKED_DURING_ATTEMPT', 'Finish the attempt in progress before reviewing this recording', 403)
-        if not disclosure["disclosed"]:
-            raise ContractAPIException('REVIEW_NOT_AVAILABLE', 'Correct answers and audio review open after the cohort finishes or the deadline passes', 403)
+    disclosure = answer_disclosure_status(actor, attempt)
+    if disclosure["reason"] == "ACTIVE_ATTEMPT_BLOCKED":
+        raise ContractAPIException('REVIEW_BLOCKED_DURING_ATTEMPT', 'Finish the attempt in progress before reviewing this recording', 403)
+    if not disclosure["disclosed"]:
+        raise ContractAPIException('REVIEW_NOT_AVAILABLE', 'Correct answers and audio review open after the cohort finishes or the deadline passes', 403)
     from .mock_practice import scope
     practice = scope(attempt)
     if practice is not None:

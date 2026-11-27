@@ -482,6 +482,7 @@ urlpatterns = [
     path("users", user_admin.users), path("users/bulk", user_admin.bulk_users),
     path("users/reconciliation", reconciliation.duplicates_view),
     path("users/reconciliation/preview", reconciliation.preview_view),
+    path("users/reconciliation/verify-identity", reconciliation.verify_identity_view),
     path("users/reconciliation/merge", reconciliation.merge_view),
     path("users/<str:user_id>", user_admin.user),
     path("users/<str:user_id>/memberships", user_admin.student_memberships),

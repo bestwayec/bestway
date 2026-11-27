@@ -1,9 +1,9 @@
 """Live Exam Guard 5.0: multi-group-safe supervisor routing, incident correlation, and real-time teacher alerts."""
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from html import escape
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from django.core.cache import cache
 from django.db import connection, transaction
@@ -16,7 +16,7 @@ from common.api.exceptions import ContractAPIException
 
 from .classroom_roster import member_profiles
 from .homework_scoring import ASSIGNMENT_KEY
-from .models import ExamIntegrityIncident, HomeworkAssignment, HomeworkSubmission
+from .models import ClassroomArchive, ExamIntegrityIncident, HomeworkAssignment, HomeworkSubmission
 
 CANONICAL_EVENT_MAP = {
     "blur": "WINDOW_FOCUS_LOST",
@@ -92,16 +92,23 @@ def normalize_event(raw_event: str) -> str:
     key = (raw_event or "").strip().lower()
     if key in CANONICAL_EVENT_MAP:
         return CANONICAL_EVENT_MAP[key]
-    cleaned = key.upper().replace("-", "_").replace(" ", "_")[:48]
-    return cleaned or "UNKNOWN_EVENT"
+    if key.upper() in UZ_EVENT_LABELS:
+        return key.upper()
+    raise ContractAPIException("VALIDATION_ERROR", "Unknown exam event", 400)
 
 
-def resolve_integrity_mode(attempt: MockAttempt, requested_mode: str | None = None) -> str:
-    if requested_mode in ("practice", "supervised_mock", "supervised_desktop"):
-        return requested_mode
-    if attempt.mode == "practice" and ASSIGNMENT_KEY not in (attempt.media_state or {}):
-        return "practice"
-    return "supervised_mock"
+RECOVERY_WINDOW = timedelta(minutes=15)
+CLOCK_SKEW = timedelta(seconds=30)
+MAX_EVENTS_PER_MINUTE = 60
+
+
+def _active_teacher(teacher_id, group_id):
+    if not teacher_id or not User.objects.filter(pk=teacher_id, role="teacher", is_active=True).exists():
+        return False
+    return group_id is None or (
+        Group.objects.filter(pk=group_id, teacher_id=teacher_id).exists()
+        and not ClassroomArchive.objects.filter(group_id=group_id).exists()
+    )
 
 
 def resolve_attempt_supervision(attempt: MockAttempt) -> tuple[str | None, str | None]:
@@ -122,8 +129,8 @@ def resolve_attempt_supervision(attempt: MockAttempt) -> tuple[str | None, str |
                 [attempt.id, attempt.student_id, attempt.exam_id],
             )
             row = cursor.fetchone()
-            if row and row[1]:
-                return row[0], row[1]
+            if row:
+                return tuple(row) if _active_teacher(row[1], row[0]) else (None, None)
 
     assignment_id = (attempt.media_state or {}).get(ASSIGNMENT_KEY)
     if not assignment_id:
@@ -137,14 +144,15 @@ def resolve_attempt_supervision(attempt: MockAttempt) -> tuple[str | None, str |
     if assignment_id:
         assignment = (
             HomeworkAssignment.objects.select_related("cohort", "cohort__classroom")
-            .filter(pk=assignment_id)
+            .filter(pk=assignment_id, exam_id=attempt.exam_id)
             .first()
         )
-        if assignment:
+        if assignment and (assignment.participant_ids is None or attempt.student_id in assignment.participant_ids):
             classroom = assignment.cohort.classroom
             group_id = classroom.id if classroom else None
             supervisor_id = (classroom.teacher_id if classroom and classroom.teacher_id else assignment.cohort.teacher_id)
-            return group_id, supervisor_id
+            if _active_teacher(supervisor_id, group_id):
+                return group_id, supervisor_id
 
     return None, None
 
@@ -158,16 +166,6 @@ def _bump_guard_seq(supervisor_id: str | None):
             cache.incr(key)
     except Exception:
         pass
-
-
-def _build_uzbek_alert(student_name: str, group_name: str, exam_title: str, skill: str, event_type: str) -> str:
-    action_text = UZ_EVENT_LABELS.get(event_type, "imtihon oynasidan chiqdi")
-    skill_label = (skill or "Exam").capitalize()
-    group_part = f" Guruh: {group_name}." if group_name else ""
-    return (
-        f"⚠️ {student_name} {action_text}.{group_part} "
-        f"Bo‘lim: {skill_label}. Imtihon: {exam_title}. Iltimos, vaziyatni tekshiring."
-    )
 
 
 def _queue_private_telegram_alert(supervisor_id: str, incident: ExamIntegrityIncident, student_name: str, group_name: str, exam_title: str):
@@ -201,6 +199,18 @@ def _queue_private_telegram_alert(supervisor_id: str, incident: ExamIntegrityInc
     )
 
 
+def _event_response(incident, *, created, notified, now):
+    return {
+        "incidentId": incident.id,
+        "eventType": incident.event_type,
+        "occurrenceCount": incident.occurrence_count,
+        "created": created,
+        "supervisorNotified": notified,
+        "serverTime": now,
+    }
+
+
+@transaction.atomic
 def record_event(
     actor,
     attempt: MockAttempt,
@@ -209,20 +219,60 @@ def record_event(
     observed_at=None,
     skill: str | None = None,
     question_ref: str = "",
-    integrity_mode: str | None = None,
+    event_id: str | None = None,
     offline_synced: bool = False,
 ) -> dict:
-    """Persist an observable integrity event, correlate bursts, and alert ONLY the authorized supervisor."""
+    """Persist a bounded observation and alert the currently authorized supervisor."""
+    if actor.role != "student" or actor.id != attempt.student_id:
+        raise ContractAPIException("FORBIDDEN", "Ruxsat berilmagan", 403)
+    attempt = MockAttempt.objects.select_for_update().select_related("exam").get(
+        pk=attempt.id, student_id=actor.id,
+    )
     event_type = normalize_event(raw_event)
-    mode = resolve_integrity_mode(attempt, integrity_mode)
     now = timezone.now()
     obs_dt = observed_at if observed_at is not None else now
-    if timezone.is_naive(obs_dt):
-        obs_dt = timezone.make_aware(obs_dt, timezone.get_current_timezone())
+    if not isinstance(obs_dt, datetime) or timezone.is_naive(obs_dt):
+        raise ContractAPIException("VALIDATION_ERROR", "observedAt must include a time zone", 400)
+    ends = min((end for end in (
+        attempt.overall_deadline_at or attempt.deadline_at, attempt.submitted_at,
+    ) if end is not None), default=None)
+    if (
+        obs_dt < max(attempt.started_at - CLOCK_SKEW, now - RECOVERY_WINDOW)
+        or obs_dt > now + CLOCK_SKEW
+        or (ends is not None and obs_dt > ends + CLOCK_SKEW)
+        or (not offline_synced and attempt.status != "in_progress")
+    ):
+        raise ContractAPIException("GUARD_OBSERVATION_EXPIRED", "Exam observation is outside the permitted window", 409)
+    if offline_synced and observed_at is None:
+        raise ContractAPIException("VALIDATION_ERROR", "Offline observations require observedAt", 400)
+    current_skill = skill or attempt.current_skill or ""
+    if current_skill not in ("", "listening", "reading", "writing", "speaking") or len(question_ref) > 120:
+        raise ContractAPIException("VALIDATION_ERROR", "Invalid exam observation", 400)
+    if question_ref and not MockQuestion.objects.filter(
+        pk=question_ref, group__section__exam_id=attempt.exam_id,
+    ).exists():
+        raise ContractAPIException("VALIDATION_ERROR", "Question does not belong to the exam", 400)
+    if event_id is not None:
+        try:
+            event_id = str(UUID(event_id))
+        except (TypeError, ValueError, AttributeError):
+            raise ContractAPIException("VALIDATION_ERROR", "eventId must be a UUID", 400)
+    elif offline_synced:
+        event_id = f"{event_type}:{obs_dt.isoformat()}:{current_skill}:{question_ref}"
 
-    current_skill = (skill or attempt.current_skill or "").strip()[:24]
+    incidents = ExamIntegrityIncident.objects.filter(attempt_id=attempt.id)
+    duplicate = incidents.filter(metadata__eventIds__contains=[event_id]).first() if event_id else None
+    if duplicate:
+        return _event_response(duplicate, created=False, notified=False, now=now)
+    minute_count = sum(incidents.filter(
+        updated_at__gte=now - timedelta(minutes=1),
+    ).values_list("occurrence_count", flat=True))
+    if minute_count >= MAX_EVENTS_PER_MINUTE:
+        raise ContractAPIException("GUARD_RATE_LIMIT", "Too many exam observations", 429)
+
     group_id, supervisor_id = resolve_attempt_supervision(attempt)
-    is_alert = event_type in ALERT_WORTHY_EVENTS and mode != "practice"
+    mode = "supervised_mock" if supervisor_id else "practice"
+    is_alert = event_type in ALERT_WORTHY_EVENTS and supervisor_id is not None
 
     with transaction.atomic():
         # Correlate rapid focus/visibility/fullscreen events within 5 seconds on the same attempt & skill
@@ -234,6 +284,7 @@ def record_event(
                 .filter(
                     attempt_id=attempt.id,
                     skill=current_skill,
+                    supervisor_id=supervisor_id,
                     event_type__in=CORRELATABLE_EXIT_EVENTS,
                     status="open",
                     updated_at__gte=cutoff,
@@ -248,6 +299,7 @@ def record_event(
                 .filter(
                     attempt_id=attempt.id,
                     skill=current_skill,
+                    supervisor_id=supervisor_id,
                     event_type=event_type,
                     status="open",
                     updated_at__gte=cutoff,
@@ -259,7 +311,11 @@ def record_event(
         if existing is not None:
             existing.occurrence_count = existing.occurrence_count + 1
             existing.observed_at = max(existing.observed_at, obs_dt)
-            existing.save(update_fields=["occurrence_count", "observed_at", "updated_at"])
+            if event_id:
+                existing.metadata = {**existing.metadata, "eventIds": [
+                    *existing.metadata.get("eventIds", []), event_id,
+                ]}
+            existing.save(update_fields=["occurrence_count", "observed_at", "metadata", "updated_at"])
             incident = existing
             created = False
         else:
@@ -275,7 +331,7 @@ def record_event(
                 integrity_mode=mode,
                 occurrence_count=1,
                 observed_at=obs_dt,
-                metadata={"offlineSynced": bool(offline_synced)},
+                metadata={"offlineSynced": offline_synced, "eventIds": [event_id] if event_id else []},
             )
             created = True
 
@@ -287,13 +343,12 @@ def record_event(
             )
             group_name = Group.objects.filter(id=group_id).values_list("name", flat=True).first() if group_id else ""
             exam_title = attempt.exam.title if getattr(attempt, "exam", None) else "Mock Imtihon"
-            alert_text = _build_uzbek_alert(student_name, group_name or "", exam_title, current_skill, event_type)
 
             Notification.objects.create(
                 id=str(uuid4()),
                 user_id=supervisor_id,
                 type="announcement",
-                text=alert_text,
+                text="Imtihon nazoratida yangi kuzatuv qayd etildi.",
                 read=False,
                 created_at=now,
             )
@@ -305,36 +360,28 @@ def record_event(
 
             transaction.on_commit(lambda: _bump_guard_seq(supervisor_id))
 
-    return {
-        "incidentId": incident.id,
-        "eventType": incident.event_type,
-        "occurrenceCount": incident.occurrence_count,
-        "created": created,
-        "supervisorNotified": bool(is_alert and supervisor_id and created),
-        "serverTime": now,
-    }
+    return _event_response(incident, created=created, notified=bool(is_alert and created), now=now)
 
 
-def record_batch_events(actor, attempt: MockAttempt, events: list[dict]) -> list[dict]:
-    results = []
-    for item in events[:50]:
-        raw_evt = item.get("event") or item.get("eventType") or ""
-        if not isinstance(raw_evt, str) or not raw_evt.strip():
-            continue
-        obs = parse_datetime(str(item.get("observedAt") or "")) if item.get("observedAt") else None
-        results.append(
-            record_event(
-                actor,
-                attempt,
-                raw_evt,
-                observed_at=obs,
-                skill=item.get("skill"),
-                question_ref=item.get("questionRef") or "",
-                integrity_mode=item.get("integrityMode"),
-                offline_synced=bool(item.get("offlineSynced") or item.get("observedAt")),
-            )
-        )
-    return results
+def private_teacher_access(teacher_id, incident):
+    if incident.supervisor_id != teacher_id or not _active_teacher(teacher_id, incident.group_id):
+        return False
+    return resolve_attempt_supervision(incident.attempt) == (incident.group_id, teacher_id)
+
+
+def _teacher_alert_scope(qs, actor):
+    if actor.role != "teacher":
+        return qs
+    qs = qs.filter(supervisor_id=actor.id).filter(
+        Q(group__isnull=True) | Q(group__teacher_id=actor.id),
+    ).exclude(group_id__in=ClassroomArchive.objects.values("group_id"))
+    # Legacy standalone cohorts have no classroom foreign key; recheck their
+    # current assignment or session authority before including these events.
+    standalone = [
+        incident.pk for incident in qs.filter(group__isnull=True).select_related("attempt")
+        if private_teacher_access(actor.id, incident)
+    ]
+    return qs.filter(Q(group__isnull=False) | Q(pk__in=standalone))
 
 
 def teacher_alerts(actor, *, status: str = "", group_id: str = "", limit: int = 30) -> dict:
@@ -346,8 +393,7 @@ def teacher_alerts(actor, *, status: str = "", group_id: str = "", limit: int = 
         integrity_mode__in=("supervised_mock", "supervised_desktop"),
     ).select_related("student", "exam", "group")
 
-    if actor.role == "teacher":
-        qs = qs.filter(supervisor_id=actor.id)
+    qs = _teacher_alert_scope(qs, actor)
     if status in ExamIntegrityIncident.STATUSES:
         qs = qs.filter(status=status)
     if group_id:
@@ -358,8 +404,7 @@ def teacher_alerts(actor, *, status: str = "", group_id: str = "", limit: int = 
         integrity_mode__in=("supervised_mock", "supervised_desktop"),
         status="open",
     )
-    if actor.role == "teacher":
-        unread_qs = unread_qs.filter(supervisor_id=actor.id)
+    unread_qs = _teacher_alert_scope(unread_qs, actor)
 
     items = [
         {
@@ -404,7 +449,7 @@ def review_incident(actor, incident_id: str, *, status: str, note: str = "") -> 
     incident = ExamIntegrityIncident.objects.select_for_update().filter(id=incident_id).first()
     if incident is None:
         raise ContractAPIException("INCIDENT_NOT_FOUND", "Hodisa topilmadi", 404)
-    if actor.role == "teacher" and incident.supervisor_id != actor.id:
+    if actor.role == "teacher" and not private_teacher_access(actor.id, incident):
         raise ContractAPIException("FORBIDDEN", "Bu imtihon hodisasini boshqarish huquqingiz yo‘q", 403)
 
     now = timezone.now()

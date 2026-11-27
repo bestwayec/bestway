@@ -30,6 +30,7 @@ from django.db import connection
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from apps.core.models import ClassroomEnrollment
 from apps.core import class_quiz as cq
 from apps.core import class_quiz_appeals as appeals
 from apps.core import telegram_notify as notify
@@ -103,6 +104,8 @@ def mk_student(group_id, chat):
         cursor.execute('INSERT INTO "StudentProfile" ("userId","availablePrograms","activeProgram","isApproved","groupId","currentPoints","linkCode","createdAt","pointsPeriod","gameQualified","qualifiedAt") '
                        "VALUES (%s, ARRAY['IELTS']::\"ExamProgram\"[], 'IELTS', true, %s, 0, %s, NOW(), NULL, false, NULL)",
                        [student.id, group_id, 'TQ' + uuid4().hex[:8].upper()])
+    if group_id is not None:
+        ClassroomEnrollment.objects.create(group_id=group_id, student_id=student.id, started_at=timezone.now())
     return student
 
 
@@ -534,6 +537,7 @@ finally:
         cursor.execute('DELETE FROM "VocabularySet" WHERE created_by_id = ANY(%s)', [users])
         cursor.execute('DELETE FROM core_telegramdialogstate WHERE user_id = ANY(%s)', [users])
         cursor.execute('DELETE FROM core_telegrampreference WHERE user_id = ANY(%s)', [users])
+        ClassroomEnrollment.objects.filter(student_id__in=users).delete()
         cursor.execute('DELETE FROM "StudentProfile" WHERE "userId" = ANY(%s)', [users])
         cursor.execute('DELETE FROM "Group" WHERE id = ANY(%s)', [groups_made])
         cursor.execute('DELETE FROM "User" WHERE id = ANY(%s)', [users])

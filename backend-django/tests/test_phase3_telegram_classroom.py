@@ -9,7 +9,9 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.core import assessment, groups
+from apps.core import telegram_classroom_service as bindings
 from apps.core import telegram_notify as notify
+from apps.core import telegram_outbox as outbox
 from apps.core import telegram_teacher as bot_teacher
 from apps.core.homework_scoring import ASSIGNMENT_KEY
 from apps.core.models import (
@@ -122,7 +124,7 @@ def make_exam(title="Mock Exam", exam_type="ielts_academic"):
     )
 
 
-def test_binding_and_disconnect_invalidates_outbox(pg_phase3_tables):
+def test_binding_and_disconnect_invalidates_outbox(pg_phase3_tables, monkeypatch):
     teacher_a = make_user("teacher", "Teacher A", tg_chat="70001")
     teacher_b = make_user("teacher", "Teacher B", tg_chat="70002")
     student = make_user("student", "Student One", tg_chat="80001")
@@ -146,11 +148,34 @@ def test_binding_and_disconnect_invalidates_outbox(pg_phase3_tables):
 
     client_a = APIClient()
     client_a.force_authenticate(user=SimpleNamespace(id=teacher_a.id, role="teacher", name=teacher_a.name, is_authenticated=True))
-    bound = client_a.post(
-        f"/v1/groups/{group_a.id}/telegram-binding",
-        {"chatId": "-100999888", "chatTitle": "IELTS Group Chat"},
-        format="json",
-    )
+    path = f"/v1/groups/{group_a.id}/telegram-binding"
+    chat_id = "-100999888"
+    assert client_a.post(path, {"chatId": chat_id}, format="json").status_code == 403
+
+    from common.api.exceptions import ContractAPIException
+
+    with patch.object(bindings.api, "call", return_value=None), pytest.raises(ContractAPIException) as unavailable:
+        bindings.request_binding(teacher_a, group_a.id, chat_id, sender_id="70001")
+    assert unavailable.value.status_code == 503
+
+    manager = {"status": "member"}
+
+    def telegram(method, payload):
+        if method == "getChat":
+            return {"id": int(chat_id), "type": "supergroup", "title": "IELTS Group Chat"}
+        if method == "getMe":
+            return {"id": 42}
+        return {"status": "administrator"} if payload["user_id"] == 42 else manager
+
+    monkeypatch.setattr(bindings.api, "call", telegram)
+    with pytest.raises(ContractAPIException) as unauthorized:
+        bindings.request_binding(teacher_a, group_a.id, chat_id, sender_id="70001")
+    assert unauthorized.value.status_code == 403
+    manager["status"] = "administrator"
+    token = bindings.request_binding(teacher_a, group_a.id, chat_id, sender_id="70001")
+    assert client_a.post(path, {"chatId": "-1000000", "confirmation": token}, format="json").status_code == 403
+    bound = client_a.post(path, {"chatId": chat_id, "confirmation": token}, format="json")
+    assert client_a.post(path, {"chatId": chat_id, "confirmation": token}, format="json").status_code == 409
     assert bound.status_code == 200
     assert bound.json()["data"]["bound"] is True
 
@@ -159,6 +184,11 @@ def test_binding_and_disconnect_invalidates_outbox(pg_phase3_tables):
     group_msg = TelegramOutbox.objects.filter(group_id=group_a.id, chat_id_override="-100999888").first()
     assert group_msg is not None
     assert group_msg.status == "pending"
+
+    manager["status"] = "member"
+    with patch.object(outbox.api, "send_detailed") as sender:
+        assert outbox._send_group(group_msg, timezone.now()) == ("skipped", "group_authority_revoked")
+        sender.assert_not_called()
 
     disc = client_a.delete(f"/v1/groups/{group_a.id}/telegram-binding")
     assert disc.status_code == 200
@@ -181,6 +211,7 @@ def test_small_group_privacy_and_provisional_group_report(pg_phase3_tables):
         chat_id="-100555111",
         chat_title="Small Group",
         bound_by_id=teacher.id,
+        verified_telegram_id=teacher.telegram_chat_id,
         is_active=True,
         bot_can_post=True,
         verified_at=timezone.now(),
@@ -344,6 +375,7 @@ def test_teacher_bot_menu_includes_binding_and_monitoring(pg_phase3_tables):
         chat_id="-100777888",
         chat_title="Bot Group",
         bound_by_id=teacher.id,
+        verified_telegram_id=teacher.telegram_chat_id,
         is_active=True,
         bot_can_post=True,
         verified_at=timezone.now(),

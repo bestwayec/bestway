@@ -44,7 +44,7 @@ def active_enrollments(**filters):
 
 
 def student_group_ids(student_id):
-    return active_enrollments(student_id=student_id).values("group_id")
+    return active_enrollments(student_id=student_id).values_list("group_id", flat=True)
 
 
 def member_profiles(group_id):

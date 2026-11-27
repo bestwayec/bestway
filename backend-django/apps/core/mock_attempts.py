@@ -286,6 +286,8 @@ def start(actor, exam_id, data):
         ).first()
         if assignment is None:
             fail('ASSIGNMENT_NOT_FOUND', 'Exam assignment not found', 404)
+        if assignment.participant_ids is not None and actor.id not in assignment.participant_ids:
+            fail('ASSIGNMENT_NOT_FOUND', 'Exam assignment not found', 404)
         if assignment.deadline < timezone.now():
             fail('ASSIGNMENT_EXPIRED', 'The assignment deadline has passed', 409)
     if not exam.is_published and not exam.is_demo:
@@ -405,6 +407,8 @@ def start(actor, exam_id, data):
         if flow == 'full_test' and exam.profile not in ('full_mock', 'writing_speaking'):
             fail('MOCK_FULL_TEST_UNAVAILABLE', 'Full Mock flow faqat full_mock imtihonlarda mavjud')
         mode = 'timed' if flow in ('full_test', 'single_skill') and data.get('mode') != 'practice' else data.get('mode') or 'timed'
+        if assignment:
+            mode = 'timed'
         at = attempt_signature.truncate_to_millis(timezone.now())  # equals the stored TIMESTAMP(3)
         deadlines, overall, last = timing(exam.type, shaped['sections'], mode, flow, at, selected_skills=data.get('skills') if partial else None)
         if mode == 'practice' and practice_options.get('timer') in ('section', 'part'):
@@ -939,10 +943,10 @@ def detail(actor, attempt_id):
             fail("FORBIDDEN", "Bu natijani ko‘rish huquqingiz yo‘q", 403)
     else:
         assert_view(actor, attempt.student_id)
-    from .classroom_results import answer_disclosure_status
+    from .classroom_results import answer_disclosure_status, practice_answers_available
 
     staff = mock_catalog.is_staff(actor) and teacher_can_grade is not False
-    disclosure = answer_disclosure_status(actor, attempt, is_review_blocked=attempt.status == "completed" and review_blocked(attempt))
+    disclosure = answer_disclosure_status(actor, attempt)
     show = disclosure["disclosed"]
     answers = {a.question_id: a for a in MockAnswer.objects.filter(attempt_id=attempt_id)}
     # One query per level instead of one per section and one per group (N+1).
@@ -956,7 +960,11 @@ def detail(actor, attempt_id):
     from .handwriting import handwriting_fields, page_urls
     from . import review_evidence
     from .practice_mode import revealed as practice_revealed
-    shown_in_practice = set(practice_revealed(attempt))
+    shown_in_practice = set()
+    saved_reveals = practice_revealed(attempt)
+    practice_help = attempt.mode == 'practice' and attempt.status == 'in_progress' and practice_answers_available(attempt)
+    if saved_reveals and (show or practice_help):
+        shown_in_practice = set(saved_reveals)
     sections = []
     for section in section_rows:
         raw = (attempt.raw_scores or {}).get(section.skill, {})
@@ -984,7 +992,6 @@ def detail(actor, attempt_id):
             review_source, review_recording = sources.get(group.id, ('', None))
             if review_source and section.skill == 'reading':
                 shaped_group['reviewText'] = review_source
-            practice_help = attempt.mode == 'practice' and attempt.status == 'in_progress'
             if (show or practice_help) and section.skill == 'listening':
                 # Practice only (never a timed exam): the audioscript is a study aid while practising.
                 script = review_source if show else review_evidence.source_text(group, section.skill)

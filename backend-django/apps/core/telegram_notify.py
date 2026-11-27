@@ -127,6 +127,8 @@ def homework_assigned(assignment_id, now=None):
     web = site_url(student_href(kind, row.id))
     count = 0
     for student_id in _linked_students(row.cohort.classroom_id):
+        if row.participant_ids is not None and student_id not in row.participant_ids:
+            continue
         lang = state.language_of(student_id)
         detail = T[lang]['hw_' + kind].format(n=words)
         text = T[lang]['new_homework'].format(title=esc(row.title), detail=detail, when=local(row.deadline))
@@ -193,20 +195,19 @@ def homework_deadline_sweep(now=None, *, windows=None):
         done_ids = set(
             HomeworkSubmission.objects.filter(
                 assignment=row,
-                status__in=('graded', 'awaiting_review', 'submitted'),
+                status__in=('graded', 'awaiting_review', 'awaiting_result', 'submitted'),
             ).values_list('student_id', flat=True)
         )
         if row.exam_id:
-            done_ids.update(
-                MockAttempt.objects.filter(
-                    exam_id=row.exam_id,
-                    started_at__gte=row.created_at,
-                    status__in=('completed', 'grading'),
-                ).values_list('student_id', flat=True)
-            )
+            from .classroom_results import assignment_attempts
+            from .homework_scoring import ASSIGNMENT_KEY
+
+            done_ids.update(assignment_attempts(MockAttempt.objects.filter(
+                exam_id=row.exam_id, submitted_at__isnull=False, status__in=('completed', 'grading'),
+            )).filter(media_state__contains={ASSIGNMENT_KEY: row.id}).values_list('student_id', flat=True))
         deadline_stamp = int(row.deadline.timestamp())
         for student_id in _linked_students(row.cohort.classroom_id):
-            if student_id in done_ids:
+            if student_id in done_ids or (row.participant_ids is not None and student_id not in row.participant_ids):
                 continue
             text = tx(
                 student_id,
@@ -231,14 +232,16 @@ def homework_group_report(assignment_id: str, *, reason: str = 'closed', now=Non
         return {'sent': False, 'reason': 'missing_classroom'}
     group_id = row.cohort.classroom_id
     classroom = row.cohort.classroom
-    roster_ids = list(member_profiles(group_id).values_list('user_id', flat=True))
+    roster_ids = row.participant_ids
+    if roster_ids is None:
+        roster_ids = list(member_profiles(group_id).values_list('user_id', flat=True))
     total = len(roster_ids)
 
     for sid in roster_ids:
         homework_scoring.sync_from_exam(row, sid)
 
     subs = list(HomeworkSubmission.objects.filter(assignment=row, student_id__in=roster_ids))
-    submitted_subs = [s for s in subs if s.status in ('graded', 'awaiting_review', 'submitted')]
+    submitted_subs = [s for s in subs if s.status in ('graded', 'awaiting_review', 'awaiting_result', 'submitted')]
     graded_subs = [s for s in subs if s.status == 'graded']
     avg = round(sum(s.score_percent for s in graded_subs) / len(graded_subs), 1) if graded_subs else 0
     pending_count = sum(1 for s in subs if s.status in ('awaiting_review', 'awaiting_result'))
@@ -250,6 +253,10 @@ def homework_group_report(assignment_id: str, *, reason: str = 'closed', now=Non
             has_provisional = AssessmentJob.objects.filter(attempt_id__in=attempt_ids).filter(
                 Q(status__in=('PENDING', 'PROCESSING', 'RETRY', 'NEEDS_REVIEW')) | ~Q(final_score_source='TEACHER')
             ).exists()
+
+    if reason == "automatic" and now < row.deadline and (not total or len(submitted_subs) < total):
+        return {"sent": False, "reason": "assignment_open"}
+    report_key = str(int(now.timestamp())) if reason == "manual" else "provisional" if has_provisional else "final"
 
     small_group = total < 5 or len(submitted_subs) < 5
     binding = TelegramClassroomBinding.objects.filter(group_id=group_id, is_active=True, bot_can_post=True).first()
@@ -273,7 +280,7 @@ def homework_group_report(assignment_id: str, *, reason: str = 'closed', now=Non
             outbox.enqueue(
                 f'group:{group_id}',
                 'announcements',
-                f'hw_group_report:{row.id}:{reason}:{binding.chat_id}:{int(now.timestamp()) if reason == "manual" else "closed"}',
+                f'hw_group_report:{row.id}:{reason}:{binding.chat_id}:{report_key}',
                 text,
                 now=now,
                 group_id=group_id,
@@ -297,7 +304,7 @@ def homework_group_report(assignment_id: str, *, reason: str = 'closed', now=Non
             outbox.enqueue(
                 teacher_id,
                 'teacher',
-                f'hw_teacher_report:{row.id}:{reason}:{int(now.timestamp()) if reason == "manual" else "closed"}',
+                f'hw_teacher_report:{row.id}:{reason}:{report_key}',
                 ttext,
                 now=now,
             )
@@ -312,6 +319,19 @@ def homework_group_report(assignment_id: str, *, reason: str = 'closed', now=Non
         'queuedGroup': queued_group,
         'queuedTeacher': queued_teacher,
     }
+
+
+def homework_report_sweep(now=None):
+    now = now or timezone.now()
+    rows = HomeworkAssignment.objects.filter(
+        exam_id__isnull=False, cohort__classroom_id__isnull=False,
+        deadline__range=(now - CLOSED_WINDOW, now),
+    )
+    queued = 0
+    for assignment_id in rows.values_list("pk", flat=True).iterator():
+        report = homework_group_report(assignment_id, reason="automatic", now=now)
+        queued += int(report.get("queuedGroup", False)) + int(report.get("queuedTeacher", False))
+    return queued
 
 
 def deadline_sweep(now=None):
@@ -450,6 +470,7 @@ def tick(now=None, *, deliver=True):
     for name, sweep in (
         ('deadlines', deadline_sweep),
         ('homework_deadlines', homework_deadline_sweep),
+        ('homework_reports', homework_report_sweep),
         ('vocab', vocab_due_sweep),
         ('closed', assignment_closed_sweep),
     ):

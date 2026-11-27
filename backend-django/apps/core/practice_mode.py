@@ -89,6 +89,7 @@ def revealed(attempt) -> list[str]:
 def reveal(actor, attempt_id: str, question_id: str) -> dict:
     """Shows a practice answer (key and, when the author marked it, where it is). Never in a timed attempt."""
     from . import review_evidence
+    from .classroom_results import practice_answers_available
     from .mock_attempts import own
 
     if not isinstance(question_id, str) or not question_id:
@@ -99,6 +100,8 @@ def reveal(actor, attempt_id: str, question_id: str) -> dict:
             _fail("PRACTICE_ONLY", "Answers can be shown in practice only", 403)
         if attempt.status != "in_progress":
             _fail("MOCK_ATTEMPT_FINISHED", "This attempt is finished", 409)
+        if not practice_answers_available(attempt):
+            _fail("REVIEW_NOT_AVAILABLE", "Answers are reserved for an active examination", 403)
         selected = scope(attempt)
         if selected is not None and question_id not in selected["questionIds"]:
             _fail("QUESTION_NOT_IN_EXAM", "Savol bu imtihonga tegishli emas", 400)

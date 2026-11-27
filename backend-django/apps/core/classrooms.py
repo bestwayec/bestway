@@ -47,6 +47,14 @@ def is_member(cohort, student_id):
     return CohortMembership.objects.filter(cohort=cohort, student_id=student_id, status="active").exists()
 
 
+def participant_ids(cohort):
+    if is_linked(cohort):
+        members = active_enrollments(group_id=cohort.classroom_id)
+    else:
+        members = CohortMembership.objects.filter(cohort=cohort, status="active")
+    return sorted(set(members.values_list("student_id", flat=True)))
+
+
 def student_homework_scope(student_id):
     classroom_ids = student_group_ids(student_id)
     inherited_ids = CohortMembership.objects.filter(student_id=student_id, status="active").values("cohort_id")

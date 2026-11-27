@@ -37,6 +37,8 @@ from apps.core import (
     mock_submission_snapshots,
 )
 from apps.core.multilevel import CURRENT_SPEC
+from apps.core.homework_scoring import ASSIGNMENT_KEY
+from apps.core.models import Cohort, HomeworkAssignment
 from apps.legacy_schema.models import (
     AssessmentEvaluation,
     AssessmentJob,
@@ -78,6 +80,14 @@ try:
         with connection.cursor() as cursor:
             cursor.execute('INSERT INTO "StudentProfile" ("userId","availablePrograms","activeProgram","isApproved","groupId","linkCode") VALUES (%s,ARRAY[\'MULTILEVEL\']::"ExamProgram"[],\'MULTILEVEL\',true,%s,%s)',[ids['student'],ids['group'],prefix])
         insert('MockExam',id=ids['exam'],type='multilevel',title='Local partial W/S practice',profile='practice',specificationVersion=CURRENT_SPEC,assessmentPolicy='MANUAL_ONLY',updatedAt=stamp)
+        cohort = Cohort.objects.create(
+            classroom_id=ids['group'], teacher_id=ids['teacher'], name='Local grading cohort',
+            invite_code=uuid4().hex[:16],
+        )
+        assignment = HomeworkAssignment.objects.create(
+            cohort=cohort, exam_id=ids['exam'], title='Assigned W/S practice',
+            deadline=stamp + timezone.timedelta(days=1), participant_ids=[ids['student']],
+        )
         question_ids=[];writing=[];speaking=[]
         for skill,maxima in [('writing',[5,5,6]),('speaking',[5])]:
             section=prefix+'-'+skill;insert('MockSection',id=section,examId=ids['exam'],skill=skill,sortOrder=0 if skill=='writing' else 1)
@@ -88,7 +98,10 @@ try:
                     (writing if skill=='writing' else speaking).append(qid)
                     insert('MockQuestion',id=qid,groupId=group,number=qi+1,sortOrder=qi,type='speaking_task' if skill=='speaking' else 'essay_task2' if index==2 else 'essay_task1',prompt='Describe an experience with reasons.',points=9)
         insert('MockAttempt',id=ids['attempt'],examId=ids['exam'],studentId=ids['student'],status='grading',submittedAt=stamp,
-            flowMode='partial_practice',specificationVersion=CURRENT_SPEC,mediaState=json.dumps({'__practice_scope':dict(version=1,skills=['writing','speaking'],questionIds=question_ids)}))
+            flowMode='partial_practice',specificationVersion=CURRENT_SPEC,mediaState=json.dumps({
+                ASSIGNMENT_KEY: assignment.id,
+                '__practice_scope': dict(version=1, skills=['writing', 'speaking'], questionIds=question_ids),
+            }))
         for qid in question_ids:
             key=None
             if qid in speaking:
@@ -147,7 +160,7 @@ try:
         MockExam.objects.filter(id=ids['exam']).update(assessment_policy='PRACTICE_AUTO_AI')
         ai_id=prefix+'-ai-attempt'
         insert('MockAttempt',id=ai_id,examId=ids['exam'],studentId=ids['student'],status='grading',submittedAt=stamp,
-            flowMode='partial_practice',specificationVersion=CURRENT_SPEC,mediaState=json.dumps({'__practice_scope':dict(version=1,skills=['writing','speaking'],questionIds=question_ids)}))
+            flowMode='partial_practice',specificationVersion=CURRENT_SPEC,mediaState=json.dumps({ASSIGNMENT_KEY: assignment.id, '__practice_scope': dict(version=1, skills=['writing','speaking'], questionIds=question_ids)}))
         original='I enjoy studying English because it helps me communicate with people and understand different cultures.'
         for qid in question_ids:
             insert('MockAnswer',id=str(uuid4()),attemptId=ai_id,questionId=qid,response=original if qid in writing else '',audioKey=qid+'.wav' if qid in speaking else None,updatedAt=stamp)
@@ -173,7 +186,7 @@ try:
         # A low-confidence proposal is stored for teacher review only.
         low_id=prefix+'-low-confidence'
         insert('MockAttempt',id=low_id,examId=ids['exam'],studentId=ids['student'],status='grading',submittedAt=stamp,
-            flowMode='partial_practice',specificationVersion=CURRENT_SPEC,mediaState=json.dumps({'__practice_scope':dict(version=1,skills=['writing'],questionIds=writing)}))
+            flowMode='partial_practice',specificationVersion=CURRENT_SPEC,mediaState=json.dumps({ASSIGNMENT_KEY: assignment.id, '__practice_scope':dict(version=1,skills=['writing'],questionIds=writing)}))
         for qid in writing:
             insert('MockAnswer',id=str(uuid4()),attemptId=low_id,questionId=qid,response=original,updatedAt=stamp)
         mock_submission_snapshots.enqueue(MockAttempt.objects.select_related('exam').get(id=low_id))
@@ -266,7 +279,7 @@ try:
         def speech_case(label, audio_kind, stt):
             attempt_id=prefix+'-'+label+'-attempt'
             insert('MockAttempt',id=attempt_id,examId=ids['exam'],studentId=ids['student'],status='grading',submittedAt=stamp,
-                flowMode='partial_practice',specificationVersion=CURRENT_SPEC,mediaState=json.dumps({'__practice_scope':dict(version=1,skills=['speaking'],questionIds=speaking)}))
+                flowMode='partial_practice',specificationVersion=CURRENT_SPEC,mediaState=json.dumps({ASSIGNMENT_KEY: assignment.id, '__practice_scope':dict(version=1,skills=['speaking'],questionIds=speaking)}))
             for qid in speaking:
                 key=label+'-'+qid+'.wav'
                 if audio_kind == 'silent':

@@ -91,3 +91,9 @@ def guard(request, attempt_id: str) -> None:
     state = claim(request.user, attempt_id, session_id)
     if not state['active']:
         engine.fail('EXAM_SESSION_ELSEWHERE', 'This exam is open in another tab or on another device.', 409)
+
+
+def guard_observation(request, attempt_id: str, *, recovery=False) -> None:
+    if not request.META.get(HEADER) and (recovery or _holder(attempt_id)):
+        engine.fail('EXAM_SESSION_REQUIRED', 'Send the active exam session', 409)
+    guard(request, attempt_id)

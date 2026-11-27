@@ -26,10 +26,12 @@ from types import SimpleNamespace
 from django.db.models import Q
 from django.utils import timezone
 
-from apps.legacy_schema.models import AssessmentJob, Group, User
+from apps.legacy_schema.models import AssessmentJob, Group, MockAttempt, User
 from common.api.exceptions import ContractAPIException
 
-from .classroom_roster import member_profiles
+from .classroom_results import assignment_attempts
+from .classroom_roster import assert_active, member_profiles
+from .live_exam_guard import _teacher_alert_scope
 from . import class_quiz as cq
 from . import class_quiz_appeals as appeals
 from . import groups
@@ -146,6 +148,7 @@ def _own_groups(actor):
 def _group(actor, group_id):
     group = groups.get_group(group_id)
     groups.assert_manages_group(actor, group)        # teacher B gets FORBIDDEN for teacher A's group
+    assert_active(group.id)
     return group
 
 
@@ -183,9 +186,9 @@ def group_card(chat_id, message_id, actor, lang, group_id):
     roster_ids = _roster(group.id)
     names = dict(User.objects.filter(id__in=roster_ids).values_list('id', 'name'))
     binding = TelegramClassroomBinding.objects.filter(group_id=group.id, is_active=True).first()
-    guard_open = ExamIntegrityIncident.objects.filter(group_id=group.id, status='open').count()
+    guard_open = _teacher_alert_scope(ExamIntegrityIncident.objects.filter(group_id=group.id, status='open'), actor).count()
     grading_pending = AssessmentJob.objects.filter(
-        student_id__in=roster_ids,
+        attempt_id__in=assignment_attempts(MockAttempt.objects.all(), group_id=group.id).values('id'),
         status__in=('PENDING', 'PROCESSING', 'RETRY', 'NEEDS_REVIEW'),
     ).count()
     lines = [
@@ -204,15 +207,16 @@ def group_card(chat_id, message_id, actor, lang, group_id):
 
 def group_monitoring_card(chat_id, message_id, actor, lang, group_id):
     group = _group(actor, group_id)
-    roster_ids = _roster(group.id)
     incidents = list(
-        ExamIntegrityIncident.objects.select_related('student', 'exam')
-        .filter(group_id=group.id, status='open')
+        _teacher_alert_scope(
+            ExamIntegrityIncident.objects.select_related('student', 'exam').filter(group_id=group.id, status='open'),
+            actor,
+        )
         .order_by('-updated_at')[:8]
     )
     jobs = list(
         AssessmentJob.objects.filter(
-            student_id__in=roster_ids,
+            attempt_id__in=assignment_attempts(MockAttempt.objects.all(), group_id=group.id).values('id'),
             status__in=('PENDING', 'PROCESSING', 'RETRY', 'NEEDS_REVIEW'),
         ).order_by('-created_at')[:8]
     )

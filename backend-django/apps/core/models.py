@@ -530,6 +530,7 @@ class HomeworkAssignment(models.Model):
     vocabulary_revision = models.JSONField(null=True, blank=True)
     # Question type the teacher chose for vocabulary homework (None = the learner picks).
     vocabulary_mode = models.CharField(max_length=20, choices=QuizMode.choices, null=True, blank=True)
+    participant_ids = models.JSONField(null=True, blank=True)
     deadline = models.DateTimeField()
     min_pass_percent = models.IntegerField(default=80)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1284,6 +1285,7 @@ class TelegramClassroomBinding(models.Model):
     chat_id = models.CharField(max_length=64, db_index=True)
     chat_title = models.CharField(max_length=255, blank=True, default="")
     bound_by_id = models.CharField(max_length=255)
+    verified_telegram_id = models.CharField(max_length=64, null=True, blank=True)
     is_active = models.BooleanField(default=True)
     bot_can_post = models.BooleanField(default=True)
     verified_at = models.DateTimeField()
@@ -1293,3 +1295,10 @@ class TelegramClassroomBinding(models.Model):
 
     class Meta:
         db_table = "TelegramClassroomBinding"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["chat_id"],
+                condition=models.Q(is_active=True, verified_telegram_id__isnull=False),
+                name="telegram_unique_verified_chat",
+            ),
+        ]

@@ -3,9 +3,13 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import json
 import re
 from collections import defaultdict
+from datetime import timedelta
+from uuid import uuid4
 from django.conf import settings
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
 from django.db.models import F, Q
 from django.utils import timezone
@@ -13,7 +17,7 @@ from django.utils import timezone
 from apps.legacy_schema.models import (
     AssessmentJob,
     Attendance,
-    Group,
+    AuditLog,
     MockAttempt,
     MockPurchase,
     Notification,
@@ -38,7 +42,6 @@ from .models import (
     UserLessonProgress,
     UserWeakWord,
     VocabularyAttempt,
-    VocabularySet,
 )
 from .system_settings import audit
 
@@ -104,17 +107,80 @@ def _account_summary(user: User, profile: StudentProfile | None) -> dict:
     }
 
 
-def _preview_token(source_id: str, canonical_id: str, basis: str, stamp: str) -> str:
-    payload = f"{source_id}:{canonical_id}:{basis}:{stamp}".encode()
-    return hmac.new(settings.SECRET_KEY.encode(), payload, hashlib.sha256).hexdigest()[:24]
+VERIFICATION_ACTION = "account.reconcile_identity_verified"
+VERIFICATION_AGE = timedelta(hours=24)
+RECONCILIATION_RECORDS = (
+    (User, "id"), (StudentProfile, "user_id"), (ClassroomEnrollment, "student_id"),
+    (CohortMembership, "student_id"), (HomeworkSubmission, "student_id"),
+    (MockAttempt, "student_id"), (AssessmentJob, "student_id"), (TestAttempt, "student_id"),
+    (ClassQuizAttempt, "student_id"), (MockPurchase, "user_id"), (VideoPurchase, "user_id"),
+    (VocabularyAttempt, "student_id"), (UserWeakWord, "student_id"), (UserLessonProgress, "user_id"),
+    (Payment, "student_id"), (Attendance, "student_id"), (PointsLog, "student_id"),
+    (ParentStudent, "student_id"),
+)
+
+
+def _data_stamp(source_id, canonical_id, *, lock=False):
+    digest = hashlib.sha256()
+    for model, user_field in RECONCILIATION_RECORDS:
+        records = model.objects.filter(**{f"{user_field}__in": [source_id, canonical_id]}).order_by("pk", user_field)
+        if lock:
+            records = records.select_for_update()
+        for value in records.values().iterator():
+            digest.update(json.dumps(value, sort_keys=True, cls=DjangoJSONEncoder).encode())
+    return digest.hexdigest()
+
+
+def _preview_token(actor_id, source_id, canonical_id, verification_id, transfer_telegram, stamp):
+    data = json.dumps([actor_id, source_id, canonical_id, verification_id, transfer_telegram, stamp]).encode()
+    return hmac.new(settings.SECRET_KEY.encode(), data, hashlib.sha256).hexdigest()
+
+
+def record_verification(actor, source_id, canonical_id, *, method, reference):
+    if actor.role != "super_admin" or not User.objects.filter(pk=actor.id, role="super_admin", is_active=True).exists():
+        fail("FORBIDDEN", "Ruxsat berilmagan", 403)
+    if not isinstance(method, str) or method not in {"checked_both_authenticated_accounts", "checked_identity_record"}:
+        fail("INVALID_EVIDENCE", "Tekshirish usulini tanlang")
+    if not isinstance(reference, str) or not re.fullmatch(r"[A-Za-z0-9_.-]{6,100}", reference):
+        fail("INVALID_EVIDENCE", "Tekshiruv ishi raqamini kiriting")
+    if source_id == canonical_id or User.objects.filter(
+        pk__in=[source_id, canonical_id], role="student", is_active=True,
+    ).count() != 2:
+        fail("STUDENT_ACCOUNTS_REQUIRED", "Ikki faol o‘quvchi akkauntini tanlang", 409)
+    record = AuditLog.objects.create(
+        id=str(uuid4()), user_id=actor.id, action=VERIFICATION_ACTION,
+        entity="user", entity_id=canonical_id, created_at=timezone.now(),
+        new_value={"sourceId": source_id, "method": method, "reference": reference},
+    )
+    return {"verificationId": record.id, "expiresAt": record.created_at + VERIFICATION_AGE}
+
+
+def _verification(actor, source_id, canonical_id, verification_id):
+    if not verification_id:
+        return None
+    evidence = AuditLog.objects.filter(
+        pk=verification_id, action=VERIFICATION_ACTION, entity="user", entity_id=canonical_id,
+        created_at__gte=timezone.now() - VERIFICATION_AGE,
+        new_value__sourceId=source_id,
+    ).exclude(user_id=actor.id).first()
+    if evidence and User.objects.filter(pk=evidence.user_id, role="super_admin", is_active=True).exists():
+        return evidence
+    return None
+
+
+def _validate_options(verified_ownership, transfer_telegram, verification_id):
+    if type(verified_ownership) is not bool or type(transfer_telegram) is not bool:
+        fail("VALIDATION_ERROR", "Merge options must be booleans")
+    if not isinstance(verification_id, str) or len(verification_id) > 64:
+        fail("VALIDATION_ERROR", "Invalid identity verification reference")
 
 
 def discover_duplicates(actor) -> list[dict]:
-    """Find potential duplicate accounts ONLY by verified identity signals (normalized phone, email, telegram)."""
+    """Find potential duplicate accounts by matching contact fields (normalized phone, email, telegram)."""
     if actor.role not in ("admin", "super_admin"):
         fail("FORBIDDEN", "Faqat administrator dublikat akkauntlarni tekshira oladi", 403)
 
-    users = list(User.objects.filter(is_active=True).exclude(role="super_admin").order_by("created_at"))
+    users = list(User.objects.filter(is_active=True, role="student").order_by("created_at"))
     profiles = {p.user_id: p for p in StudentProfile.objects.filter(user_id__in=[u.id for u in users])}
     by_phone = defaultdict(list)
     by_email = defaultdict(list)
@@ -145,7 +211,7 @@ def discover_duplicates(actor) -> list[dict]:
                 seen_pairs.add(pair)
                 candidates.append({
                     "signal": signal,
-                    "verifiedIdentityMatch": True,
+                    "verifiedIdentityMatch": False,
                     "accounts": [
                         _account_summary(a, profiles.get(a.id)),
                         _account_summary(b, profiles.get(b.id)),
@@ -162,43 +228,35 @@ def discover_duplicates(actor) -> list[dict]:
     return candidates[:100]
 
 
-def _evaluate_pair(source: User, canonical: User, *, verified_ownership: bool, transfer_telegram: bool):
+def _evaluate_pair(source: User, canonical: User, *, evidence, transfer_telegram: bool):
     blockers = []
     warnings = []
 
     if source.id == canonical.id:
         blockers.append({"code": "SAME_ACCOUNT", "message": "Manba va asosiy akkaunt bir xil bo'lishi mumkin emas"})
-    if source.role == "super_admin" or canonical.role == "super_admin":
-        blockers.append({"code": "SUPER_ADMIN_FORBIDDEN", "message": "Super admin akkauntini birlashtirish taqiqlangan"})
-    if source.role != canonical.role:
-        blockers.append({"code": "ROLE_MISMATCH", "message": f"Rollar mos emas: {source.role} != {canonical.role}"})
+    if source.role != "student" or canonical.role != "student":
+        blockers.append({"code": "STUDENT_ACCOUNTS_REQUIRED", "message": "Faqat o‘quvchi akkauntlarini birlashtirish mumkin"})
     if not source.is_active:
         blockers.append({"code": "SOURCE_INACTIVE", "message": "Manba akkaunt allaqachon faolsizlantirilgan"})
     if not canonical.is_active:
         blockers.append({"code": "CANONICAL_INACTIVE", "message": "Asosiy akkaunt faol emas"})
 
-    same_phone = bool(normalize_phone(source.phone) and normalize_phone(source.phone) == normalize_phone(canonical.phone))
-    same_email = bool(normalize_email(source.email) and normalize_email(source.email) == normalize_email(canonical.email))
-    same_telegram = bool(source.telegram_chat_id and source.telegram_chat_id == canonical.telegram_chat_id)
-
-    if same_phone:
-        identity_basis = "phone_match"
-    elif same_email:
-        identity_basis = "email_match"
-    elif same_telegram:
-        identity_basis = "telegram_match"
-    elif verified_ownership:
-        identity_basis = "admin_verified"
-        warnings.append({
-            "code": "MANUAL_IDENTITY_ATTESTATION",
-            "message": "Telefon, email yoki Telegram bir xil emas — egasi tasdiqlanganligi administrator tomonidan tasdiqlandi",
-        })
-    else:
-        identity_basis = "unverified"
+    identity_basis = "admin_verified" if evidence else "unverified"
+    if evidence is None:
         blockers.append({
             "code": "IDENTITY_UNVERIFIED",
-            "message": "Shaxsiy identifikator (telefon/email/Telegram) tasdiqlanmagan. Faqat ism o'xshashligi bo'yicha birlashtirish taqiqlanadi.",
+            "message": "Egalikni ikki akkaunt uchun mustaqil super administrator tekshirishi kerak.",
         })
+    if MockAttempt.objects.filter(student_id__in=[source.id, canonical.id], status__in=["in_progress", "grading"]).exists():
+        blockers.append({"code": "ACTIVE_EXAM", "message": "Faol imtihon tugaguncha kuting"})
+    source_assignments = HomeworkSubmission.objects.filter(student_id=source.id).values("assignment_id")
+    if HomeworkSubmission.objects.filter(student_id=canonical.id, assignment_id__in=source_assignments).exists():
+        blockers.append({"code": "HOMEWORK_CONFLICT", "message": "Ikkala akkauntda bir xil topshiriq natijasi bor"})
+    for purchases, item in ((MockPurchase, "exam_id"), (VideoPurchase, "video_id")):
+        other_orders = purchases.objects.filter(user_id=source.id).values(item)
+        if purchases.objects.filter(user_id=canonical.id, **{f"{item}__in": other_orders}).exists():
+            blockers.append({"code": "PURCHASE_CONFLICT", "message": "Ikkala akkauntda bir xil xarid yozuvi bor"})
+            break
 
     if source.telegram_chat_id and canonical.telegram_chat_id and source.telegram_chat_id != canonical.telegram_chat_id:
         blockers.append({
@@ -216,7 +274,7 @@ def _evaluate_pair(source: User, canonical: User, *, verified_ownership: bool, t
     can_payments = {(p.year, p.month): p for p in Payment.objects.filter(student_id=canonical.id)}
     for ym in sorted(set(src_payments) & set(can_payments)):
         sp, cp = src_payments[ym], can_payments[ym]
-        if sp.state != cp.state or (sp.amount and cp.amount and sp.amount != cp.amount):
+        if sp.state != cp.state or sp.amount != cp.amount:
             blockers.append({
                 "code": "PAYMENT_CONFLICT",
                 "message": f"{ym[0]}-{ym[1]:02d} oyi uchun to'lov yozuvlari ziddiyatli ({sp.state}/{sp.amount} vs {cp.state}/{cp.amount})",
@@ -235,9 +293,10 @@ def _evaluate_pair(source: User, canonical: User, *, verified_ownership: bool, t
     return identity_basis, blockers, warnings
 
 
-def preview_merge(actor, source_id: str, canonical_id: str, *, verified_ownership: bool = False, transfer_telegram: bool = False) -> dict:
+def preview_merge(actor, source_id: str, canonical_id: str, *, verified_ownership: bool = False, transfer_telegram: bool = False, verification_id: str = "") -> dict:
     if actor.role not in ("admin", "super_admin"):
         fail("FORBIDDEN", "Ruxsat berilmagan", 403)
+    _validate_options(verified_ownership, transfer_telegram, verification_id)
     source = User.objects.filter(id=source_id).first()
     canonical = User.objects.filter(id=canonical_id).first()
     if source is None or canonical is None:
@@ -245,16 +304,17 @@ def preview_merge(actor, source_id: str, canonical_id: str, *, verified_ownershi
 
     src_profile = StudentProfile.objects.filter(user_id=source.id).first()
     can_profile = StudentProfile.objects.filter(user_id=canonical.id).first()
+    evidence = _verification(actor, source_id, canonical_id, verification_id)
     identity_basis, blockers, warnings = _evaluate_pair(
-        source, canonical, verified_ownership=verified_ownership, transfer_telegram=transfer_telegram,
+        source, canonical, evidence=evidence, transfer_telegram=transfer_telegram,
     )
-    stamp = f"{source.updated_at.isoformat() if source.updated_at else ''}|{canonical.updated_at.isoformat() if canonical.updated_at else ''}"
+    stamp = _data_stamp(source_id, canonical_id)
     return {
         "canMerge": len(blockers) == 0,
         "identityBasis": identity_basis,
         "blockers": blockers,
         "warnings": warnings,
-        "previewToken": _preview_token(source.id, canonical.id, identity_basis, stamp),
+        "previewToken": _preview_token(actor.id, source_id, canonical_id, verification_id, transfer_telegram, stamp) if not blockers else None,
         "source": _account_summary(source, src_profile),
         "canonical": _account_summary(canonical, can_profile),
     }
@@ -271,9 +331,11 @@ def execute_merge(
     preview_token: str,
     verified_ownership: bool = False,
     transfer_telegram: bool = False,
+    verification_id: str = "",
 ) -> dict:
     if actor.role not in ("admin", "super_admin"):
         fail("FORBIDDEN", "Ruxsat berilmagan", 403)
+    _validate_options(verified_ownership, transfer_telegram, verification_id)
     if confirm_text.strip().upper() != "MERGE":
         fail("CONFIRMATION_REQUIRED", "Tasdiqlash uchun 'MERGE' so'zini kiriting", 400)
     if len(reason.strip()) < 5:
@@ -286,14 +348,15 @@ def execute_merge(
     if source is None or canonical is None:
         fail("USER_NOT_FOUND", "Foydalanuvchi topilmadi", 404)
 
+    evidence = _verification(actor, source_id, canonical_id, verification_id)
+    stamp = _data_stamp(source_id, canonical_id, lock=True)
     identity_basis, blockers, _ = _evaluate_pair(
-        source, canonical, verified_ownership=verified_ownership, transfer_telegram=transfer_telegram,
+        source, canonical, evidence=evidence, transfer_telegram=transfer_telegram,
     )
     if blockers:
         raise ContractAPIException("MERGE_BLOCKED", blockers[0]["message"], 409, details={"blockers": blockers})
 
-    stamp = f"{source.updated_at.isoformat() if source.updated_at else ''}|{canonical.updated_at.isoformat() if canonical.updated_at else ''}"
-    expected_token = _preview_token(source.id, canonical.id, identity_basis, stamp)
+    expected_token = _preview_token(actor.id, source_id, canonical_id, verification_id, transfer_telegram, stamp)
     if not hmac.compare_digest(preview_token or "", expected_token):
         fail("PREVIEW_STALE", "Akkaunt holati o'zgargan, avval qayta ko'rib chiqing", 409)
 
@@ -302,6 +365,8 @@ def execute_merge(
     snapshot_before = {
         "source": _account_summary(source, src_profile),
         "canonical": _account_summary(canonical, can_profile),
+        "identityVerificationId": evidence.pk,
+        "originalAssessmentAttempts": list(MockAttempt.objects.filter(student_id=source.id).values_list("id", flat=True)),
     }
 
     now = timezone.now()
@@ -396,12 +461,6 @@ def execute_merge(
             moved_parents += 1
     transferred["parentLinks"] = moved_parents
 
-    # 7. Teacher ownership if applicable
-    if canonical.role == "teacher":
-        transferred["groups"] = Group.objects.filter(teacher_id=source.id).update(teacher_id=canonical.id)
-        transferred["cohorts"] = Cohort.objects.filter(teacher_id=source.id).update(teacher_id=canonical.id)
-        transferred["vocabularySets"] = VocabularySet.objects.filter(created_by_id=source.id).update(created_by_id=canonical.id)
-
     Notification.objects.filter(user_id=source.id).update(user_id=canonical.id)
 
     # 8. Optional explicit Telegram transfer and deactivate source
@@ -413,8 +472,8 @@ def execute_merge(
     else:
         transferred["telegramTransferred"] = False
 
-    User.objects.filter(id=source.id).update(is_active=False, updated_at=now)
-    RefreshToken.objects.filter(user_id=source.id).delete()
+    User.objects.filter(id=source.id).update(is_active=False, telegram_chat_id=None, updated_at=now)
+    RefreshToken.objects.filter(user_id__in=pair_ids).delete()
 
     log = AccountReconciliationLog.objects.create(
         canonical_user_id=canonical.id,

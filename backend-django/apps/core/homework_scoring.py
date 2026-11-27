@@ -117,10 +117,12 @@ def propagate_attempt_finalization(attempt, actor=None, *, now=None) -> list:
 
     synced = []
     if assignment_ids:
-        for assignment in HomeworkAssignment.objects.filter(id__in=assignment_ids):
+        for assignment in HomeworkAssignment.objects.filter(id__in=assignment_ids, exam_id=attempt.exam_id):
             sub = sync_from_exam(assignment, attempt.student_id, attempt=attempt, graded_by_id=actor_id)
             if sub is not None:
                 synced.append(sub)
+        for assignment_id in {sub.assignment_id for sub in synced}:
+            tg_notify.homework_group_report(assignment_id, reason="automatic", now=now)
 
     if attempt.status == "completed":
         exam = getattr(attempt, "exam", None) or MockExam.objects.filter(pk=attempt.exam_id).first()
@@ -132,7 +134,7 @@ def propagate_attempt_finalization(attempt, actor=None, *, now=None) -> list:
         else:
             pct = finalized_attempt_percent(attempt)
             headline = f"{pct}%" if pct is not None else "—"
-        rev = str((attempt.media_state or {}).get("teacher_reviewed_at") or int(now.timestamp()))
+        rev = str((attempt.media_state or {}).get("teacher_reviewed_at") or attempt.finished_at or now)
         lang = tg_state.language_of(attempt.student_id)
         text = {
             "uz": f"🎓 <b>{html_escape(exam_title)}</b> yakuniy natijangiz tasdiqlandi: <b>{html_escape(headline)}</b>.",

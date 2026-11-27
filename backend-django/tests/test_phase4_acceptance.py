@@ -141,6 +141,7 @@ def test_full_bestway_5_end_to_end_journey(pg_phase4_tables):
         chat_id="-100888999",
         chat_title="IELTS Advanced Chat",
         bound_by_id=teacher_a.id,
+        verified_telegram_id=teacher_a.telegram_chat_id,
         is_active=True,
         bot_can_post=True,
         verified_at=now,
@@ -164,7 +165,7 @@ def test_full_bestway_5_end_to_end_journey(pg_phase4_tables):
     qgrp = MockQuestionGroup.objects.create(
         id=str(uuid4()), section=sec_r, sort_order=1, title="P1", audio_play_limit=1, created_at=now
     )
-    MockQuestion.objects.create(
+    question = MockQuestion.objects.create(
         id=str(uuid4()), group=qgrp, number=1, sort_order=1, type="fill_blank", prompt="Q1", correct_answers=["accept"], points=1, created_at=now
     )
     assignment = HomeworkAssignment.objects.create(
@@ -189,7 +190,7 @@ def test_full_bestway_5_end_to_end_journey(pg_phase4_tables):
         started_at=now,
         media_state={ASSIGNMENT_KEY: assignment.id},
     )
-    incident = guard.record_event(student_actor, attempt, "window_blur", skill="reading", question_ref="Q1")
+    incident = guard.record_event(student_actor, attempt, "window_blur", skill="reading", question_ref=question.id)
     inc_id = incident["incidentId"]
     assert ExamIntegrityIncident.objects.get(id=inc_id).supervisor_id == teacher_a.id
     assert TelegramOutbox.objects.filter(recipient_id=teacher_a.id, kind="teacher", dedupe_key__startswith="guard_alert:").exists()

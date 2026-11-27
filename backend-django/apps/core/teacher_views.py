@@ -288,6 +288,7 @@ def create_assignment(cohort, data, title, *, vocabulary_set=None, vocabulary_mo
         vocabulary_set=vocabulary_set,
         vocabulary_revision=vocabulary_collections.snapshot(vocabulary_set) if vocabulary_set else None,
         vocabulary_mode=vocabulary_mode if vocabulary_set else None,
+        participant_ids=classrooms.participant_ids(cohort) if exam else None,
         deadline=deadline,
         min_pass_percent=min_pass,
     )

@@ -326,7 +326,7 @@ def group_telegram_binding_view(request, group_id: str):
             request.user,
             group_id,
             data.get('chatId') or data.get('chat_id') or '',
-            chat_title=str(data.get('chatTitle') or data.get('chat_title') or ''),
+            confirmation=data.get('confirmation'),
         )
     )
 
