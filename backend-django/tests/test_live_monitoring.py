@@ -70,7 +70,7 @@ class LiveMonitoringTests(SimpleTestCase):
 
         with patch('apps.legacy_schema.models.Group.objects') as groups, \
              patch('apps.legacy_schema.models.StudentProfile.objects') as student_profiles, \
-             patch('apps.legacy_schema.models.MockAttempt.objects') as attempts, \
+             patch('apps.core.teacher_analytics.classroom_attempts') as attempts, \
              patch('apps.legacy_schema.models.MockCheatEvent.objects') as cheat_model:
 
             groups.filter.return_value.first.return_value = group
@@ -86,7 +86,7 @@ class LiveMonitoringTests(SimpleTestCase):
                     query.select_related.return_value.order_by.return_value.first.return_value = None
                 return query
 
-            attempts.all.return_value.filter.return_value.exclude.return_value.filter.side_effect = attempt_filter
+            attempts.return_value.filter.side_effect = attempt_filter
             cheat_model.filter.return_value.order_by.return_value = cheat_events
 
             response = self.client.get('/v1/assessment/groups/g1/live-monitoring')

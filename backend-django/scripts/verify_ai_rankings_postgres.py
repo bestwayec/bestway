@@ -29,6 +29,8 @@ from apps.core import assessment_results as results
 from apps.core.mock_import_validate import canonical_checksum
 from apps.core.mock_practice import SCOPE_KEY
 from apps.core.multilevel import CURRENT_SPEC
+from apps.core.homework_scoring import ASSIGNMENT_KEY
+from apps.core.models import ClassroomEnrollment, Cohort, HomeworkAssignment
 from apps.legacy_schema.models import AssessmentJob, MockAttempt
 
 prefix = 'rank-' + uuid4().hex[:12]
@@ -80,7 +82,7 @@ def attempt(student, suffix='', status='grading', days=0, exam='exam', skills=No
     insert('MockAttempt', id=identifier, examId=ids[exam], studentId=ids[student], status=status,
         startedAt=stamp + timedelta(days=days), submittedAt=stamp if status != 'in_progress' else None,
         specificationVersion=CURRENT_SPEC, flowMode='partial_practice',
-        mediaState=json.dumps({SCOPE_KEY: dict(version=1, skills=skills, questionIds=questions)}))
+        mediaState=json.dumps({ASSIGNMENT_KEY: assignments[exam].id, SCOPE_KEY: dict(version=1, skills=skills, questionIds=questions)}))
     return identifier
 
 
@@ -134,6 +136,25 @@ with transaction.atomic():
     for exam in ('exam', 'foreign_exam', 'ielts'):
         insert('MockExam', id=ids[exam], type='ielts_academic' if exam == 'ielts' else 'multilevel',
             title='Ranking ' + exam, specificationVersion=CURRENT_SPEC, profile='practice', updatedAt=stamp)
+    cohorts = {
+        group_name: Cohort.objects.create(
+            classroom_id=ids[group_name], teacher_id=ids[teacher_name],
+            invite_code=uuid4().hex[:16], name=group_name,
+        )
+        for group_name, teacher_name in (('group', 'teacher'), ('foreign_group', 'other_teacher'))
+    }
+    for student_name in ('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'foreign'):
+        ClassroomEnrollment.objects.create(
+            student_id=ids[student_name],
+            group_id=ids['foreign_group' if student_name == 'foreign' else 'group'], started_at=stamp,
+        )
+    assignments = {
+        exam_name: HomeworkAssignment.objects.create(
+            cohort=cohorts['foreign_group' if exam_name == 'foreign_exam' else 'group'],
+            exam_id=ids[exam_name], title=exam_name, deadline=stamp + timedelta(days=2),
+        )
+        for exam_name in ('exam', 'foreign_exam', 'ielts')
+    }
     attempts = {student: attempt(student) for student in ('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k')}
     job('a', attempts['a'], teacher=3.5)
     job('b', attempts['b'], raw=4.5); job('b', attempts['b'], generation=2, status='PENDING')
@@ -147,7 +168,7 @@ with transaction.atomic():
     speaking_only = attempt('j', '-speaking-only', status='in_progress', days=1, skills=['speaking'])
     job('k', attempts['k'], skill='speaking', raw=2.5)
     attempt('k', '-writing-only', status='in_progress', days=1, skills=['writing'])
-    foreign = attempt('foreign'); job('foreign', foreign, raw=5)
+    foreign = attempt('foreign', exam='foreign_exam'); job('foreign', foreign, raw=5)
     attempt('foreign', '-foreign', exam='foreign_exam'); attempt('a', '-ielts', exam='ielts')
     speech_job = job('a', attempts['a'], skill='speaking', raw=3.5)
     for role in ('student', 'parent', 'other_teacher'): request(role, expected=403)

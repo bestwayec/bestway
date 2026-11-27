@@ -95,7 +95,10 @@ def history(actor,query):
     for key,field in [('status','status'),('studentId','student_id'),('examId','exam_id')]:
         if query.get(key): rows=rows.filter(**{field:query[key]})
     if query.get('program'): rows=rows.filter(exam__type__in=['multilevel'] if query['program']=='MULTILEVEL' else ['ielts_academic','ielts_general'])
-    if actor.role=='teacher': rows=rows.filter(student__group__teacher_id=actor.id)
+    if actor.role == 'teacher':
+        from .classroom_results import assignment_attempts
+
+        rows = assignment_attempts(rows, teacher_id=actor.id, include_practice_shares=True)
     def shape(a):
         value=summary(a,detail=True); value['examTitle']=a.exam.title
         return value
@@ -105,13 +108,23 @@ def history(actor,query):
 def locked(actor,attempt_id):
     row=MockAttempt.objects.select_for_update().filter(id=attempt_id).first()
     if row is None: fail('MOCK_ATTEMPT_NOT_FOUND','Urinish topilmadi',404)
-    assert_view(actor,row.student_id)
+    if actor.role == 'teacher':
+        from .classroom_results import assert_attempt_access
+
+        assert_attempt_access(actor, row, grade=True)
+    else:
+        assert_view(actor, row.student_id)
     return row
 
 
 @transaction.atomic
 def extend(actor,attempt_id,minutes):
     row=locked(actor,attempt_id); assert_in_progress(row)
+    from .classroom_results import _linked_assignments
+    now = timezone.now()
+    expiry = row.overall_deadline_at or row.deadline_at
+    if expiry and aware(expiry) <= now and _linked_assignments(row).filter(deadline__lte=now).exists():
+        fail('ASSIGNMENT_EXPIRED', 'The closed exam cannot be extended', 409)
     def shift(value): return aware(value)+timedelta(minutes=minutes) if value else value
     row.deadline_at=shift(row.deadline_at); row.overall_deadline_at=shift(row.overall_deadline_at)
     if row.section_deadlines is not None:
@@ -126,6 +139,9 @@ def extend(actor,attempt_id,minutes):
 def reopen(actor,attempt_id):
     row=locked(actor,attempt_id)
     if row.status!='grading': fail('MOCK_CANNOT_REOPEN','Faqat baholanayotgan urinish qayta ochiladi')
+    from .classroom_results import _linked_assignments
+    if _linked_assignments(row).filter(deadline__lte=timezone.now()).exists():
+        fail('ASSIGNMENT_EXPIRED', 'The closed exam cannot be reopened', 409)
     row.status='in_progress'; row.submitted_at=None; row.save(update_fields=['status','submitted_at'])
     audit_event(actor,'mock.attempt.reopen','mockAttempt',row.id)
     return dict(saved=True,status='in_progress')
@@ -191,7 +207,12 @@ def verify_certificate(attempt_id, code):
 def certificate_data(actor,attempt_id):
     row=MockAttempt.objects.select_related('exam','student__user').filter(id=attempt_id).first()
     if row is None: fail('MOCK_ATTEMPT_NOT_FOUND','Urinish topilmadi',404)
-    assert_view(actor,row.student_id)
+    if actor.role == 'teacher':
+        from .classroom_results import assert_attempt_access
+
+        assert_attempt_access(actor, row)
+    else:
+        assert_view(actor, row.student_id)
     from .mock_practice import is_partial, scope
     is_part = is_partial(row)
     internal = {}

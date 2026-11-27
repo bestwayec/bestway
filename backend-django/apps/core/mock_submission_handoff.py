@@ -57,7 +57,8 @@ def pending(attempt_id):
 
 def process(attempt_id, tick=True):
     """Run one pending hand-off. True when this call did the work."""
-    from .mock_submission_snapshots import announce_channel_mock_result, enqueue, notify
+    from .homework_scoring import ASSIGNMENT_KEY, propagate_attempt_finalization
+    from .mock_submission_snapshots import enqueue, notify
     with transaction.atomic():
         row = (SubmissionHandoff.objects.select_for_update(skip_locked=True)
                .filter(attempt_id=attempt_id, done_at__isnull=True).first())
@@ -72,7 +73,9 @@ def process(attempt_id, tick=True):
         try:
             with transaction.atomic():
                 enqueue(attempt, row.skills)
-                notify(attempt, channel=False)
+                notify(attempt)
+                if ASSIGNMENT_KEY in (attempt.media_state or {}):
+                    propagate_attempt_finalization(attempt)
         except Exception as error:
             row.tries += 1
             row.last_error = repr(error)[:1000]
@@ -81,9 +84,6 @@ def process(attempt_id, tick=True):
             return False
         row.done_at, row.last_error = timezone.now(), None
         row.save(update_fields=['done_at', 'last_error'])
-        announce = attempt.status == 'completed'
-    if announce:
-        announce_channel_mock_result(attempt)
     if tick and os.environ.get('ASSESSMENT_INLINE_TICK', 'true').lower() != 'false':
         from . import assessment_worker
         assessment_worker.tick()

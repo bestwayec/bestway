@@ -31,6 +31,7 @@ from django.db import connection
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from apps.core.models import ClassroomEnrollment
 from apps.core import teacher_workspace as tw
 from apps.core.models import (ClassQuiz, ClassQuizAssignment, ClassQuizAttempt, Cohort, HomeworkAssignment, HomeworkSubmission,
                               TelegramOutbox, TelegramPreference, VocabularySet, VocabularyWord)
@@ -79,6 +80,8 @@ def mk_student(group_id, name, chat=None):
         cursor.execute('INSERT INTO "StudentProfile" ("userId","availablePrograms","activeProgram","isApproved","groupId","currentPoints","linkCode","createdAt","pointsPeriod","gameQualified","qualifiedAt") '
                        "VALUES (%s, ARRAY['IELTS']::\"ExamProgram\"[], 'IELTS', true, %s, 0, %s, NOW(), NULL, false, NULL)",
                        [student.id, group_id, 'TW' + uuid4().hex[:8].upper()])
+    if group_id is not None:
+        ClassroomEnrollment.objects.create(group_id=group_id, student_id=student.id, started_at=timezone.now())
     return student
 
 
@@ -298,9 +301,9 @@ try:
           'reminder: 19 pending, 14 linked get ONE reminder per day (a second click queues nothing)')
     listed = T.get(hw_url).json()['data']
     check(len(listed) == 4 and {i['assignment']['kind'] for i in listed} == {'quiz', 'vocabulary', 'exam', 'lesson'}, "group homework: the group's 4 assignments with counts")
-    # removed student keeps history
-    with connection.cursor() as cursor:
-        cursor.execute('UPDATE "StudentProfile" SET "groupId" = %s WHERE "userId" = %s', [g3, s1.id])
+    # The administrator moves one active membership, preserving group A's result.
+    from apps.core import groups
+    groups.add_student(SimpleNamespace(id=teacher.id, role='admin'), g3, s1.id, source_group_id=g1)
     r = T.get(f'/v1/teacher/workspace/homework/quiz/{quiz_id}/results').json()['data']
     gone = next(x for x in r['students'] if x['studentId'] == s1.id)
     check(gone['removed'] and gone['percent'] == 80.0 and r['counts']['assigned'] == 19 and ClassQuizAttempt.objects.filter(id=attempt_id).exists(),
@@ -341,6 +344,7 @@ finally:
     with connection.cursor() as cursor:
         cursor.execute('DELETE FROM "Attendance" WHERE "groupId" = ANY(%s)', [groups_made])
         cursor.execute('DELETE FROM "MockExam" WHERE id = ANY(%s)', [exams_made])
+        ClassroomEnrollment.objects.filter(student_id__in=users).delete()
         cursor.execute('DELETE FROM "StudentProfile" WHERE "userId" = ANY(%s)', [users])
         cursor.execute('DELETE FROM "Group" WHERE id = ANY(%s)', [groups_made])
         cursor.execute('DELETE FROM "User" WHERE id = ANY(%s)', [users])

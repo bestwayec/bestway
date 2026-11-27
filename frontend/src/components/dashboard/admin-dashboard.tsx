@@ -22,6 +22,7 @@ import { formatMoney } from "@/lib/utils";
 
 export function AdminDashboard() {
   const t = useTranslations("dashboard");
+  const operations = useTranslations("adminClassroomStats");
   const tc = useTranslations("common");
   const tm = useTranslations("months");
   const { data: me } = useMe();
@@ -95,7 +96,13 @@ export function AdminDashboard() {
 
           {/* Yon ko'rsatkichlar */}
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <StatCard label={t("groups")} value={stats.data.groups} icon={BookOpen} />
+            <StatCard label={operations("activeGroups")} value={stats.data.activeGroups} icon={BookOpen} />
+            <StatCard label={operations("activeStudents")} value={stats.data.activeStudents} icon={Users} />
+            <StatCard label={operations("noGroup")} value={stats.data.studentsWithoutGroups} icon={Users} />
+            <StatCard label={operations("assignments")} value={stats.data.classroomExams.assignments} icon={BookOpen} />
+            <StatCard label={operations("submitted")} value={stats.data.classroomExams.submitted} icon={ClipboardCheck} />
+            <StatCard label={operations("finalized")} value={stats.data.classroomExams.finalized} icon={ClipboardCheck} />
+            <StatCard label={operations("pendingReview")} value={stats.data.classroomExams.pendingReview} icon={ClipboardCheck} />
             <StatCard label={t("teachers")} value={stats.data.teachers} icon={GraduationCap} />
             {stats.data.queue.grading > 0 && (
               <StatCard

@@ -3,11 +3,10 @@ from uuid import uuid4
 
 from django.db.models import Q
 
-from apps.legacy_schema.models import StudentProfile
 from common.api.exceptions import ContractAPIException
 
 from . import groups
-from .classroom_roster import assert_active
+from .classroom_roster import active_enrollments, assert_active, student_group_ids
 from .models import Cohort, CohortMembership
 
 
@@ -44,11 +43,19 @@ def name(cohort):
 
 def is_member(cohort, student_id):
     if is_linked(cohort):
-        return StudentProfile.objects.filter(group_id=cohort.classroom_id, user_id=student_id).exists()
+        return active_enrollments(group_id=cohort.classroom_id, student_id=student_id).exists()
     return CohortMembership.objects.filter(cohort=cohort, student_id=student_id, status="active").exists()
 
 
+def participant_ids(cohort):
+    if is_linked(cohort):
+        members = active_enrollments(group_id=cohort.classroom_id)
+    else:
+        members = CohortMembership.objects.filter(cohort=cohort, status="active")
+    return sorted(set(members.values_list("student_id", flat=True)))
+
+
 def student_homework_scope(student_id):
-    classroom_ids = StudentProfile.objects.filter(user_id=student_id).values("group_id")
+    classroom_ids = student_group_ids(student_id)
     inherited_ids = CohortMembership.objects.filter(student_id=student_id, status="active").values("cohort_id")
     return Q(cohort__classroom_id__in=classroom_ids) | Q(cohort__classroom_id__isnull=True, cohort_id__in=inherited_ids)

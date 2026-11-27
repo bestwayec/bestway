@@ -32,7 +32,7 @@ class AttendanceTests(SimpleTestCase):
 
     def test_foreign_teacher_cannot_write_before_membership_queries(self):
         with patch.object(attendance,'get_group',return_value=SimpleNamespace(teacher_id='other')), \
-             patch.object(attendance.StudentProfile.objects,'filter') as query:
+             patch.object(attendance, 'member_profiles') as query:
             with self.assertRaises(ContractAPIException) as raised:
                 attendance.bulk(SimpleNamespace(id='teacher',role='teacher'),dict(groupId='foreign',date='2026-10-01',records=[]))
             self.assertEqual(raised.exception.status_code,403)
@@ -140,7 +140,7 @@ class GroupDaySummaryRouteTests(SimpleTestCase):
         query = SimpleNamespace(select_related=lambda *_: SimpleNamespace(order_by=lambda *_: [mark]))
         with patch.object(attendance, 'get_group', return_value=SimpleNamespace(teacher_id='t', name='G1')), \
              patch.object(attendance.Attendance.objects, 'filter', return_value=query) as rows, \
-             patch.object(attendance.StudentProfile.objects, 'filter') as members:
+             patch.object(attendance, 'member_profiles') as members:
             members.return_value.count.return_value = 3
             data = attendance.group_day_summary(SimpleNamespace(id='t', role='teacher'), 'g1', '2026-11-11')
         rows.assert_called_once_with(group_id='g1', date=date(2026, 11, 11))

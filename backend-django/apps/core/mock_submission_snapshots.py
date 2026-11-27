@@ -162,15 +162,28 @@ def enqueue(attempt, wanted=None):
                 version=1,attempt_count=0,created_at=now,updated_at=now))
 
 
-def notify(attempt, channel=True):
-    """Notification rows for a hand-in; `channel=False` leaves the Telegram channel post to the caller."""
+def notify(attempt):
+    """Route named hand-in notifications to authorized recipients."""
     from .mock_attempts import versioned
     def create(user_id, text):
         Notification.objects.create(id=new_id(),user_id=user_id,type='test_result',text=text,read=False,created_at=timezone.now())
     if attempt.status == 'grading':
-        student = attempt.student
-        if student.group_id and student.group.teacher_id:
-            create(student.group.teacher_id,f'{student.user.name} "{attempt.exam.title}" mock imtihonini topshirdi — Writing/Speaking baholashingiz kutilmoqda.')
+        from .classroom_results import _linked_assignments
+        from .classrooms import teacher_id
+        from .telegram_outbox import enqueue as telegram_enqueue
+        from .teacher_workspace import site_url
+
+        teachers = {
+            teacher_id(assignment.cohort)
+            for assignment in _linked_assignments(attempt).select_related("cohort__classroom")
+        } - {None}
+        for recipient in teachers:
+            create(recipient, "Yangi mock imtihoni Writing/Speaking baholashini kutmoqda.")
+            telegram_enqueue(
+                recipient, "teacher", f"exam_grading:{attempt.id}:{recipient}",
+                "✍️ Yangi mock imtihoni Writing/Speaking baholashini kutmoqda.",
+                [[{"text": "Baholash", "url": site_url("/teacher")}]],
+            )
         return
     def number(value):
         return '—' if value is None else format(value,'.15g')
@@ -183,8 +196,6 @@ def notify(attempt, channel=True):
             create(attempt.student_id,f'"{title}" bo\'yicha {skills_label} natijangiz tayyor! Natijani ko\'rish uchun bosing.')
             for parent in set(ParentStudent.objects.filter(student_id=attempt.student_id).values_list('parent_user_id',flat=True)):
                 create(parent,f'Farzandingizning "{title}" bo\'yicha {skills_label} natijasi tayyor!')
-            if channel and attempt.status == 'completed':
-                announce_channel_mock_result(attempt)
             return
         else:
             headline = '; '.join(f"{skill}: {number(raw['score'])}/{number(raw['max'])}" for skill,raw in (attempt.raw_scores or {}).items())+' (qisman mashq, umumiy daraja berilmaydi)' if is_partial(attempt) else f"estimated (unofficial): {number(attempt.overall_score)}/75 · {attempt.cefr_level or '—'}" if versioned(attempt) else f"daraja: {attempt.cefr_level or '—'}"
@@ -194,67 +205,3 @@ def notify(attempt, channel=True):
     create(attempt.student_id,f'Mock imtihon natijangiz tayyor: "{title}" — {headline}.')
     for parent in set(ParentStudent.objects.filter(student_id=attempt.student_id).values_list('parent_user_id',flat=True)):
         create(parent,f'Farzandingizning "{title}" mock natijasi: {headline}.')
-    if channel and attempt.status == 'completed':
-        announce_channel_mock_result(attempt)
-
-
-def announce_channel_mock_result(attempt):
-    from django.conf import settings
-    channel_id = os.environ.get('TELEGRAM_CHANNEL_ID') or getattr(settings, 'TELEGRAM_CHANNEL_ID', None)
-    if not channel_id:
-        return
-    try:
-        from apps.legacy_schema.models import MockAttempt
-
-        from . import telegram_delivery as tg_api
-        from .telegram_links import escape
-        att = MockAttempt.objects.select_related('student__user', 'exam').filter(id=attempt.id).first() or attempt
-        student_name = att.student.user.name if att.student and getattr(att.student, 'user', None) else "O'quvchi"
-        exam_title = att.exam.title if att.exam else "Mock Imtihon"
-        raw_type = (att.exam.type or '').lower() if att.exam else ''
-        type_str = "IELTS Academic" if 'academic' in raw_type else "IELTS General" if 'general' in raw_type else "IELTS" if 'ielts' in raw_type else "Multi-Level CEFR" if 'multilevel' in raw_type else "Mock Imtihon"
-
-        items = []
-        if att.cefr_level:
-            items.append(f"CEFR: <b>{escape(att.cefr_level)}</b>")
-        if att.overall_band is not None:
-            items.append(f"Band: <b>{att.overall_band}</b>")
-        elif att.overall_score is not None:
-            items.append(f"Ball: <b>{format(att.overall_score, 'g')}</b>")
-        overall_str = " | ".join(items) if items else "Muvaffaqiyatli topshirildi"
-
-        scores = att.standard_scores or {}
-        bands = att.section_bands or {}
-        raws = att.raw_scores or {}
-
-        def get_sec(s):
-            val = scores.get(s)
-            if val is None: val = bands.get(s)
-            if val is None and isinstance(raws.get(s), dict): val = raws.get(s, {}).get('score')
-            return str(val) if val is not None else "—"
-
-        l_val = get_sec('listening')
-        r_val = get_sec('reading')
-        w_val = get_sec('writing')
-        s_val = get_sec('speaking')
-
-        text = (
-            f"🎓 <b>RASMIY MOCK IMTIHON NATIJASI</b> 🎓\n"
-            f"➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
-            f"👤 <b>O'quvchi:</b> {escape(student_name)}\n"
-            f"🎯 <b>Imtihon:</b> {escape(exam_title)} ({escape(type_str)})\n"
-            f"⭐️ <b>Umumiy natija:</b> {overall_str}\n\n"
-            f"📊 <b>Bo'limlar kesimida:</b>\n"
-            f"   🎧 Listening: <b>{l_val}</b>\n"
-            f"   📖 Reading: <b>{r_val}</b>\n"
-            f"   ✍️ Writing: <b>{w_val}</b>\n"
-            f"   🗣 Speaking: <b>{s_val}</b>\n\n"
-            f"👏 O'quvchimizni ajoyib natija bilan tabriklaymiz! 🚀\n"
-            f"➖➖➖➖➖➖➖➖➖➖➖➖\n"
-            f"🌐 <i>BestWay Ta'lim Markazi</i>"
-        )
-        tg_api.send(channel_id, text)
-    except Exception as exc:
-        import logging
-        logging.getLogger(__name__).warning("Telegram channel delivery failed: %r", exc)
-

@@ -2,11 +2,15 @@
 import math
 from datetime import datetime, timedelta
 
+from django.db.models import Count
 from django.utils import timezone
 
 from apps.legacy_schema import models as m
 
 from .attendance import csv_cell
+from .classroom_results import assignment_attempts
+from .classroom_roster import active_enrollments
+from .models import ClassroomArchive, HomeworkAssignment
 from .mock_scoring import skipped_skills
 
 
@@ -31,17 +35,28 @@ def income(months=6):
 
 def dashboard():
     now=timezone.localtime();today=now.date()
-    active=m.StudentProfile.objects.filter(user__is_active=True)
+    students = m.User.objects.filter(role="student")
+    active = students.filter(is_active=True)
+    active_groups = m.Group.objects.exclude(id__in=ClassroomArchive.objects.values("group_id"))
+    grouped_students = active_enrollments(group_id__in=active_groups.values("id")).values("student_id")
+    assignments = HomeworkAssignment.objects.filter(cohort__classroom_id__isnull=False, exam_id__isnull=False)
+    results = assignment_attempts(m.MockAttempt.objects.all(), linked_classrooms_only=True)
+    submitted = results.filter(submitted_at__isnull=False)
+    assignment_totals = dict(submitted.values_list("status").annotate(total=Count("id")))
     attendance=list(m.Attendance.objects.filter(date=today).values_list('state',flat=True))
     payments=m.Payment.objects.filter(year=now.year,month=now.month)
     present=attendance.count('present');late=attendance.count('late')
     paid_ids=payments.filter(state='paid').values_list('student_id',flat=True)
-    return dict(students=active.count(),approvedStudents=active.filter(is_approved=True).count(),
+    return dict(students=students.count(), activeStudents=active.count(),
+        approvedStudents=students.filter(studentprofile__is_approved=True).count(),
+        studentsWithoutGroups=students.exclude(id__in=grouped_students).count(), activeGroups=active_groups.count(),
+        classroomExams=dict(assignments=assignments.count(), submitted=sum(assignment_totals.values()),
+                           finalized=assignment_totals.get("completed", 0), pendingReview=assignment_totals.get("grading", 0)),
         teachers=m.User.objects.filter(role='teacher',is_active=True).count(),parents=m.User.objects.filter(role='parent',is_active=True).count(),
         groups=m.Group.objects.count(),tests=m.Test.objects.filter(is_active=True).count(),videos=m.VideoLesson.objects.count(),
         mock=dict(exams=m.MockExam.objects.filter(is_published=True).count(),gradingQueue=m.MockAttempt.objects.filter(status='grading').count(),pendingPurchases=m.MockPurchase.objects.filter(status='pending_confirmation').count()),
         today=dict(date=today.isoformat(),marked=len(attendance),present=present,absent=attendance.count('absent'),late=late,attendanceRate=rounded((present+late)/len(attendance)*100) if attendance else None),
-        month=dict(month=now.month,year=now.year,income=sum(payments.filter(state__in=['paid','partial']).values_list('amount',flat=True)),paidCount=payments.filter(state='paid').count(),debtors=active.filter(group_id__isnull=False).exclude(user_id__in=paid_ids).count()),
+        month=dict(month=now.month,year=now.year,income=sum(payments.filter(state__in=['paid','partial']).values_list('amount',flat=True)),paidCount=payments.filter(state='paid').count(),debtors=active.filter(id__in=grouped_students).exclude(id__in=paid_ids).count()),
         queue=dict(grading=m.TestAttempt.objects.filter(status='grading').count(),pendingPurchases=m.VideoPurchase.objects.filter(status='pending_confirmation').count()))
 
 
@@ -77,8 +92,11 @@ def csv(headers,rows):
 
 
 def students_csv(group_id=None):
+    from .classroom_roster import active_enrollments
+
     rows=m.StudentProfile.objects.filter(user__is_active=True).select_related('user','group').order_by('user__name')
-    if group_id: rows=rows.filter(group_id=group_id)
+    if group_id:
+        rows = rows.filter(user_id__in=active_enrollments(group_id=group_id).values('student_id'))
     out=[]
     for row in rows:
         parent_ids=list(m.ParentStudent.objects.filter(student_id=row.user_id).values_list('parent_user_id',flat=True))
@@ -98,13 +116,20 @@ def payments_csv(year,month=None):
 
 
 def group_results_csv(group_id):
-    students = m.StudentProfile.objects.filter(group_id=group_id, user__is_active=True).select_related('user').order_by('user__name')
-    student_ids = [s.user_id for s in students]
-    attempts = (
-        m.MockAttempt.objects.filter(student_id__in=student_ids)
+    from .classroom_roster import member_profiles
+    from .teacher_analytics import classroom_attempts
+
+    attempts = list(
+        classroom_attempts(group_id)
         .select_related('exam', 'student__user')
         .order_by('student__user__name', '-finished_at', '-started_at')
     )
+    current_students = list(member_profiles(group_id).filter(user__is_active=True).select_related('user').order_by('user__name'))
+    current_ids = {s.user_id for s in current_students}
+    extra_ids = {a.student_id for a in attempts if a.student_id not in current_ids}
+    extra_students = list(m.StudentProfile.objects.filter(user_id__in=extra_ids).select_related('user')) if extra_ids else []
+    students = sorted([*current_students, *extra_students], key=lambda s: (s.user.name or '').casefold())
+    student_ids = [s.user_id for s in students]
     student_attempts = {}
     for att in attempts:
         student_attempts.setdefault(att.student_id, []).append(att)

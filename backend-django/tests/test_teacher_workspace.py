@@ -248,10 +248,11 @@ class TeacherWorkspaceTests(SimpleTestCase):
         self.assertEqual(data["lesson_id"], "lesson-7")
         self.assertEqual(data["min_pass_percent"], 80)
 
+    @patch("apps.core.teacher_views.classrooms.participant_ids", return_value=["student-1", "student-2"])
     @patch("apps.core.teacher_views.HomeworkAssignment.objects.create")
     @patch("apps.core.teacher_views.MockExam.objects.filter")
     @patch("apps.core.teacher_views.Cohort.objects.get")
-    def test_teacher_create_assignment_exam(self, mock_get_cohort, mock_exam, mock_create):
+    def test_teacher_create_assignment_exam(self, mock_get_cohort, mock_exam, mock_create, participants):
         """Teacher creates homework assignment tied to a mock exam."""
         cohort = MagicMock(id="c-1", teacher_id="teacher-1")
         cohort.name = "Morning IELTS"
@@ -291,6 +292,8 @@ class TeacherWorkspaceTests(SimpleTestCase):
         self.assertEqual(resp.status_code, 201)
         data = resp.data["data"]
         self.assertEqual(data["exam_id"], "exam-cefr-1")
+        participants.assert_called_once_with(cohort)
+        self.assertEqual(mock_create.call_args.kwargs["participant_ids"], ["student-1", "student-2"])
 
     @patch("apps.core.teacher_views.HomeworkSubmission.objects.filter")
     @patch("apps.core.teacher_views.HomeworkAssignment.objects.filter")

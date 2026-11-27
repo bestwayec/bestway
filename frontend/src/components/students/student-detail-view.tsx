@@ -13,10 +13,13 @@ import { Avatar } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { AdjustPointsDialog } from "@/components/students/adjust-points-dialog";
+import { StudentMemberships } from "./student-memberships";
 import { DeleteStudentDialog } from "@/components/students/delete-student-dialog";
 import { Trash2 } from "lucide-react";
 import { UserFormDialog } from "@/components/users/user-form-dialog";
-import { useUserDetail, useApproveStudent, useDeactivateUser } from "@/hooks/use-users";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api-client";
+import { useUserDetail, useApproveStudent, useDeactivateUser, useUpdateUser } from "@/hooks/use-users";
 import { useMe } from "@/hooks/use-me";
 import { usePoints } from "@/hooks/use-points";
 import { useStudentAttendance } from "@/hooks/use-attendance";
@@ -52,8 +55,11 @@ export function StudentDetailView({ studentId }: { studentId: string }) {
   const groupsQ = useGroups();
   const approve = useApproveStudent();
   const deactivate = useDeactivateUser();
+  const reactivate = useUpdateUser(studentId);
+  const management = useTranslations("studentManagement");
   const { data: me } = useMe();
   const isSuper = me?.user.role === "super_admin";
+  const office = isSuper || me?.user.role === "admin";
   const router = useRouter();
   const tst = useTranslations("staff");
   const [adjustOpen, setAdjustOpen] = React.useState(false);
@@ -67,6 +73,35 @@ export function StudentDetailView({ studentId }: { studentId: string }) {
   const year = new Date().getFullYear();
   const attQ = useStudentAttendance(groupId, studentId, month);
   const payQ = useChildPayments(studentId, year);
+  const overviewQ = useQuery({
+    queryKey: ["student-overview", studentId],
+    queryFn: () =>
+      api.get<{
+        teachers: Array<{ id: string; name: string; groupName: string }>;
+        exams: Array<{
+          id: string;
+          examTitle: string;
+          examType: string;
+          status: string;
+          overallBand?: number | null;
+          overallScore?: number | null;
+          startedAt: string;
+        }>;
+        homework: Array<{
+          assignmentId: string;
+          title: string;
+          groupName?: string | null;
+          status: string;
+          scorePercent: number;
+          isPassed: boolean;
+        }>;
+        vocabulary: {
+          attempts: Array<{ id: string; setTitle: string; score: number; totalWords: number; percentage: number }>;
+          weakWordsCount: number;
+        };
+      }>(`/users/${encodeURIComponent(studentId)}/overview`),
+    enabled: office || me?.user.role === "teacher",
+  });
 
   if (userQ.isError) {
     return (
@@ -180,7 +215,7 @@ export function StudentDetailView({ studentId }: { studentId: string }) {
               Talabani o&apos;chirish
             </Button>
           )}
-          {isSuper && user.isActive && user.id !== me?.user.id && user.role !== "super_admin" && (
+          {office && user.isActive && user.role === "student" && (
             <Button
               size="sm"
               variant="ghost"
@@ -201,9 +236,109 @@ export function StudentDetailView({ studentId }: { studentId: string }) {
               {tst("deactivate")}
             </Button>
           )}
+          {office && !user.isActive && user.role === "student" && (
+            <Button size="sm" variant="outline" loading={reactivate.isPending} onClick={() => {
+              if (confirm(management("reactivateConfirm"))) reactivate.mutate({ isActive: true }, {
+                onError: () => toast.error(tc("unknownError")),
+              });
+            }}>{management("reactivate")}</Button>
+          )}
           {!user.isActive && <Badge variant="danger">{tst("inactive")}</Badge>}
         </div>
       </Card>
+
+      {office && <StudentMemberships studentId={studentId} name={user.name} groups={groupsQ.data ?? []} />}
+
+      {overviewQ.data && (
+        <div className="mb-4 grid gap-4 sm:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">{management("associatedTeachers")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {overviewQ.data.teachers.length === 0 ? (
+                <p className="text-sm text-fg-muted">{t("noGroup")}</p>
+              ) : (
+                <ul className="space-y-1.5 text-sm">
+                  {overviewQ.data.teachers.map((tr) => (
+                    <li key={`${tr.id}-${tr.groupName}`} className="flex items-center justify-between gap-2 rounded bg-bg-subtle px-2.5 py-1.5">
+                      <span className="font-medium text-fg">{tr.name}</span>
+                      <span className="text-xs text-fg-muted">{tr.groupName}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-sm">{management("vocabHistory")}</CardTitle>
+              <Badge variant="outline">{management("weakWords", { count: overviewQ.data.vocabulary.weakWordsCount })}</Badge>
+            </CardHeader>
+            <CardContent>
+              {overviewQ.data.vocabulary.attempts.length === 0 ? (
+                <p className="text-sm text-fg-muted">{management("noVocab")}</p>
+              ) : (
+                <ul className="space-y-1.5 text-sm">
+                  {overviewQ.data.vocabulary.attempts.slice(0, 5).map((v) => (
+                    <li key={v.id} className="flex items-center justify-between gap-2 rounded bg-bg-subtle px-2.5 py-1.5">
+                      <span className="truncate font-medium text-fg">{v.setTitle}</span>
+                      <span className="shrink-0 text-xs font-semibold text-brand tabular-nums">
+                        {v.score}/{v.totalWords} ({Math.round(v.percentage)}%)
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">{management("examHistory")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {overviewQ.data.exams.length === 0 ? (
+                <p className="text-sm text-fg-muted">{management("noExams")}</p>
+              ) : (
+                <ul className="space-y-1.5 text-sm">
+                  {overviewQ.data.exams.slice(0, 6).map((ex) => (
+                    <li key={ex.id} className="flex items-center justify-between gap-2 rounded bg-bg-subtle px-2.5 py-1.5">
+                      <Link href={`/mock/result/${ex.id}`} className="truncate font-medium text-fg hover:underline">
+                        {ex.examTitle}
+                      </Link>
+                      <Badge variant={ex.status === "completed" ? "success" : "warning"}>
+                        {ex.overallBand ?? ex.overallScore ?? ex.status}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">{management("homeworkHistory")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {overviewQ.data.homework.length === 0 ? (
+                <p className="text-sm text-fg-muted">{management("noHomework")}</p>
+              ) : (
+                <ul className="space-y-1.5 text-sm">
+                  {overviewQ.data.homework.slice(0, 6).map((hw) => (
+                    <li key={hw.assignmentId} className="flex items-center justify-between gap-2 rounded bg-bg-subtle px-2.5 py-1.5">
+                      <span className="truncate font-medium text-fg">{hw.title}</span>
+                      <Badge variant={hw.isPassed ? "success" : "outline"}>{hw.scorePercent}%</Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Davomat + to'lov */}
       <div className="mb-4 grid gap-4 sm:grid-cols-2">

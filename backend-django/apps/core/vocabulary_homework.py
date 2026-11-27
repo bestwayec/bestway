@@ -15,6 +15,7 @@ from rest_framework.decorators import api_view
 from apps.legacy_schema.models import StudentProfile, User
 from common.api.exceptions import ContractAPIException
 
+from .classroom_roster import member_profiles
 from . import classrooms, vocabulary_answers, vocabulary_collections, vocabulary_service
 from .domain_contracts import invalid, payload
 from .models import ClassroomEnrollment, HomeworkAssignment, HomeworkSubmission, QuizMode, VocabularyAttempt, VocabularyFlashcardProgress, VocabularyFlashcardReceipt, VocabularyHomeworkSession
@@ -28,7 +29,7 @@ def assignment_for_student(student_id, assignment_id):
     if assignment is None:
         raise ContractAPIException("NOT_FOUND", "Vazifa topilmadi", 404)
     profile = StudentProfile.objects.select_for_update().filter(user_id=student_id).first()
-    if not profile or not assignment.cohort.classroom_id or profile.group_id != assignment.cohort.classroom_id:
+    if not profile or not assignment.cohort.classroom_id or not classrooms.is_member(assignment.cohort, student_id):
         raise ContractAPIException("FORBIDDEN", "Vazifa bu o‘quvchiga biriktirilmagan", 403)
     return assignment
 
@@ -214,7 +215,7 @@ def results_view(request, group_id, assignment_id):
     if assignment is None:
         raise ContractAPIException("NOT_FOUND", "Vazifa topilmadi", 404)
 
-    current_members = StudentProfile.objects.filter(group_id=group_id).values_list("user_id", flat=True)
+    current_members = member_profiles(group_id).values_list("user_id", flat=True)
     current = set(current_members)
     periods = ClassroomEnrollment.objects.filter(group_id=group_id).filter(
         Q(ended_at__gte=assignment.created_at) | Q(ended_at__isnull=True),

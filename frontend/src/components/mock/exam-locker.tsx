@@ -6,6 +6,38 @@ import { Maximize2, ShieldAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { FULLSCREEN_GUARD_EVENT } from "@/lib/microphone";
+import { api } from "@/lib/api-client";
+
+interface QueuedGuardEvent {
+  event: string;
+  eventId?: string;
+  observedAt: string;
+  offlineSynced: boolean;
+}
+
+function guardQueueKey(attemptId: string): string {
+  return `bw_guard_queue_${attemptId}`;
+}
+
+function readGuardQueue(attemptId: string): QueuedGuardEvent[] {
+  try {
+    const raw = window.localStorage.getItem(guardQueueKey(attemptId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeGuardQueue(attemptId: string, items: QueuedGuardEvent[]) {
+  try {
+    if (items.length === 0) window.localStorage.removeItem(guardQueueKey(attemptId));
+    else window.localStorage.setItem(guardQueueKey(attemptId), JSON.stringify(items.slice(-50)));
+  } catch {
+    // storage unavailable
+  }
+}
 
 export interface ExamLockerProps {
   active: boolean;
@@ -70,12 +102,59 @@ export function ExamLocker({
   // Paused while the app itself leaves full screen for a moment (microphone permission prompt).
   const guardPausedRef = React.useRef(false);
   const lastViolationTimeRef = React.useRef(0);
+  const guardRequestInFlight = React.useRef(false);
 
   // Keep callback refs stable
   const onAnomalyRef = React.useRef(onAnomaly);
   React.useEffect(() => {
     onAnomalyRef.current = onAnomaly;
   }, [onAnomaly]);
+
+  const flushGuardQueue = React.useCallback(async () => {
+    if (!active || guardRequestInFlight.current || typeof window === "undefined" || navigator.onLine === false) return;
+    const cutoff = Date.now() - 15 * 60_000;
+    const queued = readGuardQueue(attemptId).filter((item) => Date.parse(item.observedAt) > cutoff);
+    if (queued.length === 0) return;
+    guardRequestInFlight.current = true;
+    const sent = new Set(queued.map((item) => item.eventId ?? `${item.event}:${item.observedAt}`));
+    try {
+      await api.post(`/mock/attempts/${encodeURIComponent(attemptId)}/guard-events`, { events: queued });
+      writeGuardQueue(attemptId, readGuardQueue(attemptId).filter((item) =>
+        !sent.has(item.eventId ?? `${item.event}:${item.observedAt}`)));
+    } catch {
+      // keep queued for the next reconnect
+    } finally {
+      guardRequestInFlight.current = false;
+    }
+  }, [active, attemptId]);
+
+  React.useEffect(() => {
+    if (!active || typeof window === "undefined") return;
+    void flushGuardQueue();
+    const onOnline = () => {
+      void flushGuardQueue();
+    };
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [active, flushGuardQueue]);
+
+  const emitGuardEvent = React.useCallback(
+    (eventType: string) => {
+      if (typeof window !== "undefined" && navigator.onLine === false) {
+        const queued = readGuardQueue(attemptId);
+        queued.push({
+          event: eventType,
+          eventId: window.crypto?.randomUUID?.(),
+          observedAt: new Date().toISOString(),
+          offlineSynced: true,
+        });
+        writeGuardQueue(attemptId, queued);
+        return;
+      }
+      onAnomalyRef.current(eventType);
+    },
+    [attemptId],
+  );
 
 
   const requestFullscreenSafe = React.useCallback(async () => {
@@ -102,7 +181,7 @@ export function ExamLocker({
     (eventType: string) => {
       if (!active || guardPausedRef.current) return;
 
-      onAnomalyRef.current(eventType);
+      emitGuardEvent(eventType);
 
       const now = Date.now();
       // Debounce strike increments: don't count multiple simultaneous events as multiple strikes
@@ -119,7 +198,7 @@ export function ExamLocker({
         return next;
       });
     },
-    [active]
+    [active, emitGuardEvent]
   );
 
   // 1. Full screen is requested only from the student's click on the start notice (browsers
@@ -213,7 +292,7 @@ export function ExamLocker({
       const last = lastReportTimeRef.get(type) ?? 0;
       if (now - last < 500) return;
       lastReportTimeRef.set(type, now);
-      onAnomalyRef.current(type);
+      emitGuardEvent(type);
     };
 
     const blockEvent = (e: Event, type: string) => {
@@ -271,7 +350,7 @@ export function ExamLocker({
       document.removeEventListener("contextmenu", onContextMenu, { capture: true });
       window.removeEventListener("keydown", onKeyDown, { capture: true });
     };
-  }, [active]);
+  }, [active, emitGuardEvent]);
 
   return (
     <>

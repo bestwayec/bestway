@@ -8,6 +8,7 @@ from __future__ import annotations
 import base64
 import binascii
 import json
+import logging
 from copy import copy
 from datetime import UTC, datetime, timedelta
 
@@ -286,6 +287,8 @@ def start(actor, exam_id, data):
         ).first()
         if assignment is None:
             fail('ASSIGNMENT_NOT_FOUND', 'Exam assignment not found', 404)
+        if assignment.participant_ids is not None and actor.id not in assignment.participant_ids:
+            fail('ASSIGNMENT_NOT_FOUND', 'Exam assignment not found', 404)
         if assignment.deadline < timezone.now():
             fail('ASSIGNMENT_EXPIRED', 'The assignment deadline has passed', 409)
     if not exam.is_published and not exam.is_demo:
@@ -336,7 +339,12 @@ def start(actor, exam_id, data):
             # the request falls through to the full_test flow and a practice
             # exam is refused with MOCK_FULL_TEST_UNAVAILABLE.
             partial = True
-        existing_list = list(MockAttempt.objects.filter(exam_id=exam_id, student_id=actor.id, status='in_progress').order_by('-started_at'))
+        in_progress = MockAttempt.objects.filter(exam_id=exam_id, student_id=actor.id, status='in_progress')
+        if assignment:
+            in_progress = in_progress.filter(media_state__contains={ASSIGNMENT_KEY: assignment.id})
+        else:
+            in_progress = in_progress.exclude(media_state__has_key=ASSIGNMENT_KEY)
+        existing_list = list(in_progress.order_by('-started_at'))
         existing = existing_list[0] if existing_list else None
         if len(existing_list) > 1:
             for extra in existing_list[1:]:
@@ -362,12 +370,6 @@ def start(actor, exam_id, data):
             if partial and practice_options:
                 scope_mismatch = scope_mismatch or existing.mode != 'practice' or practice_mode.options(existing) != {
                     'groupIds': practice_options['groupIds'] or None, 'timer': practice_options['timer']}
-            if assignment:
-                linked = (existing.media_state or {}).get(ASSIGNMENT_KEY)
-                if linked and linked != assignment.id:
-                    fail('MOCK_ASSIGNMENT_ATTEMPT_ACTIVE', 'Finish the active assignment attempt before starting another', 409)
-                if aware(existing.started_at) < aware(assignment.created_at):
-                    scope_mismatch = True
             if (exp and aware(exp) <= now) or is_retake or scope_mismatch:
                 from .mock_submissions import submit
                 try:
@@ -377,9 +379,6 @@ def start(actor, exam_id, data):
                     existing.save(update_fields=['status'])
                 existing = None
             else:
-                if assignment and not linked:
-                    existing.media_state = {**(existing.media_state or {}), ASSIGNMENT_KEY: assignment.id}
-                    existing.save(update_fields=['media_state'])
                 return start_response(existing, exam, True)
         practice = (selected_scope(exam, data['skills'], _auto_seed=False) if implicit_practice
                     else selected_scope(exam, data['skills']) if partial else None)
@@ -409,6 +408,8 @@ def start(actor, exam_id, data):
         if flow == 'full_test' and exam.profile not in ('full_mock', 'writing_speaking'):
             fail('MOCK_FULL_TEST_UNAVAILABLE', 'Full Mock flow faqat full_mock imtihonlarda mavjud')
         mode = 'timed' if flow in ('full_test', 'single_skill') and data.get('mode') != 'practice' else data.get('mode') or 'timed'
+        if assignment:
+            mode = 'timed'
         at = attempt_signature.truncate_to_millis(timezone.now())  # equals the stored TIMESTAMP(3)
         deadlines, overall, last = timing(exam.type, shaped['sections'], mode, flow, at, selected_skills=data.get('skills') if partial else None)
         if mode == 'practice' and practice_options.get('timer') in ('section', 'part'):
@@ -544,88 +545,10 @@ def save_answers(actor, attempt_id, items, *, bulk=False):
 
 
 def notify_teacher_proctoring_alert(attempt, actor, event):
-    import logging
-    import os
-
-    from django.core.cache import cache
-
-    from apps.legacy_schema.models import StudentProfile, User
-
-    from . import telegram_delivery
-
-    attempt_id = getattr(attempt, 'id', 'unknown')
-    cache_key = f"proctoring_alert_throttle:{attempt_id}"
-    if cache.get(cache_key):
-        return
-    cache.set(cache_key, True, timeout=10)
-
     try:
-        student_id = getattr(attempt, 'student_id', None) or getattr(actor, 'id', None)
-        if not student_id:
-            return
+        from . import live_exam_guard
 
-        profile = StudentProfile.objects.filter(user_id=student_id).select_related('group__teacher', 'user').first()
-        teacher = profile.group.teacher if (profile and profile.group and profile.group.teacher) else None
-
-        chat_id = getattr(teacher, 'telegram_chat_id', None) if teacher else None
-        if not chat_id:
-            chat_id = os.environ.get('TELEGRAM_CHANNEL_ID')
-
-        if not chat_id:
-            return
-
-        desc_map = {
-            'blur': 'Oynadan chiqib ketish (Window Blur / Focus Lost)',
-            'window_blur': 'Oynadan chiqib ketish (Window Blur / Focus Lost)',
-            'window_loss': 'Oyna yo‘qolishi / minimallashtirish (Window Loss)',
-            'focus_lost': 'Oynadan fokus yo‘qoldi (Focus Lost)',
-            'exit_fullscreen': 'To‘liq ekran rejimidan chiqish (Exit Fullscreen)',
-            'fullscreen_exit': 'To‘liq ekran rejimidan chiqish (Exit Fullscreen)',
-            'tab_switch': 'Boshqa oynaga/tabga o‘tish (Tab Switch)',
-            'webcam_blocked': 'Veb-kamera to‘sildi yoki o‘chirildi (Webcam Blocked)',
-            'camera_blocked': 'Veb-kamera to‘sildi yoki o‘chirildi (Webcam Blocked)',
-            'camera_error': 'Veb-kamera uzilishi (Camera Error)',
-            'cheat_attempt': 'Taqiqlangan harakat yoki dastur (Cheat Attempt)',
-            'copy_paste': 'Matn nusxalash yoki qo‘yish (Copy/Paste)',
-            'devtools_open': 'Dasturchi asboblari ochildi (DevTools)',
-            'multiple_monitors': 'Ikkinchi monitor aniqlandi (Multiple Monitors)',
-        }
-        event_lower = (event or '').lower().strip()
-        violation_desc = desc_map.get(event_lower, f"{event} (Xavfsizlik ogohlantirishi)")
-
-        student_name = ""
-        if profile and profile.user and profile.user.name:
-            student_name = profile.user.name
-        elif hasattr(actor, 'name') and actor.name:
-            student_name = actor.name
-        else:
-            student_user = User.objects.filter(id=student_id).first()
-            student_name = student_user.name if student_user else "Noma'lum o'quvchi"
-
-        exam_title = "Mock Imtihon"
-        if hasattr(attempt, 'exam') and attempt.exam:
-            exam_title = getattr(attempt.exam, 'title', None) or "Mock Imtihon"
-        elif getattr(attempt, 'exam_id', None):
-            from apps.legacy_schema.models import MockExam
-            ex = MockExam.objects.filter(id=attempt.exam_id).first()
-            if ex and ex.title:
-                exam_title = ex.title
-
-        count = getattr(attempt, 'anti_cheat_count', 1)
-        now_str = timezone.now().strftime("%H:%M:%S")
-
-        text = (
-            "⚠️ <b>DIQQAT! Imtihon xavfsizligi buzildi:</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━━\n"
-            f"👤 <b>O'quvchi:</b> {student_name}\n"
-            f"💻 <b>Imtihon:</b> {exam_title}\n"
-            f"🚨 <b>Qoidabuzarlik:</b> {violation_desc}\n"
-            f"🔢 <b>Jami ogohlantirishlar:</b> {count} ta\n"
-            f"🕒 <b>Vaqt:</b> {now_str}\n"
-            "━━━━━━━━━━━━━━━━━━━━━\n"
-            "<i>BestWay Teacher Live Monitoring panelida jarayonni kuzatishingiz mumkin.</i>"
-        )
-        telegram_delivery.send(chat_id, text)
+        live_exam_guard.record_event(actor, attempt, event)
     except Exception as e:
         logging.getLogger(__name__).warning("notify_teacher_proctoring_alert failed: %s", e)
 
@@ -883,7 +806,11 @@ def assert_view(actor, student_id, *, started_at=None):
         return
     with connection.cursor() as cursor:
         if actor.role == 'teacher':
-            cursor.execute('SELECT 1 FROM "StudentProfile" s JOIN "Group" g ON g.id=s."groupId" WHERE s."userId"=%s AND g."teacherId"=%s', [student_id, actor.id])
+            cursor.execute(
+                'SELECT 1 FROM core_classroomenrollment ce JOIN "Group" g ON g.id = ce.group_id '
+                'WHERE ce.student_id = %s AND ce.ended_at IS NULL AND g."teacherId" = %s',
+                [student_id, actor.id],
+            )
         elif actor.role == 'parent':
             cursor.execute('SELECT 1 FROM "ParentStudent" WHERE "parentUserId"=%s AND "studentId"=%s', [actor.id, student_id])
         else:
@@ -1008,9 +935,20 @@ def detail(actor, attempt_id):
     attempt = MockAttempt.objects.select_related('exam', 'student__user').filter(id=attempt_id).first()
     if not attempt:
         fail('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404)
-    assert_view(actor, attempt.student_id, started_at=attempt.started_at)
-    staff = mock_catalog.is_staff(actor)
-    show = staff or (attempt.status == 'completed' and not review_blocked(attempt))
+    teacher_can_grade = None
+    if actor.role == "teacher":
+        from .classroom_results import explicit_teacher_access
+
+        teacher_can_grade = explicit_teacher_access(actor, attempt, grade=True)
+        if not teacher_can_grade and not explicit_teacher_access(actor, attempt):
+            fail("FORBIDDEN", "Bu natijani ko‘rish huquqingiz yo‘q", 403)
+    else:
+        assert_view(actor, attempt.student_id)
+    from .classroom_results import answer_disclosure_status, practice_answers_available
+
+    staff = mock_catalog.is_staff(actor) and teacher_can_grade is not False
+    disclosure = answer_disclosure_status(actor, attempt)
+    show = disclosure["disclosed"]
     answers = {a.question_id: a for a in MockAnswer.objects.filter(attempt_id=attempt_id)}
     # One query per level instead of one per section and one per group (N+1).
     section_rows = list(MockSection.objects.filter(exam_id=attempt.exam_id).order_by('sort_order'))
@@ -1023,7 +961,11 @@ def detail(actor, attempt_id):
     from .handwriting import handwriting_fields, page_urls
     from . import review_evidence
     from .practice_mode import revealed as practice_revealed
-    shown_in_practice = set(practice_revealed(attempt))
+    shown_in_practice = set()
+    saved_reveals = practice_revealed(attempt)
+    practice_help = attempt.mode == 'practice' and attempt.status == 'in_progress' and practice_answers_available(attempt)
+    if saved_reveals and (show or practice_help):
+        shown_in_practice = set(saved_reveals)
     sections = []
     for section in section_rows:
         raw = (attempt.raw_scores or {}).get(section.skill, {})
@@ -1051,7 +993,6 @@ def detail(actor, attempt_id):
             review_source, review_recording = sources.get(group.id, ('', None))
             if review_source and section.skill == 'reading':
                 shaped_group['reviewText'] = review_source
-            practice_help = attempt.mode == 'practice' and attempt.status == 'in_progress'
             if (show or practice_help) and section.skill == 'listening':
                 # Practice only (never a timed exam): the audioscript is a study aid while practising.
                 script = review_source if show else review_evidence.source_text(group, section.skill)
@@ -1096,6 +1037,12 @@ def detail(actor, attempt_id):
     from .question_numbering import apply_display_numbers
     apply_display_numbers(attempt.exam.type, sections)
     result = summary(attempt, detail=True)
+    if teacher_can_grade is not None:
+        result['canGrade'] = teacher_can_grade
+    if actor.role == 'student' and actor.id == attempt.student_id and attempt.mode == 'practice':
+        from .classroom_results import is_personal_practice
+
+        result['canSharePractice'] = is_personal_practice(attempt)
     if show and getattr(actor, 'role', None) == 'student' and actor.id == attempt.student_id and attempt.status == 'completed':
         from .teacher_analytics import own_exam_benchmark
         if benchmark := own_exam_benchmark(attempt):
@@ -1104,7 +1051,7 @@ def detail(actor, attempt_id):
         result['examTitle'] = attempt.exam.title
         result['cheatEvents'] = [dict(event=e.event, date=e.created_at) for e in MockCheatEvent.objects.filter(attempt_id=attempt_id).order_by('created_at')]
     result.update(serverTime=timezone.now(), annotations=attempt.annotations or [], sections=scope_sections(attempt, sections),
-        sessionSignature=attempt_signature.sign(attempt), attemptId=attempt.id)
+        sessionSignature=attempt_signature.sign(attempt), attemptId=attempt.id, answerDisclosure=disclosure)
     try:
         from apps.legacy_schema.models import AssessmentEvaluation, AssessmentJob
 

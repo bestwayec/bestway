@@ -34,7 +34,7 @@ class AssessmentOverviewIntegrityTests(SimpleTestCase):
         answer = SimpleNamespace(question_id='q1', response='unverified answer', score=None, graded_by_id=None,
             feedback=None, rubric_scores={'transcript': 'unverified answer', 'speech_diagnostics': {'fluency_score': 10}})
         with ExitStack() as stack:
-            stack.enter_context(patch.object(assessment, 'assert_can_view'))
+            stack.enter_context(patch.object(assessment, 'authorize_attempt'))
             att = stack.enter_context(patch.object(assessment.MockAttempt.objects, 'filter'))
             att.return_value.select_related.return_value.first.return_value = attempt
             stack.enter_context(patch.object(assessment.MockAnswer.objects, 'filter', return_value=[answer]))
@@ -108,22 +108,19 @@ class AssessmentOverviewIntegrityTests(SimpleTestCase):
 class ManualGradeBoundaryTests(SimpleTestCase):
     def setUp(self):
         self.teacher = SimpleNamespace(id='teacher', role='teacher', name='Teacher')
-        self.attempt = SimpleNamespace(status='grading', exam=SimpleNamespace(type='ielts'),
-            student=SimpleNamespace(group=SimpleNamespace(teacher_id='teacher')))
+        self.attempt = SimpleNamespace(id='attempt', status='grading', exam=SimpleNamespace(type='ielts'))
 
-    def grade_error(self, payload):
+    def grade_error(self, payload, *, authorized=True):
         from common.api.exceptions import ContractAPIException
-        with patch.object(assessment.MockAttempt.objects, 'filter') as attempts:
+        with patch.object(assessment.MockAttempt.objects, 'filter') as attempts, \
+             patch('apps.core.classroom_results.explicit_teacher_access', return_value=authorized):
             attempts.return_value.select_related.return_value.first.return_value = self.attempt
             with self.assertRaises(ContractAPIException) as error:
                 assessment.teacher_grade_attempt(self.teacher, 'attempt', payload)
         return error.exception
 
-    def test_unassigned_or_unowned_group_cannot_grade(self):
-        for group in (None, SimpleNamespace(teacher_id=None), SimpleNamespace(teacher_id='other')):
-            with self.subTest(group=group):
-                self.attempt.student.group = group
-                self.assertEqual(self.grade_error({'final_score': 5}).status_code, 403)
+    def test_teacher_without_assessment_access_cannot_grade(self):
+        self.assertEqual(self.grade_error({'final_score': 5}, authorized=False).status_code, 403)
 
     def test_unsubmitted_attempt_cannot_be_manually_graded(self):
         self.attempt.status = 'in_progress'

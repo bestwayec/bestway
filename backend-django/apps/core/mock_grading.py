@@ -56,7 +56,12 @@ def grade(actor,attempt_id,data):
     attempt=MockAttempt.objects.select_for_update().select_related('exam').filter(id=attempt_id).first()
     if attempt is None:fail('MOCK_ATTEMPT_NOT_FOUND','Urinish topilmadi',404)
     if attempt.status=='in_progress':fail('MOCK_ATTEMPT_NOT_SUBMITTED','Imtihon hali topshirilmagan')
-    assert_can_view(actor, attempt.student_id, started_at=attempt.started_at if actor.role == "teacher" else None)
+    if actor.role == "teacher":
+        from .classroom_results import assert_attempt_access
+
+        assert_attempt_access(actor, attempt, grade=True)
+    else:
+        assert_can_view(actor, attempt.student_id)
     question=MockQuestion.objects.filter(id=data['questionId'],group__section__exam_id=attempt.exam_id).select_related('group__section').first()
     if question is None:fail('QUESTION_NOT_IN_EXAM','Savol bu imtihonga tegishli emas')
     selected=scope(attempt)
@@ -98,6 +103,8 @@ def grade(actor,attempt_id,data):
     from .system_settings import audit
     audit(actor,'mock.answer.grade','mockAnswer',question.id,old=dict(score=before.score if before else None,gradedById=before.graded_by_id if before else None,feedback=before.feedback if before else None),new=dict(attemptId=attempt_id,score=final,status=result['status']))
     if result['status']=='completed':
+        from .homework_scoring import propagate_attempt_finalization
         from .mock_submission_snapshots import notify
         notify(attempt)
+        propagate_attempt_finalization(attempt, actor=actor)
     return dict(saved=True,status=result['status'])

@@ -423,12 +423,11 @@ class VocabularySetVisibilityTests(SimpleTestCase):
     """Students see sets of their own group's teacher, sets assigned to their group,
     and their own sets; staff see everything."""
 
-    def visibility(self, user, group_id="g1", teacher_id="t1"):
+    def visibility(self, user, group_ids=("g1", "g2")):
         from apps.core import vocabulary_views as views
-        with patch("apps.legacy_schema.models.StudentProfile.objects") as profiles, \
+        with patch("apps.core.classroom_roster.student_group_ids", return_value=group_ids), \
              patch("apps.legacy_schema.models.Group.objects") as groups:
-            profiles.filter.return_value.values_list.return_value.first.return_value = group_id
-            groups.filter.return_value.values_list.return_value.first.return_value = teacher_id
+            groups.filter.return_value.values_list.return_value.distinct.return_value = ["t1", "t2"]
             return views.student_visibility(user)
 
     def test_staff_are_not_filtered(self):
@@ -436,12 +435,17 @@ class VocabularySetVisibilityTests(SimpleTestCase):
             self.assertIsNone(self.visibility(SimpleNamespace(id="x", role=role)))
 
     def test_student_filter_covers_own_group_teacher_and_own_sets(self):
-        q = str(self.visibility(SimpleNamespace(id="s1", role="student")))
-        for clause in ("('created_by_id', 's1')", "('group_id', 'g1')", "('created_by_id', 't1')"):
-            self.assertIn(clause, q)
+        from django.db.models import Q
+
+        self.assertEqual(
+            self.visibility(SimpleNamespace(id="s1", role="student")),
+            Q(created_by_id="s1")
+            | Q(group_id__in=["g1", "g2"], is_public=True)
+            | Q(created_by_id__in=["t1", "t2"], group_id__isnull=True, is_public=True),
+        )
 
     def test_student_without_group_sees_only_own_sets(self):
-        q = self.visibility(SimpleNamespace(id="s1", role="student"), group_id=None)
+        q = self.visibility(SimpleNamespace(id="s1", role="student"), group_ids=())
         self.assertEqual(str(q), "(AND: ('created_by_id', 's1'))")
 
     def test_hidden_set_is_not_found_for_quiz_and_submit(self):

@@ -84,7 +84,7 @@ def teacher_grade(request, attempt_id):
     attempt = MockAttempt.objects.select_for_update().filter(pk=attempt_id).first()
     if attempt is None:
         assessment.fail("MOCK_ATTEMPT_NOT_FOUND", "Attempt not found", 404)
-    assessment.assert_can_view(request.user, attempt.student_id, started_at=attempt.started_at)
+    assessment.authorize_attempt(request.user, attempt, grade=True)
     return success(assessment.teacher_grade_attempt(request.user, attempt_id, request.data or {}), 200)
 
 @api_view(['POST'])
@@ -149,9 +149,7 @@ def live_monitoring(request, group_id):
 
     from apps.legacy_schema.models import (
         Group,
-        MockAttempt,
         MockCheatEvent,
-        StudentProfile,
     )
     from common.api.exceptions import ContractAPIException
 
@@ -161,12 +159,14 @@ def live_monitoring(request, group_id):
     if request.user.role == 'teacher' and group.teacher_id != request.user.id:
         raise ContractAPIException('FORBIDDEN', 'Bu guruh sizga biriktirilmagan', 403)
 
-    students = list(StudentProfile.objects.filter(group_id=group_id).select_related('user').order_by('user__name', 'user__id'))
+    from .classroom_roster import member_profiles
+
+    students = list(member_profiles(group_id).select_related('user').order_by('user__name', 'user__id'))
     cutoff = timezone.now() - timedelta(hours=24)
     students_data = []
 
-    from .classroom_roster import current_teacher_attempts
-    classroom_attempts = current_teacher_attempts(MockAttempt.objects.all(), request.user)
+    from .teacher_analytics import classroom_attempts as group_attempts
+    classroom_attempts = group_attempts(group_id)
     for s in students:
         active = classroom_attempts.filter(student_id=s.user_id, status__in=['in_progress', 'grading']).select_related('exam').order_by('-started_at').first()
         if not active:

@@ -224,10 +224,10 @@ class TeacherGroupsAnalyticsAndExcelExportTests(SimpleTestCase):
 
         with patch("apps.core.groups.get_group", return_value=group_obj), \
              patch("apps.core.groups.StudentProfile.objects.filter") as mock_sp, \
-             patch("apps.core.groups.MockAttempt.objects.filter") as mock_att, \
+             patch("apps.core.teacher_analytics.classroom_attempts") as mock_att, \
              patch("apps.core.groups.TestAttempt.objects.filter") as mock_leg:
             mock_sp.return_value.select_related.return_value.order_by.return_value = [student_profile]
-            mock_att.return_value.select_related.return_value.order_by.return_value = [attempt_obj]
+            mock_att.return_value.filter.return_value.select_related.return_value.order_by.return_value = [attempt_obj]
             mock_leg.return_value.order_by.return_value = []
 
             res = self.client.get("/v1/groups/grp-1")

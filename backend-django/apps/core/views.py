@@ -1244,7 +1244,7 @@ def _can_view_student(cursor, viewer, target_id):
 
     elif viewer.role == "teacher":
 
-        cursor.execute('SELECT 1 FROM "StudentProfile" s JOIN "Group" g ON g."id"=s."groupId" WHERE s."userId"=%s AND g."teacherId"=%s', [target_id, viewer.id])
+        cursor.execute('SELECT 1 FROM core_classroomenrollment ce JOIN "Group" g ON g."id"=ce.group_id WHERE ce.student_id=%s AND ce.ended_at IS NULL AND g."teacherId"=%s', [target_id, viewer.id])
 
     else:
 
@@ -1278,7 +1278,12 @@ def _user_detail(cursor, viewer, target_id):
 
     elif row[3] == "teacher":
 
-        cursor.execute('SELECT g."id",g."name",COUNT(s."userId") FROM "Group" g LEFT JOIN "StudentProfile" s ON s."groupId"=g."id" WHERE g."teacherId"=%s GROUP BY g."id",g."name"', [target_id])
+        cursor.execute(
+            'SELECT g."id", g."name", COUNT(ce.id) FROM "Group" g '
+            'LEFT JOIN core_classroomenrollment ce ON ce.group_id = g."id" AND ce.ended_at IS NULL '
+            'WHERE g."teacherId"=%s GROUP BY g."id", g."name"',
+            [target_id],
+        )
 
         out["groups"] = [{"id": r[0], "name": r[1], "studentsCount": r[2]} for r in cursor.fetchall()]
 

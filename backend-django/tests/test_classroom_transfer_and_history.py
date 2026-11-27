@@ -12,17 +12,6 @@ from apps.core import classroom_roster, group_views, groups
 from common.api.exceptions import ContractAPIException
 
 
-class DummyAtomic:
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        return False
-
-    def __call__(self, func):
-        return func
-
-
 class ClassroomTransferAndHistoryTests(SimpleTestCase):
     def setUp(self):
         self.client = APIClient()
@@ -59,112 +48,67 @@ class ClassroomTransferAndHistoryTests(SimpleTestCase):
             mock_filter.assert_not_called()
             mock_create.assert_not_called()
 
-    def test_record_enrollment_closes_old_and_opens_new(self):
-        """Moving from group-a to group-b closes active enrollment and creates new started_at record."""
+    def test_record_enrollment_closes_only_the_source_and_opens_destination(self):
+        old, new = MagicMock(), MagicMock()
+        old.update.return_value = 1
         now = datetime(2026, 11, 20, 12, 0, tzinfo=timezone.utc)
-        active_enrollment = SimpleNamespace(group_id="group-a")
-        mock_qs = MagicMock()
-        mock_qs.first.return_value = active_enrollment
-
-        with patch("django.utils.timezone.now", return_value=now), \
-             patch.object(classroom_roster.ClassroomEnrollment.objects, "filter", return_value=mock_qs) as mock_filter, \
-             patch.object(classroom_roster.ClassroomEnrollment.objects, "create") as mock_create:
-            classroom_roster.record_enrollment("student-1", "group-a", "group-b")
-
-            mock_filter.assert_called_once_with(student_id="student-1", ended_at__isnull=True)
-            mock_qs.update.assert_called_once_with(ended_at=now)
-            mock_create.assert_called_once_with(student_id="student-1", group_id="group-b", started_at=now)
+        with patch.object(classroom_roster, "active_enrollments", side_effect=[old, new]) as active, \
+             patch.object(classroom_roster.timezone, "now", return_value=now):
+            classroom_roster.record_enrollment("student-1", "group-a", "group-b", source="transfer")
+        self.assertEqual(active.call_args_list, [
+            call(student_id="student-1", group_id="group-a"),
+            call(student_id="student-1", group_id="group-b"),
+        ])
+        old.update.assert_called_once_with(ended_at=now)
+        new.get_or_create.assert_called_once_with(
+            student_id="student-1", group_id="group-b", defaults={"started_at": now, "source": "transfer"},
+        )
 
     def test_record_enrollment_on_removal_only_closes(self):
-        """Removing student from group-a closes enrollment without opening a new one."""
         now = datetime(2026, 11, 20, 12, 0, tzinfo=timezone.utc)
-        active_enrollment = SimpleNamespace(group_id="group-a")
-        mock_qs = MagicMock()
-        mock_qs.first.return_value = active_enrollment
-
-        with patch("django.utils.timezone.now", return_value=now), \
-             patch.object(classroom_roster.ClassroomEnrollment.objects, "filter", return_value=mock_qs) as mock_filter, \
-             patch.object(classroom_roster.ClassroomEnrollment.objects, "create") as mock_create:
+        with patch.object(classroom_roster, "active_enrollments") as active, \
+             patch.object(classroom_roster.timezone, "now", return_value=now):
+            active.return_value.update.return_value = 1
             classroom_roster.record_enrollment("student-1", "group-a", None)
+        active.assert_called_once_with(student_id="student-1", group_id="group-a")
+        active.return_value.update.assert_called_once_with(ended_at=now)
+        active.return_value.get_or_create.assert_not_called()
 
-            mock_filter.assert_called_once_with(student_id="student-1", ended_at__isnull=True)
-            mock_qs.update.assert_called_once_with(ended_at=now)
-            mock_create.assert_not_called()
-
-    def test_add_student_rejects_unauthorized_hijack_between_teachers(self):
-        """Teacher 2 cannot hijack a student already assigned to Teacher 1's group."""
-        group_target = SimpleNamespace(id="group-b", teacher_id="teacher-2", name="Group B")
-        mock_user = SimpleNamespace(id="student-1", role="student")
-        mock_profile = SimpleNamespace(user_id="student-1", group_id="group-a")
-
-        with patch("apps.core.groups.transaction.atomic", return_value=DummyAtomic()), \
-             patch("apps.core.groups.get_group", return_value=group_target), \
-             patch("apps.core.classroom_roster.assert_active"), \
-             patch("apps.core.groups.User.objects.select_for_update") as mock_user_qs, \
-             patch("apps.core.groups.StudentProfile.objects.select_for_update") as mock_sp_qs, \
-             patch("apps.core.groups.Group.objects.filter") as mock_grp_qs:
-            mock_user_qs.return_value.filter.return_value.first.return_value = mock_user
-            mock_sp_qs.return_value.filter.return_value.first.return_value = mock_profile
-            # Group A does NOT belong to teacher-2:
-            mock_grp_qs.return_value.exists.return_value = False
-
-            add_student_fn = getattr(groups.add_student, "__wrapped__", groups.add_student)
+    def test_transfer_requires_permission_on_both_groups(self):
+        source = SimpleNamespace(teacher_id="teacher-1")
+        target = SimpleNamespace(teacher_id="teacher-2")
+        with patch.object(groups, "get_group", side_effect=[source, target]), \
+             patch.object(classroom_roster, "assert_active"), patch.object(groups, "lock_student") as lock:
             with self.assertRaises(ContractAPIException) as ctx:
-                add_student_fn(self.teacher_2, "group-b", "student-1")
+                groups.add_student.__wrapped__(
+                    self.teacher_2, "group-b", "student-1", source_group_id="group-a",
+                )
+        self.assertEqual(ctx.exception.status_code, 403)
+        lock.assert_not_called()
 
-            self.assertEqual(ctx.exception.status_code, 403)
-            self.assertIn("ruxsat berilmagan", str(ctx.exception.detail))
-
-    def test_add_student_allows_transfer_between_own_groups(self):
-        """Teacher 1 CAN transfer a student from their own group-a to their own group-b."""
-        group_target = SimpleNamespace(id="group-b", teacher_id="teacher-1", name="Group B")
-        mock_user = SimpleNamespace(id="student-1", role="student")
-        mock_profile = MagicMock(user_id="student-1", group_id="group-a")
-
-        with patch("apps.core.groups.transaction.atomic", return_value=DummyAtomic()), \
-             patch("apps.core.groups.get_group", return_value=group_target), \
-             patch("apps.core.classroom_roster.assert_active"), \
-             patch("apps.core.groups.User.objects.select_for_update") as mock_user_qs, \
-             patch("apps.core.groups.StudentProfile.objects.select_for_update") as mock_sp_qs, \
-             patch("apps.core.groups.Group.objects.filter") as mock_grp_qs, \
-             patch("apps.core.classroom_roster.record_enrollment") as mock_record, \
-             patch("apps.core.groups.audit"):
-            mock_user_qs.return_value.filter.return_value.first.return_value = mock_user
-            mock_sp_qs.return_value.filter.return_value.first.return_value = mock_profile
-            # Group A DOES belong to teacher-1:
-            mock_grp_qs.return_value.exists.return_value = True
-
-            add_student_fn = getattr(groups.add_student, "__wrapped__", groups.add_student)
-            result = add_student_fn(self.teacher_1, "group-b", "student-1")
-
+    def test_teacher_and_admin_can_transfer_authorized_groups(self):
+        for actor, destination_teacher in [(self.teacher_1, "teacher-1"), (self.admin, "teacher-2")]:
+            source = SimpleNamespace(teacher_id="teacher-1")
+            target = SimpleNamespace(teacher_id=destination_teacher)
+            with self.subTest(actor=actor.role), patch.object(groups, "get_group", side_effect=[source, target]), \
+                 patch.object(classroom_roster, "assert_active"), patch.object(groups, "lock_student", return_value=self.student), \
+                 patch.object(groups, "close_membership", return_value=True) as close, \
+                 patch.object(groups, "add_member", return_value=True) as add, patch.object(groups, "audit"):
+                result = groups.add_student.__wrapped__(
+                    actor, "group-b", "student-1", source_group_id="group-a",
+                )
             self.assertEqual(result, {"groupId": "group-b", "studentId": "student-1", "added": True})
-            self.assertEqual(mock_profile.group_id, "group-b")
-            mock_profile.save.assert_called_once_with(update_fields=["group_id"])
-            mock_record.assert_called_once_with("student-1", "group-a", "group-b")
+            close.assert_called_once_with("group-a", "student-1")
+            add.assert_called_once_with("group-b", self.student, source="transfer")
 
-    def test_add_student_allows_admin_to_transfer_across_any_teachers(self):
-        """Admin can transfer any student across groups regardless of assigned teachers."""
-        group_target = SimpleNamespace(id="group-b", teacher_id="teacher-2", name="Group B")
-        mock_user = SimpleNamespace(id="student-1", role="student")
-        mock_profile = MagicMock(user_id="student-1", group_id="group-a")
-
-        with patch("apps.core.groups.transaction.atomic", return_value=DummyAtomic()), \
-             patch("apps.core.groups.get_group", return_value=group_target), \
-             patch("apps.core.classroom_roster.assert_active"), \
-             patch("apps.core.groups.User.objects.select_for_update") as mock_user_qs, \
-             patch("apps.core.groups.StudentProfile.objects.select_for_update") as mock_sp_qs, \
-             patch("apps.core.classroom_roster.record_enrollment") as mock_record, \
-             patch("apps.core.groups.audit"):
-            mock_user_qs.return_value.filter.return_value.first.return_value = mock_user
-            mock_sp_qs.return_value.filter.return_value.first.return_value = mock_profile
-
-            add_student_fn = getattr(groups.add_student, "__wrapped__", groups.add_student)
-            result = add_student_fn(self.admin, "group-b", "student-1")
-
-            self.assertEqual(result, {"groupId": "group-b", "studentId": "student-1", "added": True})
-            self.assertEqual(mock_profile.group_id, "group-b")
-            mock_profile.save.assert_called_once_with(update_fields=["group_id"])
-            mock_record.assert_called_once_with("student-1", "group-a", "group-b")
+    def test_default_add_preserves_existing_memberships(self):
+        group = SimpleNamespace(teacher_id="teacher-2")
+        with patch.object(groups, "get_group", return_value=group), patch.object(classroom_roster, "assert_active"), \
+             patch.object(groups, "lock_student", return_value=self.student), patch.object(groups, "audit"), \
+             patch.object(groups, "close_membership") as close, patch.object(groups, "add_member", return_value=True) as add:
+            groups.add_student.__wrapped__(self.teacher_2, "group-b", "student-1")
+        close.assert_not_called()
+        add.assert_called_once_with("group-b", self.student, source="staff")
 
     def test_student_cannot_call_add_student_endpoint(self):
         """Students cannot add or transfer members in groups (403 Forbidden)."""
@@ -185,10 +129,9 @@ class ClassroomTransferAndHistoryTests(SimpleTestCase):
 
         with patch("apps.core.groups.get_group", return_value=group_obj), \
              patch("apps.core.classroom_roster.ClassroomEnrollment.objects.filter") as mock_enroll, \
-             patch("apps.core.classroom_roster.StudentProfile.objects.filter") as mock_sp, \
+             patch("apps.core.classroom_roster.active_enrollments") as current, \
              patch("apps.core.classroom_roster.User.objects.filter") as mock_users:
             mock_enroll.return_value.values.return_value = [{"student_id": "stu-1"}, {"student_id": "stu-2"}]
-            mock_sp.return_value.values.return_value = [{"user_id": "stu-1"}]
             
             # mock user queryset
             mock_qs = MagicMock()
@@ -198,7 +141,7 @@ class ClassroomTransferAndHistoryTests(SimpleTestCase):
             ]
             mock_users.return_value = mock_qs
             # stu-1 is currently enrolled; stu-2 was transferred out
-            mock_sp.return_value.values_list.return_value = ["stu-1"]
+            current.return_value.filter.return_value.values_list.return_value = ["stu-1"]
 
             res = self.client.get("/v1/groups/group-a/member-history?search=Ali&page=1")
             self.assertEqual(res.status_code, 200)

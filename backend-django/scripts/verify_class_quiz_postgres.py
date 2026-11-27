@@ -26,6 +26,7 @@ from django.db import connection
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from apps.core.models import ClassroomEnrollment
 from apps.core import class_quiz as cq
 from apps.core.models import ClassQuiz, ClassQuizAttempt
 from apps.legacy_schema.models import Group, User
@@ -72,6 +73,8 @@ def mk_student(group_id, name=None):
         cursor.execute('INSERT INTO "StudentProfile" ("userId","availablePrograms","activeProgram","isApproved","groupId","currentPoints","linkCode","createdAt","pointsPeriod","gameQualified","qualifiedAt") '
                        "VALUES (%s, ARRAY['IELTS']::\"ExamProgram\"[], 'IELTS', true, %s, 0, %s, NOW(), NULL, false, NULL)",
                        [student.id, group_id, 'CQ' + uuid4().hex[:8].upper()])
+    if group_id is not None:
+        ClassroomEnrollment.objects.create(group_id=group_id, student_id=student.id, started_at=timezone.now())
     return student
 
 
@@ -301,6 +304,7 @@ finally:
         cursor.execute('DELETE FROM "ClassQuizQuestion" WHERE quiz_id IN (SELECT id FROM "ClassQuiz" WHERE owner_id = ANY(%s))', [users])
         cursor.execute('DELETE FROM "ClassQuiz" WHERE owner_id = ANY(%s)', [users])
         cursor.execute('DELETE FROM "ParentStudent" WHERE "parentUserId" = ANY(%s)', [users])
+        ClassroomEnrollment.objects.filter(student_id__in=users).delete()
         cursor.execute('DELETE FROM "StudentProfile" WHERE "userId" = ANY(%s)', [users])
         cursor.execute('DELETE FROM "Group" WHERE id = ANY(%s)', [groups_made])
         cursor.execute('DELETE FROM "User" WHERE id = ANY(%s)', [users])

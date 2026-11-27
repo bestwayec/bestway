@@ -17,11 +17,12 @@ import {
   useReopenMock,
 } from "@/hooks/use-mock";
 import { useMe } from "@/hooks/use-me";
+import { PracticeResultSharing } from "./practice-result-sharing";
 import { ExamLogPanel } from "./exam-log-panel";
 import type { MockAttemptDetail, MockAttemptQuestion, MockAttemptSection, MockSkill } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { mayShowSectionBand } from "@/lib/score-display";
-import { ResultReviewTable } from "./result-review-table";
+import { objectiveReviewCounts, ResultReviewTable } from "./result-review-table";
 import { IeltsResultBreakdown } from "./ielts-result-breakdown";
 import { TypeAccuracyCard } from "./type-accuracy-card";
 import { AssessmentPanel } from "./assessment-panel";
@@ -63,7 +64,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
   const t = useTranslations("mock");
   const { data: me } = useMe();
   const role = me?.user.role;
-  const isStaff = role === "teacher" || role === "admin" || role === "super_admin";
+  const isStaff = (role === "teacher" && attempt.canGrade !== false) || role === "admin" || role === "super_admin";
   const grade = useGradeMock(attempt.id);
   const [certModalOpen, setCertModalOpen] = React.useState(false);
   const [feedbackModalOpen, setFeedbackModalOpen] = React.useState(false);
@@ -138,11 +139,11 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
       {empty ? null : <>
 
       {/* Natija sarlavhasi */}
-      <Card className="p-5 sm:p-6 print:border-none print:shadow-none">
-        <p className="text-sm text-fg-muted">
+      <Card className="overflow-hidden border-brand/20 bg-gradient-to-b from-brand-subtle/60 to-surface p-5 sm:p-7 print:border-none print:shadow-none">
+        <h1 className="text-xl font-semibold text-fg sm:text-2xl">
           {attempt.examTitle}
           {isStaff && attempt.studentName ? ` · ${attempt.studentName}` : ""}
-        </p>
+        </h1>
         <div className="mt-2 flex flex-wrap items-center gap-2 print:hidden">
           <Badge variant={completed ? "success" : "warning"}>{t(`status.${attempt.status}`)}</Badge>
           {partialPractice && <Badge variant="outline">{t("resultView.sectionPractice")}</Badge>}
@@ -234,13 +235,14 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
         )}
 
         {/* Bo'lim ballari va aniqlik tahlili */}
-        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {attempt.sections.map((s) => {
             const rawSkill = attempt.rawScores?.[s.skill];
             const hasObjectiveResponse = s.groups?.some((group) => group.questions.some((q) => q.response?.trim() || q.isCorrect === true));
             const isSkipped = rawSkill?.skipped || rawSkill?.status === "SKIPPED" ||
               (s.score === 0 && s.standardScore == null && !s.band && completed && !MANUAL_SKILLS.has(s.skill) && !hasObjectiveResponse);
             const pendingManual = MANUAL_SKILLS.has(s.skill) && !hasCompleteManualGrade(s);
+            const counts = !MANUAL_SKILLS.has(s.skill) ? objectiveReviewCounts(s.groups) : null;
             const accuracy = s.max && s.max > 0 && s.score != null ? Math.round(((s.score ?? 0) / s.max) * 100) : null;
             const questionCount = (s.groups ?? []).reduce((sum, g) => sum + (g.questions?.length ?? 0), 0);
             // Practice (S4) is raw only: correct / asked, never a band, whatever its length.
@@ -248,9 +250,9 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
             return (
               <div
                 key={s.id}
-                className="flex flex-col justify-between rounded-control border border-border bg-bg-subtle p-3.5 text-left"
+                className="flex min-w-0 flex-col rounded-control border border-border bg-surface p-3.5 text-left"
               >
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-sm font-bold text-fg capitalize flex items-center gap-1.5">
                     {t(`skills.${s.skill}`)}
                     {MANUAL_SKILLS.has(s.skill) && !pendingManual && !isSkipped && provisionalSkills.has(s.skill) && (
@@ -286,6 +288,13 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
                     </Badge>
                   )}
                 </div>
+                {counts && (
+                  <ul className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs tabular-nums text-fg-muted">
+                    <li className="font-medium text-brand">{t("resultTable.filter_correct", { count: counts.correct })}</li>
+                    <li>{t("resultTable.filter_wrong", { count: counts.wrong })}</li>
+                    <li>{t("resultTable.filter_unanswered", { count: counts.unanswered })}</li>
+                  </ul>
+                )}
 
                 {/* Writing / Speaking: the criteria marks (TA/TR, CC, LR, GRA; FC, LR, GRA, P), never a derived "accuracy". */}
                 {MANUAL_SKILLS.has(s.skill) && !isSkipped && !pendingManual && (attempt.diagnosticFeedback?.[s.skill]?.criteria_scores?.length ?? 0) > 0 && (
@@ -358,6 +367,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
       {!isIelts && attempt.specificationVersion && <MultilevelResultBreakdown attempt={attempt} />}
       {isIelts && (completed || partialPractice) && <IeltsResultBreakdown attempt={attempt} />}
 
+      {role === "student" && attempt.canSharePractice && <PracticeResultSharing attemptId={attempt.id} />}
       {attempt.status !== "in_progress" && <AssessmentPanel attemptId={attempt.id} isStaff={isStaff} />}
 
       {/* Staff: what the exam window recorded, after the work to grade (also when no answer was given). */}
@@ -381,6 +391,18 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
       )}
 
       {/* Savollar tahlili */}
+      {attempt.answerDisclosure && attempt.answerDisclosure.disclosed === false && (
+        <Card className="mt-6 border-warning-border bg-warning-bg p-4" data-testid="answer-disclosure-notice">
+          <p className="text-sm font-semibold text-warning">{t("resultView.disclosureLockedTitle")}</p>
+          <p className="mt-1 text-xs text-fg-muted">
+            {attempt.answerDisclosure.discloseAt
+              ? t("resultView.disclosureLockedDeadline", {
+                  date: new Date(attempt.answerDisclosure.discloseAt).toLocaleString(),
+                })
+              : t("resultView.disclosureLockedGroup")}
+          </p>
+        </Card>
+      )}
       <div className="mt-6 space-y-4">
         {attempt.sections.map((s) => {
           const canGrade = isStaff && MANUAL_SKILLS.has(s.skill);

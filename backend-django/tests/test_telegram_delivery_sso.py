@@ -10,7 +10,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from apps.core import telegram_bot, telegram_delivery, telegram_menu, telegram_views
-from apps.core.mock_submission_snapshots import announce_channel_mock_result
+from apps.core.mock_submission_snapshots import notify
 from common.api.exceptions import ContractAPIException
 
 
@@ -223,33 +223,17 @@ class TelegramBotParityTests(TestCase):
         except OSError:
             pass
 
-    def test_channel_mock_result_announcement(self):
-        sent_channel = []
+    def test_exam_result_stays_private_when_channel_is_configured(self):
         attempt = SimpleNamespace(
-            id="att-completed",
-            cefr_level="C1",
-            overall_band=7.5,
-            overall_score=None,
-            standard_scores={"listening": 8.0, "reading": 7.5, "writing": 7.0, "speaking": 7.5},
-            section_bands=None,
-            raw_scores=None,
-            exam=SimpleNamespace(title="Official BestWay Mock", type="ielts_academic"),
-            student=SimpleNamespace(user=SimpleNamespace(name="Javohir Toshmatov"))
+            student_id="student-1", status="completed", overall_band=7.5,
+            exam=SimpleNamespace(title="Synthetic BestWay Mock", type="ielts_academic"),
         )
-
         with patch.dict(os.environ, {"TELEGRAM_CHANNEL_ID": "@bestway_results"}), \
-             patch("apps.legacy_schema.models.MockAttempt.objects.select_related") as mock_rel, \
-             patch.object(telegram_delivery, "send", side_effect=lambda cid, txt: sent_channel.append((cid, txt))):
-            mock_rel.return_value.filter.return_value.first.return_value = attempt
-            announce_channel_mock_result(attempt)
-            self.assertEqual(len(sent_channel), 1)
-            cid, text = sent_channel[0]
-            self.assertEqual(cid, "@bestway_results")
-            self.assertIn("Javohir Toshmatov", text)
-            self.assertIn("Official BestWay Mock", text)
-            self.assertIn("Band: <b>7.5</b>", text)
-            self.assertIn("CEFR: <b>C1</b>", text)
-            self.assertIn("Listening: <b>8.0</b>", text)
-            self.assertIn("Reading: <b>7.5</b>", text)
-            self.assertIn("Writing: <b>7.0</b>", text)
-            self.assertIn("Speaking: <b>7.5</b>", text)
+             patch("apps.core.mock_submission_snapshots.Notification.objects.create") as create, \
+             patch("apps.core.mock_submission_snapshots.ParentStudent.objects.filter") as parents, \
+             patch.object(telegram_delivery, "send") as sender:
+            parents.return_value.values_list.return_value = ["parent-1"]
+            notify(attempt)
+        self.assertEqual([call.kwargs["user_id"] for call in create.call_args_list], ["student-1", "parent-1"])
+        self.assertIn("Overall Band: 7.5", create.call_args_list[0].kwargs["text"])
+        sender.assert_not_called()

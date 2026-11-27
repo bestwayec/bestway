@@ -482,32 +482,42 @@ def text_for(user,key):
         elif user.role == 'teacher':
             teacher_groups = list(m.Group.objects.filter(teacher_id=user.id))
             if teacher_groups:
+                from .classroom_roster import active_enrollments
+
                 t_sections = []
                 for tg in teacher_groups:
-                    g_top = list(m.StudentProfile.objects.filter(group_id=tg.id, user__is_active=True).select_related('user').order_by('-current_points')[:5])
+                    member_ids = active_enrollments(group_id=tg.id).values('student_id')
+                    g_top = list(m.StudentProfile.objects.filter(user_id__in=member_ids, user__is_active=True).select_related('user').order_by('-current_points')[:5])
                     glines = [f"{medals.get(r, f'<b>{r}.</b>')} {escape(p.user.name)} — <b>{p.current_points}</b> ball" for r, p in enumerate(g_top, 1)]
                     t_sections.append(f"👥 <b>{escape(tg.name)}</b>:\n" + ('\n'.join(glines) if glines else "   <i>O'quvchilar yo'q</i>"))
                 group_section = "\n\n➖➖➖➖➖➖➖➖➖\n\n<b>👥 Sizning guruhlaringiz reytingi:</b>\n\n" + '\n\n'.join(t_sections)
         elif user.role == 'parent':
+            from .classroom_roster import active_enrollments
+
             kids = targets(user)
             p_sections = []
             for kid in kids:
-                kp = m.StudentProfile.objects.filter(user_id=kid.id).select_related('group').first()
-                if kp and kp.group:
-                    g_top = list(m.StudentProfile.objects.filter(group_id=kp.group_id, user__is_active=True).select_related('user').order_by('-current_points')[:5])
+                enr = active_enrollments(student_id=kid.id).select_related('group').first()
+                kp = m.StudentProfile.objects.filter(user_id=kid.id).first()
+                grp = enr.group if enr else None
+                if kp and grp:
+                    member_ids = active_enrollments(group_id=grp.id).values('student_id')
+                    g_top = list(m.StudentProfile.objects.filter(user_id__in=member_ids, user__is_active=True).select_related('user').order_by('-current_points')[:5])
                     glines = [f"{medals.get(r, f'<b>{r}.</b>')} {escape(p.user.name)} — <b>{p.current_points}</b> ball" for r, p in enumerate(g_top, 1)]
-                    k_gr_rank = m.StudentProfile.objects.filter(group_id=kp.group_id, user__is_active=True, current_points__gt=kp.current_points).count() + 1
-                    p_sections.append(f"👥 <b>{escape(kid.name)} — {escape(kp.group.name)}</b> (O'rni: <b>{k_gr_rank}-o'rin</b>):\n" + '\n'.join(glines))
+                    k_gr_rank = m.StudentProfile.objects.filter(user_id__in=member_ids, user__is_active=True, current_points__gt=kp.current_points).count() + 1
+                    p_sections.append(f"👥 <b>{escape(kid.name)} — {escape(grp.name)}</b> (O'rni: <b>{k_gr_rank}-o'rin</b>):\n" + '\n'.join(glines))
             if p_sections:
                 group_section = "\n\n➖➖➖➖➖➖➖➖➖\n\n" + '\n\n'.join(p_sections)
 
         return center_text + user_rank_str + group_section
     if key=='monitoring':
         if user.role not in ('teacher','admin','super_admin'):return "ℹ️ Bu bo'lim faqat o'qituvchi va ma'murlar uchun mo'ljallangan."
+        from .classroom_roster import active_enrollments
+
         student_query=m.StudentProfile.objects.all()
         if user.role=='teacher':
             group_ids=m.Group.objects.filter(teacher_id=user.id).values_list('id',flat=True)
-            student_query=student_query.filter(group_id__in=group_ids)
+            student_query=student_query.filter(user_id__in=active_enrollments(group_id__in=group_ids).values('student_id'))
         student_user_ids=list(student_query.values_list('user_id',flat=True))
         active_attempts=list(m.MockAttempt.objects.filter(student_id__in=student_user_ids,status__in=['in_progress','grading']).select_related('student__user','student__group','exam').order_by('-started_at')[:15])
         if not active_attempts:return "👁 <b>Jonli Imtihon Monitoringi</b>\n\n🟢 Ayni paytda faol imtihon topshirayotgan o'quvchilar yo'q."
@@ -538,13 +548,17 @@ def text_for(user,key):
             parts.append(f'👤 <b>{escape(s.user.name)}</b>\n   Guruh: {escape(s.group.name if s.group_id else "— (guruhga biriktirilmagan)")}\n   Ball: <b>{s.current_points}</b>\n   Bu oy kelmagan kunlar: <b>{absent}</b>\n   To\'lanmagan oylar: <b>{unpaid}</b>')
         return '👨‍👩‍👦 <b>Farzandlaringiz</b>\n\n'+'\n\n'.join(parts)+'\n\n<i>Batafsil: pastdagi tugmalar.</i>' if parts else no_children('parent')
     if key=='groups':
+        from .classroom_roster import active_enrollments
+
         parts=[]
         for group in m.Group.objects.filter(teacher_id=user.id):
-            count=m.StudentProfile.objects.filter(group_id=group.id).count();marked=m.Attendance.objects.filter(group_id=group.id,date=now.date()).count()
+            count=active_enrollments(group_id=group.id).count();marked=m.Attendance.objects.filter(group_id=group.id,date=now.date()).count()
             parts.append(f'👥 <b>{escape(group.name)}</b>\n   O\'quvchilar: <b>{count}</b>\n   Bugungi davomat: '+(f'✅ belgilangan ({marked})' if marked else '⚠️ hali belgilanmagan'))
         return '\n\n'.join(parts) or '👥 Sizga hali guruh biriktirilmagan.'
     if key=='grading':
-        rows=list(m.TestAttempt.objects.filter(status='grading',student__group__teacher_id=user.id).select_related('student__user','test').order_by('finished_at')[:10])
+        from .classroom_roster import active_enrollments
+
+        rows=list(m.TestAttempt.objects.filter(status='grading',student_id__in=active_enrollments(group__teacher_id=user.id).values('student_id')).select_related('student__user','test').order_by('finished_at')[:10])
         if not rows:return "✍️ Baholash navbati bo'sh. Barakalla! 🎉"
         lines='\n'.join(f'   • {escape(r.student.user.name)} — {escape(r.test.title)}' for r in rows)
         return f'✍️ <b>Baholash kutilmoqda: {len(rows)} ta</b>\n\n{lines}\n\n<i>Baholash saytdagi panelda amalga oshiriladi.</i>'

@@ -24,6 +24,14 @@ function positions(q: MockAttemptQuestion) {
   return Math.max(1, (q.displayNumberEnd ?? q.displayNumber ?? q.number) - (q.displayNumber ?? q.number) + 1);
 }
 
+export function objectiveReviewCounts(groups: MockAttemptGroup[]) {
+  const counts = { correct: 0, wrong: 0, unanswered: 0, pending: 0 };
+  for (const question of groups.flatMap((group) => group.questions)) {
+    counts[reviewState(question)] += positions(question);
+  }
+  return counts;
+}
+
 export function filterReviewRows(
   questions: MockAttemptQuestion[],
   filter: ReviewFilter,
@@ -101,7 +109,7 @@ export function ResultReviewTable({
                 )}
               </div>
             </td>
-            <td className="hidden max-w-[28rem] px-3 py-2 text-fg-muted sm:table-cell">
+            <td className="max-w-[28rem] px-1.5 py-2 text-fg-muted sm:px-3">
               <span className="line-clamp-2" title={q.prompt}>
                 {q.prompt}
               </span>
@@ -246,7 +254,7 @@ export function ResultReviewTable({
                   <thead className="text-xs text-fg-muted">
                     <tr className="border-b border-border">
                       <th scope="col" className="w-8 px-1.5 py-2 sm:w-12 sm:px-2">#</th>
-                      <th scope="col" className="hidden px-3 py-2 sm:table-cell">{t("question")}</th>
+                      <th scope="col" className="px-1.5 py-2 sm:px-3">{t("question")}</th>
                       <th scope="col" className="px-1.5 py-2 sm:px-3">{t("yourAnswer")}</th>
                       <th scope="col" className="px-1.5 py-2 sm:px-3">{t("key")}</th>
                       <th scope="col" className="w-8 px-1 py-2 sm:w-12 sm:px-3"><span className="sr-only">{t("mark")}</span></th>

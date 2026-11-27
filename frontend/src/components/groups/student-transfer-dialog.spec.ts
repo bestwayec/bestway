@@ -76,7 +76,7 @@ describe('StudentTransferDialog', () => {
       select()!.dispatchEvent(new Event('change', { bubbles: true }));
     });
     await act(async () => { submitButton().click(); });
-    expect(api.post).toHaveBeenCalledWith('/groups/g-c/students', { studentId: 's-1' });
+    expect(api.post).toHaveBeenCalledWith('/groups/g-c/students', { studentId: 's-1', sourceGroupId: 'g-src' });
     expect(toast.success).toHaveBeenCalledWith('Student moved to the selected group');
     expect(onClose).toHaveBeenCalled();
   });

@@ -44,16 +44,17 @@ def assert_teacher(teacher_id):
 
 
 def list_groups(actor, *, archived=False, search=""):
-    from django.db.models import Exists, OuterRef
+    from django.db.models import Count, Exists, OuterRef
+    from .classroom_roster import active_enrollments, student_group_ids
     from .models import ClassroomArchive
 
     rows = Group.objects.select_related('teacher')
     if actor.role == 'teacher':
         rows = rows.filter(teacher_id=actor.id)
     elif actor.role == 'student':
-        rows = rows.filter(studentprofile__user_id=actor.id)
+        rows = rows.filter(id__in=student_group_ids(actor.id))
     elif actor.role == 'parent':
-        rows = rows.filter(studentprofile__user_id__in=child_ids(actor)).distinct()
+        rows = rows.filter(id__in=active_enrollments(student_id__in=child_ids(actor)).values('group_id'))
     elif actor.role not in ('admin', 'super_admin'):
         fail('FORBIDDEN', 'Ruxsat berilmagan')
     if archived and actor.role not in ('teacher', 'admin', 'super_admin'):
@@ -62,6 +63,11 @@ def list_groups(actor, *, archived=False, search=""):
     rows = rows.filter(is_archived=archived)
     if search:
         rows = rows.filter(name__icontains=search)
+    visible = list(rows.order_by('created_at'))
+    counts = dict(
+        active_enrollments(group_id__in=[group.id for group in visible])
+        .values('group_id').annotate(total=Count('id')).values_list('group_id', 'total')
+    )
     # Count the entire roster, not just the matched student/parent join.
     return [
         dict(
@@ -71,10 +77,10 @@ def list_groups(actor, *, archived=False, search=""):
             teacherId=g.teacher_id,
             teacherName=g.teacher.name if g.teacher_id and getattr(g, 'teacher', None) else None,
             schedule=g.schedule,
-            studentsCount=StudentProfile.objects.filter(group_id=g.id).count(),
+            studentsCount=counts.get(g.id, 0),
             createdAt=g.created_at,
         )
-        for g in rows.order_by('created_at')
+        for g in visible
     ]
 
 
@@ -88,7 +94,7 @@ def _skipped_totals():
     return {'listening': 0, 'reading': 0, 'writing': 0, 'speaking': 0, 'total': 0}
 
 
-def _compute_student_and_group_analytics(student_ids):
+def _compute_student_and_group_analytics(student_ids, *, group_id=None):
     per_student = {
         sid: {
             'completedExamsCount': 0,
@@ -112,9 +118,15 @@ def _compute_student_and_group_analytics(student_ids):
             'incompleteOverallCount': 0,
         }
 
+    if group_id is None:
+        available = MockAttempt.objects
+    else:
+        from .teacher_analytics import classroom_attempts
+
+        available = classroom_attempts(group_id)
     try:
         mock_attempts = list(
-            MockAttempt.objects.filter(student_id__in=student_ids)
+            available.filter(student_id__in=student_ids)
             .select_related('exam')
             .order_by('-finished_at', '-submitted_at', '-started_at')
         )
@@ -122,7 +134,7 @@ def _compute_student_and_group_analytics(student_ids):
         mock_attempts = []
 
     try:
-        legacy_attempts = list(
+        legacy_attempts = [] if group_id else list(
             TestAttempt.objects.filter(student_id__in=student_ids)
             .order_by('-finished_at', '-started_at')
         )
@@ -249,8 +261,10 @@ def _compute_student_and_group_analytics(student_ids):
 
 
 def detail(actor, group_id):
+    from .classroom_roster import member_profiles
+
     group = get_group(group_id)
-    scope = {'group_id': group_id}
+    scope = {}
     show_phones = actor.role in ('teacher', 'admin', 'super_admin')
     if show_phones:
         assert_manages_group(actor, group)
@@ -260,12 +274,19 @@ def detail(actor, group_id):
         scope['user_id__in'] = child_ids(actor)
     else:
         fail('FORBIDDEN', 'Ruxsat berilmagan')
-    students = list(StudentProfile.objects.filter(**scope).select_related('user').order_by('user__name'))
+    if not show_phones:
+        from .classroom_roster import assert_active
+
+        assert_active(group_id)
+    profiles = member_profiles(group_id)
+    if scope:
+        profiles = profiles.filter(**scope)
+    students = list(profiles.select_related('user').order_by('user__name'))
     if not show_phones and not students:
         fail('FORBIDDEN', "Bu guruhga ruxsat berilmagan")
 
     student_ids = [s.user_id for s in students]
-    per_student, group_analytics = _compute_student_and_group_analytics(student_ids)
+    per_student, group_analytics = _compute_student_and_group_analytics(student_ids, group_id=group_id)
 
     student_rows = []
     for s in students:
@@ -377,19 +398,11 @@ def update(actor, group_id, data):
     return detail(actor, group_id)
 
 
-@transaction.atomic
-def add_student(actor, group_id, student_id):
-    group = get_group(group_id, True)
-    assert_manages_group(actor, group)
-    from .classroom_roster import assert_active
+def add_member(group_id, user, *, source):
+    """Enroll a student while the group and user rows are locked."""
+    from .classroom_roster import active_enrollments, record_enrollment
 
-    assert_active(group_id)
-    user = User.objects.select_for_update().filter(id=student_id).first()
-    if user is None:
-        fail('STUDENT_NOT_FOUND', "O'quvchi topilmadi", 404)
-    if user.role != 'student':
-        fail('NOT_A_STUDENT', "Foydalanuvchi o'quvchi emas", 400)
-    profile = StudentProfile.objects.select_for_update().filter(user_id=student_id).first()
+    profile = StudentProfile.objects.select_for_update().filter(user_id=user.id).first()
     if profile is None:
         from .auth_service import unique_link_code
 
@@ -399,42 +412,78 @@ def add_student(actor, group_id, student_id):
                 INSERT INTO "StudentProfile"
                     ("userId", "groupId", "isApproved", "currentPoints", "linkCode",
                      "availablePrograms", "activeProgram", "gameQualified", "createdAt")
-                VALUES (%s, %s, true, 0, %s, %s::"ExamProgram"[], 'IELTS', false, NOW())
+                VALUES (%s, %s, false, 0, %s, %s::"ExamProgram"[], 'IELTS', false, NOW())
                 """,
-                [student_id, group_id, unique_link_code(cursor), ['IELTS', 'MULTILEVEL']],
+                [user.id, group_id, unique_link_code(cursor), ['IELTS', 'MULTILEVEL']],
             )
-        old = None
-    else:
-        old = profile.group_id
-        if actor.role == 'teacher' and old and old != group_id:
-            if not Group.objects.filter(id=old, teacher_id=actor.id).exists():
-                fail('FORBIDDEN', 'O‘quvchini boshqa o‘qituvchi guruhidan ko‘chirishga ruxsat berilmagan')
-        if old == group_id:
-            return dict(groupId=group_id, studentId=student_id, added=True)
+    elif profile.group_id is None:
         profile.group_id = group_id
         profile.save(update_fields=['group_id'])
-    from .classroom_roster import record_enrollment
+    if active_enrollments(student_id=user.id, group_id=group_id).exists():
+        return False
+    record_enrollment(user.id, None, group_id, source=source)
+    return True
 
-    record_enrollment(student_id, old, group_id)
-    audit(actor, 'group.add_student', 'studentProfile', student_id, old=dict(groupId=old), new=dict(groupId=group_id))
+
+def lock_student(student_id):
+    user = User.objects.select_for_update().filter(id=student_id).first()
+    if user is None:
+        fail('STUDENT_NOT_FOUND', "O'quvchi topilmadi", 404)
+    if user.role != 'student':
+        fail('NOT_A_STUDENT', "Foydalanuvchi o'quvchi emas", 400)
+    return user
+
+
+def close_membership(group_id, student_id):
+    from .classroom_roster import active_enrollments, record_enrollment
+    from .models import ClassroomArchive
+
+    if not active_enrollments(student_id=student_id, group_id=group_id).exists():
+        return False
+    record_enrollment(student_id, group_id, None)
+    replacement = (
+        active_enrollments(student_id=student_id)
+        .exclude(group_id__in=ClassroomArchive.objects.values('group_id'))
+        .order_by('id').values_list('group_id', flat=True).first()
+    )
+    StudentProfile.objects.filter(user_id=student_id, group_id=group_id).update(group_id=replacement)
+    return True
+
+
+@transaction.atomic
+def add_student(actor, group_id, student_id, *, source_group_id=None):
+    from .classroom_roster import active_enrollments, assert_active
+
+    group_ids = {group_id}
+    if source_group_id:
+        if source_group_id == group_id:
+            fail('VALIDATION_ERROR', 'Choose a different destination group', 400)
+        group_ids.add(source_group_id)
+    for identifier in sorted(group_ids):
+        assert_manages_group(actor, get_group(identifier, lock=True))
+        assert_active(identifier)
+    user = lock_student(student_id)
+    transferred = False
+    if source_group_id:
+        transferred = close_membership(source_group_id, student_id)
+        if not transferred and not active_enrollments(student_id=student_id, group_id=group_id).exists():
+            fail('STUDENT_NOT_IN_GROUP', "O'quvchi bu guruhda emas", 404)
+    added = add_member(group_id, user, source='transfer' if source_group_id else 'staff')
+    if added or transferred:
+        audit(actor, 'group.transfer_student' if source_group_id else 'group.add_student',
+              'studentProfile', student_id, old=dict(groupId=source_group_id), new=dict(groupId=group_id))
     return dict(groupId=group_id, studentId=student_id, added=True)
 
 
 @transaction.atomic
 def remove_student(actor, group_id, student_id):
-    group = get_group(group_id, True)
-    assert_manages_group(actor, group)
     from .classroom_roster import assert_active
 
+    assert_manages_group(actor, get_group(group_id, lock=True))
     assert_active(group_id)
-    profile = StudentProfile.objects.select_for_update().filter(user_id=student_id).first()
-    if profile is None or profile.group_id != group_id:
+    lock_student(student_id)
+    if not close_membership(group_id, student_id):
         fail('STUDENT_NOT_IN_GROUP', "O'quvchi bu guruhda emas", 404)
-    profile.group_id = None
-    profile.save(update_fields=['group_id'])
-    from .classroom_roster import record_enrollment
-
-    record_enrollment(student_id, group_id, None)
     audit(actor, 'group.remove_student', 'studentProfile', student_id, old=dict(groupId=group_id), new=dict(groupId=None))
     return dict(removed=True)
 
@@ -451,21 +500,32 @@ def export_group_xlsx(actor, group_id) -> tuple[bytes, str]:
     elif actor.role not in ('admin', 'super_admin', 'teacher'):
         fail('FORBIDDEN', 'Ruxsat berilmagan', 403)
 
-    students = list(
-        StudentProfile.objects.filter(group_id=group_id)
-        .select_related('user')
-        .order_by('user__name')
-    )
-    student_ids = [s.user_id for s in students]
+    from .classroom_roster import member_profiles
+    from .teacher_analytics import classroom_attempts
 
     try:
         attempts = list(
-            MockAttempt.objects.filter(student_id__in=student_ids)
+            classroom_attempts(group_id)
             .select_related('exam', 'student__user')
             .order_by('student__user__name', '-finished_at', '-started_at')
         )
     except Exception:
         attempts = []
+
+    current_roster = list(
+        member_profiles(group_id)
+        .select_related('user')
+        .order_by('user__name')
+    )
+    roster_ids = {s.user_id for s in current_roster}
+    extra_ids = {a.student_id for a in attempts if a.student_id not in roster_ids}
+    extra_profiles = list(
+        StudentProfile.objects.filter(user_id__in=extra_ids)
+        .select_related('user')
+        .order_by('user__name')
+    ) if extra_ids else []
+    students = sorted([*current_roster, *extra_profiles], key=lambda s: (s.user.name or '').casefold())
+    student_ids = [s.user_id for s in students]
 
     attempt_ids = [a.id for a in attempts]
     feedback_by_attempt = {}

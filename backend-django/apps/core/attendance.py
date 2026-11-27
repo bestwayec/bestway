@@ -11,9 +11,10 @@ from django.db.models import Count, Q
 from django.db.models.functions import Collate
 from django.utils import timezone
 
-from apps.legacy_schema.models import Attendance, StudentProfile
+from apps.legacy_schema.models import Attendance
 from common.api.exceptions import ContractAPIException
 
+from .classroom_roster import member_profiles
 from .groups import child_ids, get_group
 from .models import ClassroomArchive
 from .notifications import notify_parents
@@ -100,7 +101,7 @@ def bulk(actor, data):
     manage_group(actor, data['groupId'])
     assert_active(data['groupId'])
     day = reference_date(data['date'])
-    members = {p.user_id: p for p in StudentProfile.objects.filter(group_id=data['groupId']).select_related('user')}
+    members = {p.user_id: p for p in member_profiles(data['groupId']).select_related('user')}
     
     if any(r['studentId'] not in members for r in data['records']):
         raise ContractAPIException('STUDENT_NOT_IN_GROUP', "Ro'yxatda guruhga tegishli bo'lmagan o'quvchi bor", 400)
@@ -232,7 +233,7 @@ def group_day_summary(actor, group_id, day_value=None):
     the group roster; only stored marks are returned here."""
     group = manage_group(actor, group_id)
     day = reference_date(day_value) if day_value else timezone.localdate()
-    total = StudentProfile.objects.filter(group_id=group_id).count()
+    total = member_profiles(group_id).count()
     rows = list(Attendance.objects.filter(group_id=group_id, date=day)
                 .select_related('student__user').order_by('student__user__name'))
     counts = {state: sum(1 for r in rows if r.state == state) for state in ('present', 'late', 'absent')}

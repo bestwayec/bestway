@@ -269,7 +269,10 @@ def history(actor,query,mine=False):
         rows=rows.filter(test__type='multilevel' if program=='MULTILEVEL' else 'ielts') if program else rows.none()
     else:
         if query.get('studentId'): rows=rows.filter(student_id=query['studentId'])
-        if actor.role=='teacher': rows=rows.filter(student__group__teacher_id=actor.id)
+        if actor.role=='teacher':
+            from .classroom_roster import active_enrollments
+
+            rows = rows.filter(student_id__in=active_enrollments(group__teacher_id=actor.id).values('student_id'))
     total=rows.count(); page,limit=query['page'],query['limit']
     return [summary(a,not mine) for a in rows.order_by('-started_at')[(page-1)*limit:page*limit]],dict(page=page,limit=limit,total=total)
 

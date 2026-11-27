@@ -231,6 +231,10 @@ export interface NotificationItem {
 export interface DashboardStats {
   students: number;
   approvedStudents: number;
+  activeStudents: number;
+  studentsWithoutGroups: number;
+  activeGroups: number;
+  classroomExams: { assignments: number; submitted: number; finalized: number; pendingReview: number };
   teachers: number;
   parents: number;
   groups: number;
@@ -956,6 +960,8 @@ export interface DiagnosticFeedback {
 }
 
 export interface MockAttemptDetail extends MockAttemptSummary {
+  canSharePractice?: boolean;
+  canGrade?: boolean;
   annotations: unknown[];
   sections: MockAttemptSection[];
   cheatEvents?: { event: string; date: string }[];
@@ -963,6 +969,12 @@ export interface MockAttemptDetail extends MockAttemptSummary {
   classroomBenchmark?: { students: number; median: number };
   /** Writing/Speaking skills whose score is still an AI estimate (not yet confirmed by a teacher). */
   provisionalSkills?: string[];
+  answerDisclosure?: {
+    disclosed: boolean;
+    reason: string;
+    discloseAt: string | null;
+  };
+  groupName?: string | null;
 }
 
 export interface MockPurchaseItem {
@@ -1476,5 +1488,53 @@ export interface GroupAttendanceSummaryResponse {
     state: "present" | "late" | "absent";
     isExcused: boolean;
     note: string;
+  }>;
+}
+
+export type GuardIncidentStatus = "open" | "acknowledged" | "explained" | "flagged";
+export type GuardIncidentSeverity = "info" | "warning" | "high" | "critical";
+
+export interface GuardAlertIncident {
+  id: string;
+  attemptId: string;
+  examId: string;
+  examTitle: string;
+  studentId: string;
+  studentName: string;
+  groupId: string | null;
+  groupName: string;
+  sessionId: string | null;
+  assignmentId: string | null;
+  supervisorId: string | null;
+  eventType: string;
+  severity: GuardIncidentSeverity;
+  skill: string;
+  questionRef: string;
+  integrityMode: string;
+  occurrenceCount: number;
+  status: GuardIncidentStatus;
+  offlineSynced: boolean;
+  metadata: Record<string, unknown>;
+  firstObservedAt: string;
+  lastObservedAt: string;
+  reviewedAt: string | null;
+  reviewNote: string;
+}
+
+export interface GroupLiveGuardStudent {
+  attemptId: string | null;
+  studentId: string;
+  name: string;
+  examTitle: string | null;
+  status: string;
+  currentSkill: string | null;
+  answeredCount: number;
+  totalQuestions: number;
+  lastActivityAt: string | null;
+  connectionStatus: "online" | "offline" | "idle" | "finished";
+  incidentCount: number;
+  unreviewedCount: number;
+  timeline: Array<Pick<GuardAlertIncident, "id" | "eventType" | "occurrenceCount" | "status" | "offlineSynced" | "reviewNote"> & {
+    observedAt: string;
   }>;
 }

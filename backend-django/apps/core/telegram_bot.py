@@ -11,6 +11,7 @@ from . import telegram_delivery as api
 from . import telegram_fsm as fsm
 from . import telegram_links as links
 from . import telegram_menu as menu
+from . import telegram_classrooms
 from . import telegram_quiz
 from . import telegram_state as _dialogs
 from . import telegram_vocab
@@ -366,6 +367,8 @@ def handle(update):
                 telegram_quiz.send_my_tests(chat_id)
             return
         _ctype = (msg.get('chat') or {}).get('type', 'private')
+        if telegram_classrooms.command(chat_id, text, chat_type=_ctype, sender_id=from_user.get('id')):
+            return
         if text.startswith('/') and (telegram_vocab.command(chat_id, text, chat_type=_ctype) or telegram_teacher.command(chat_id, text, chat_type=_ctype)
                                      or telegram_settings.command(chat_id, text, chat_type=_ctype)):
             return

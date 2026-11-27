@@ -2,7 +2,7 @@
 import datetime
 import uuid
 from django.db import models
-from apps.legacy_schema.models import Group, User, MockExam
+from apps.legacy_schema.models import Group, MockAttempt, MockExam, User
 
 
 def uuid4_str() -> str:
@@ -395,13 +395,53 @@ class ClassroomEnrollment(models.Model):
     student = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False)
     started_at = models.DateTimeField(null=True, blank=True)
     ended_at = models.DateTimeField(null=True, blank=True)
+    source = models.CharField(max_length=20, default="staff")
 
     class Meta:
         indexes = [models.Index(fields=["group", "student", "ended_at"], name="classroom_enroll_history")]
         constraints = [
             models.UniqueConstraint(
-                fields=["student"], condition=models.Q(ended_at__isnull=True), name="unique_open_classroom_enrollment",
+                fields=["student", "group"], condition=models.Q(ended_at__isnull=True), name="unique_open_classroom_group",
             ),
+        ]
+
+
+class ClassroomInvitation(models.Model):
+    group = models.OneToOneField(Group, on_delete=models.CASCADE, db_constraint=False)
+    code_hash = models.CharField(max_length=64, unique=True)
+    version = models.PositiveIntegerField(default=1)
+    expires_at = models.DateTimeField()
+    max_uses = models.PositiveIntegerField(null=True, blank=True)
+    uses = models.PositiveIntegerField(default=0)
+    requires_approval = models.BooleanField(default=False)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+
+class ClassroomJoinRequest(models.Model):
+    invitation = models.ForeignKey(ClassroomInvitation, on_delete=models.CASCADE)
+    student = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False)
+    invitation_version = models.PositiveIntegerField()
+    status = models.CharField(max_length=10, default="pending")
+    source = models.CharField(max_length=20)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["invitation", "student", "invitation_version"], name="unique_classroom_join_request",
+            ),
+        ]
+
+
+class PracticeResultShare(models.Model):
+    attempt = models.ForeignKey(MockAttempt, on_delete=models.CASCADE, db_constraint=False)
+    teacher = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["attempt", "teacher"], name="unique_practice_result_share"),
         ]
 
 
@@ -490,6 +530,7 @@ class HomeworkAssignment(models.Model):
     vocabulary_revision = models.JSONField(null=True, blank=True)
     # Question type the teacher chose for vocabulary homework (None = the learner picks).
     vocabulary_mode = models.CharField(max_length=20, choices=QuizMode.choices, null=True, blank=True)
+    participant_ids = models.JSONField(null=True, blank=True)
     deadline = models.DateTimeField()
     min_pass_percent = models.IntegerField(default=80)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1163,8 +1204,10 @@ class TelegramOutbox(models.Model):
 
     id = models.BigAutoField(primary_key=True)
     recipient_id = models.CharField(max_length=255)
-    kind = models.CharField(max_length=24)               # tests | deadlines | vocab | results | feedback | attendance | teacher
+    kind = models.CharField(max_length=24)               # tests | deadlines | vocab | results | feedback | attendance | teacher | announcements
     dedupe_key = models.CharField(max_length=255, unique=True)
+    group_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
+    chat_id_override = models.CharField(max_length=64, null=True, blank=True)
     text = models.TextField()
     keyboard = models.JSONField(null=True, blank=True)
     status = models.CharField(max_length=10, default="pending")
@@ -1180,3 +1223,82 @@ class TelegramOutbox(models.Model):
         db_table = "TelegramOutbox"
         indexes = [models.Index(fields=["status", "next_attempt_at"], name="telegram_outbox_due"),
                    models.Index(fields=["recipient_id", "kind"], name="telegram_outbox_recipient")]
+
+
+class AccountReconciliationLog(models.Model):
+    """Immutable audit and recovery record of an administrator-executed account merge."""
+
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    canonical_user_id = models.CharField(max_length=255, db_index=True)
+    source_user_id = models.CharField(max_length=255, db_index=True)
+    actor_id = models.CharField(max_length=255)
+    reason = models.TextField()
+    identity_basis = models.CharField(max_length=64)
+    snapshot_before = models.JSONField(default=dict)
+    transferred_summary = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "AccountReconciliationLog"
+        ordering = ["-created_at"]
+
+
+class ExamIntegrityIncident(models.Model):
+    """Durable, supervisor-scoped exam integrity observation (never auto-penalizes grades)."""
+
+    STATUSES = ("open", "acknowledged", "explained", "flagged")
+
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    attempt = models.ForeignKey(MockAttempt, on_delete=models.CASCADE, db_constraint=False, related_name="integrity_incidents")
+    student = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False, related_name="+")
+    exam = models.ForeignKey(MockExam, on_delete=models.CASCADE, db_constraint=False, related_name="+")
+    group = models.ForeignKey(Group, null=True, blank=True, on_delete=models.SET_NULL, db_constraint=False, related_name="+")
+    supervisor = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, db_constraint=False, related_name="supervised_incidents")
+    event_type = models.CharField(max_length=48, db_index=True)
+    skill = models.CharField(max_length=24, blank=True, default="")
+    question_ref = models.CharField(max_length=120, blank=True, default="")
+    integrity_mode = models.CharField(max_length=24, default="supervised_mock")
+    occurrence_count = models.PositiveIntegerField(default=1)
+    observed_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True, db_index=True)
+    status = models.CharField(max_length=20, default="open", db_index=True)
+    reviewed_by_id = models.CharField(max_length=255, null=True, blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_note = models.TextField(blank=True, default="")
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "ExamIntegrityIncident"
+        ordering = ["-updated_at"]
+        indexes = [
+            models.Index(fields=["supervisor", "status", "-updated_at"], name="guard_supervisor_status"),
+            models.Index(fields=["attempt", "-updated_at"], name="guard_attempt_updated"),
+        ]
+
+
+class TelegramClassroomBinding(models.Model):
+    """Explicitly verified binding between a BESTWAY classroom Group and a Telegram group chat."""
+
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    group = models.OneToOneField(Group, on_delete=models.CASCADE, db_constraint=False, related_name="telegram_binding")
+    chat_id = models.CharField(max_length=64, db_index=True)
+    chat_title = models.CharField(max_length=255, blank=True, default="")
+    bound_by_id = models.CharField(max_length=255)
+    verified_telegram_id = models.CharField(max_length=64, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    bot_can_post = models.BooleanField(default=True)
+    verified_at = models.DateTimeField()
+    disconnected_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "TelegramClassroomBinding"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["chat_id"],
+                condition=models.Q(is_active=True, verified_telegram_id__isnull=False),
+                name="telegram_unique_verified_chat",
+            ),
+        ]

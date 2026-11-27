@@ -35,8 +35,11 @@ class FoundationContractTests(SimpleTestCase):
     def test_student_and_parent_rosters_omit_peer_phone_numbers(self):
         group=SimpleNamespace(id='group',name='English',teacher_id=None,schedule=[],created_at=None)
         roster=[SimpleNamespace(user_id='student',user=SimpleNamespace(name='Student',phone='private',is_active=True),is_approved=True,current_points=100)]
-        with patch.object(groups,'get_group',return_value=group), patch.object(groups.StudentProfile.objects,'filter') as query, patch.object(groups,'child_ids',return_value=['student']):
-            query.return_value.select_related.return_value.order_by.return_value=roster
+        with patch.object(groups,'get_group',return_value=group), patch('apps.core.classroom_roster.member_profiles') as profiles, \
+             patch('apps.core.classroom_roster.assert_active'), patch('apps.core.teacher_analytics.classroom_attempts'), \
+             patch.object(groups,'child_ids',return_value=['student']):
+            profiles.return_value.select_related.return_value.order_by.return_value=roster
+            profiles.return_value.filter.return_value.select_related.return_value.order_by.return_value=roster
             for role in ('student','parent'):
                 result=groups.detail(SimpleNamespace(role=role,id='student'),'group')
                 self.assertNotIn('phone',result['students'][0])

@@ -24,6 +24,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { StudentTransferDialog } from "@/components/groups/student-transfer-dialog";
+import { ClassroomInvitation } from "@/components/groups/classroom-invitation";
 import { ClassroomManagement } from "@/components/groups/classroom-management";
 import { ClassroomAssignments } from "@/components/groups/classroom-assignments";
 import { GroupFormDialog } from "@/components/groups/group-form-dialog";
@@ -65,7 +66,7 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
   const [editOpen, setEditOpen] = React.useState(false);
   const [createOpen, setCreateOpen] = React.useState(false);
   const params = useSearchParams();
-  const TABS = ["overview", "students", "attendance", "homework", "results"] as const;
+  const TABS = ["overview", "students", "attendance", "homework", "results", "guard"] as const;
   type Tab = (typeof TABS)[number];
   const requestedTab = params.get("tab") as Tab | null;
   const [tab, setTabState] = React.useState<Tab>(requestedTab && TABS.includes(requestedTab) ? requestedTab : "overview");
@@ -275,6 +276,14 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
           <GroupAiRanking groupId={groupId} />
         </section>
       )}
+
+      {canSeePhones && tab === "guard" && (
+        <section id="group-panel-guard" role="tabpanel" aria-labelledby="group-tab-guard">
+          <GroupLiveMonitoring groupId={groupId} />
+        </section>
+      )}
+
+      {canSeePhones && tab === "students" && <ClassroomInvitation key={groupId} groupId={groupId} />}
 
       {(!canSeePhones || tab === "students") && (<div id="group-panel-students" role={canSeePhones ? "tabpanel" : undefined}>
       {/* O'quvchi qo'shish */}

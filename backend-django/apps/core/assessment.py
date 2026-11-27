@@ -23,6 +23,7 @@ from . import assessment_results as results
 from .content_media import storage_path
 from .handwriting import handwriting_fields, page_urls
 from .mock_attempts import aware, fail
+from .classroom_results import assert_attempt_access
 from .points import assert_can_view
 
 
@@ -36,8 +37,15 @@ def get(identifier):
     job=AssessmentJob.objects.filter(id=identifier).first()
     if job is None:fail('ASSESSMENT_NOT_FOUND','Assessment not found',404)
     return job
+def authorize_attempt(actor, attempt, *, grade=False):
+    if actor.role == "teacher":
+        assert_attempt_access(actor, attempt, grade=grade)
+    else:
+        assert_can_view(actor, attempt.student_id)
+
+
 def authorize(actor,job):
-    assert_can_view(actor, job.student_id, started_at=job.attempt.started_at if actor.role == "teacher" else None)
+    authorize_attempt(actor, job.attempt)
     if actor.role=='student':assert_program(actor,job.attempt)
 
 def assert_program(actor,attempt):
@@ -49,7 +57,7 @@ def assert_program(actor,attempt):
 def for_attempt(actor,identifier):
     attempt=MockAttempt.objects.filter(id=identifier).select_related('exam').first()
     if attempt is None:fail('MOCK_ATTEMPT_NOT_FOUND','Attempt not found',404)
-    assert_can_view(actor, attempt.student_id, started_at=attempt.started_at if actor.role == "teacher" else None)
+    authorize_attempt(actor, attempt)
     if actor.role=='student':assert_program(actor,attempt)
     answers_map = {a.question_id: a for a in MockAnswer.objects.filter(attempt_id=identifier)}
     rows=list(AssessmentJob.objects.filter(attempt_id=identifier).order_by('-generation','-created_at'))
@@ -355,7 +363,7 @@ def review(actor,identifier,data):
     with transaction.atomic():
         attempt=MockAttempt.objects.select_for_update().get(id=before.attempt_id)
         job=AssessmentJob.objects.select_for_update().get(id=identifier)
-        assert_can_view(actor, attempt.student_id, started_at=attempt.started_at if actor.role == "teacher" else None)
+        authorize_attempt(actor, attempt, grade=True)
         if job.version!=data['expectedVersion']:fail('ASSESSMENT_STALE_VERSION','Assessment changed; refresh before reviewing',409)
         if attempt.status=='in_progress':fail('MOCK_ATTEMPT_NOT_SUBMITTED','Attempt has been reopened',409)
         latest=AssessmentJob.objects.filter(attempt_id=job.attempt_id,skill=job.skill).order_by('-generation','-created_at').first()
@@ -419,8 +427,12 @@ def review(actor,identifier,data):
             values=dict(status='SUCCEEDED',failure_code=None,teacher_score=score,final_score=score,final_score_source='TEACHER',
                 final_result=result,approved_feedback=result,lease_token=None,lease_expires_at=None,completed_at=timezone.now(),version=F('version')+1)
             updated=update(job,**values)
+            from .homework_scoring import propagate_attempt_finalization
             from .mock_grading import recompute
             recompute(job.attempt_id)
+            refreshed_attempt = MockAttempt.objects.select_related('exam').filter(id=job.attempt_id).first()
+            if refreshed_attempt is not None:
+                propagate_attempt_finalization(refreshed_attempt, actor=actor)
         # Unlike best-effort administration audit, review audit belongs to the
         # caller-owned transaction and must roll back the entire review on error.
         AuditLog.objects.create(id=str(uuid4()),user_id=actor.id,action='assessment.'+action.lower(),entity='AssessmentJob',entity_id=job.id,old_value=old,
@@ -540,10 +552,7 @@ def teacher_grade_attempt(actor, attempt_id: str, data: dict) -> dict:
         fail('MOCK_ATTEMPT_NOT_FOUND', 'Attempt not found', 404)
 
     if actor.role == 'teacher':
-        student = getattr(attempt, 'student', None)
-        student_group = getattr(student, 'group', None) if student else None
-        if not student_group or getattr(student_group, 'teacher_id', None) != actor.id:
-            fail('FORBIDDEN', 'Ushbu talaba sizning guruhingizga biriktirilmagan', 403)
+        authorize_attempt(actor, attempt, grade=True)
     if attempt.status == 'in_progress':
         fail('MOCK_ATTEMPT_NOT_SUBMITTED', 'Imtihon hali topshirilmagan', 409)
 
@@ -659,6 +668,10 @@ def teacher_grade_attempt(actor, attempt_id: str, data: dict) -> dict:
     attempt.status = 'completed'
     attempt.finished_at = attempt.finished_at or now
     attempt.save(update_fields=['overall_band', 'section_bands', 'standard_scores', 'media_state', 'status', 'finished_at'])
+
+    from .homework_scoring import propagate_attempt_finalization
+
+    propagate_attempt_finalization(attempt, actor=actor, now=now)
 
     return {
         'success': True,

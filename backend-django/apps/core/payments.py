@@ -14,7 +14,9 @@ UZ_MONTHS = ['yanvar','fevral','mart','aprel','may','iyun','iyul','avgust','sent
 
 
 def teacher_students(actor):
-    return list(StudentProfile.objects.filter(group__teacher_id=actor.id).values_list('user_id', flat=True))
+    from .classroom_roster import active_enrollments
+
+    return list(active_enrollments(group__teacher_id=actor.id).values_list('student_id', flat=True).distinct())
 
 
 def list_payments(actor, query):
@@ -75,9 +77,14 @@ def period(data):
 
 
 def debtors(actor, data):
+    from .classroom_roster import active_enrollments
+
     month,year = period(data)
     students = StudentProfile.objects.filter(user__is_active=True).select_related('user','group')
-    students = students.filter(group__teacher_id=actor.id) if actor.role=='teacher' else students.filter(group_id__isnull=False)
+    if actor.role == 'teacher':
+        students = students.filter(user_id__in=teacher_students(actor))
+    else:
+        students = students.filter(user_id__in=active_enrollments().values('student_id'))
     payments = {p.student_id:p for p in Payment.objects.filter(year=year,month=month)}
     result=[]
     for student in students:

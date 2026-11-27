@@ -5,6 +5,7 @@ from apps.exams import analytics_service
 from apps.bamboozle import views as bamboozle_views
 from django.urls import path
 
+from . import account_reconciliation_views as reconciliation
 from . import article_views as articles
 from . import assessment_ranking_views as assessment_rankings
 from . import assessment_views as assessment
@@ -13,11 +14,13 @@ from . import auth_views, exam_mode_views, topic_views, user_admin
 from . import content_views as content
 from . import game_points_views as game_points
 from . import group_views as groups
+from . import classroom_invitation_views, classroom_result_views
 from . import group_report_views as group_reports
 from . import study_plan_views as study_plans
 from . import group_report_views as group_reports
 from . import study_plan_views as study_plans
 from . import legacy_authoring_views as legacy_admin
+from . import live_exam_guard_views as guard_views
 from . import legacy_test_views as legacy
 from . import mock_support_views as support
 from . import notification_views as notifications
@@ -141,6 +144,9 @@ urlpatterns = [
     path('notifications/<str:notification_id>/read', notifications.read_view),
     path('groups', groups.groups_view),
     path('groups/', groups.groups_view),
+    path('classroom-invitations/join', classroom_invitation_views.join),
+    path('groups/<str:group_id>/invitation', classroom_invitation_views.manage),
+    path('groups/<str:group_id>/invitation/requests/<int:request_id>', classroom_invitation_views.decide),
     path('groups/<str:group_id>', groups.group_view),
     path('groups/<str:group_id>/', groups.group_view),
     path('groups/<str:group_id>/analytics', group_reports.group_analytics_view),
@@ -240,6 +246,7 @@ urlpatterns = [
     path('mock/attempts/start/', start_view),
     path('mock/attempts/mine/type-accuracy', type_accuracy_view),
     path('mock/attempts/<str:attempt_id>/reveal', reveal_view),
+    path('mock/attempts/<str:attempt_id>/practice-shares', classroom_result_views.shares),
     path('mock/attempts/mine', mine_view),
     path('mock/item-bank', item_bank_view),
     path('mock/attempts/<str:attempt_id>', detail_view),
@@ -293,6 +300,11 @@ urlpatterns = [
     path('mock/attempts/<str:attempt_id>/flag-cheat/', cheat_view),
     path('mock/attempts/<str:attempt_id>/anomaly', cheat_view),
     path('mock/attempts/<str:attempt_id>/anomaly/', cheat_view),
+    path('mock/attempts/<str:attempt_id>/guard-events', guard_views.record_guard_events_view),
+    path('mock/attempts/<str:attempt_id>/guard-events/', guard_views.record_guard_events_view),
+    path('teacher/guard-alerts', guard_views.teacher_guard_alerts_view),
+    path('teacher/guard-alerts/<str:incident_id>/review', guard_views.review_guard_incident_view),
+    path('teacher/groups/<str:group_id>/live-guard', guard_views.group_live_guard_view),
     path('mock/attempts/<str:attempt_id>/telemetry', telemetry_view),
     path('mock/attempts/<str:attempt_id>/telemetry/', telemetry_view),
     path('v1/mock/attempts/<str:attempt_id>/telemetry', telemetry_view),
@@ -452,6 +464,14 @@ urlpatterns = [
     path('gallery', content.cards), path('gallery/all', content.all_cards),
     path('videos',videos.videos),path('videos/stream',videos.stream),path('videos/purchases',videos.purchases),
     path('telegram/status',telegram.status),path('telegram/link-token',telegram.token),path('telegram/link',telegram.unlink),path('telegram/webhook',telegram.webhook),
+    path('groups/<str:group_id>/telegram-binding', telegram.group_telegram_binding_view),
+    path('groups/<str:group_id>/telegram-binding/', telegram.group_telegram_binding_view),
+    path('v1/groups/<str:group_id>/telegram-binding', telegram.group_telegram_binding_view),
+    path('v1/groups/<str:group_id>/telegram-binding/', telegram.group_telegram_binding_view),
+    path('groups/<str:group_id>/telegram-report', telegram.group_telegram_report_view),
+    path('groups/<str:group_id>/telegram-report/', telegram.group_telegram_report_view),
+    path('v1/groups/<str:group_id>/telegram-report', telegram.group_telegram_report_view),
+    path('v1/groups/<str:group_id>/telegram-report/', telegram.group_telegram_report_view),
     path('videos/<str:identifier>/thumbnail',videos.thumbnail),path('videos/<str:identifier>/stream-url',videos.stream_url),
     path('videos/<str:identifier>/purchase',videos.purchase),path('videos/<str:identifier>/confirm-purchase',videos.confirm),path('videos/<str:identifier>',videos.video),
     path('stats/dashboard',statistics.dashboard),path('stats/income',statistics.income),path('stats/exam-activity',statistics.activity),
@@ -459,7 +479,14 @@ urlpatterns = [
     path('gallery/<str:identifier>/image', content.card_image), path('gallery/<str:identifier>', content.card),
     path('teachers', content.cards, {'teacher':True}), path('teachers/all', content.all_cards, {'teacher':True}),
     path('teachers/<str:identifier>/photo', content.card_image, {'teacher':True}), path('teachers/<str:identifier>', content.card, {'teacher':True}),
-    path("users", user_admin.users), path("users/<str:user_id>", user_admin.user),
+    path("users", user_admin.users), path("users/bulk", user_admin.bulk_users),
+    path("users/reconciliation", reconciliation.duplicates_view),
+    path("users/reconciliation/preview", reconciliation.preview_view),
+    path("users/reconciliation/verify-identity", reconciliation.verify_identity_view),
+    path("users/reconciliation/merge", reconciliation.merge_view),
+    path("users/<str:user_id>", user_admin.user),
+    path("users/<str:user_id>/memberships", user_admin.student_memberships),
+    path("users/<str:user_id>/overview", user_admin.student_overview),
     path("topics", topic_views.topics_view),
     path("topics/", topic_views.topics_view),
     path("topics/<str:topic_id>", topic_views.topic_detail_view),

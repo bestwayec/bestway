@@ -265,8 +265,10 @@ def speaking_start_view(request, attempt_id, question_id):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@exam_session.serialize
 def cheat_view(request, attempt_id):
     student(request)
+    exam_session.guard_observation(request, attempt_id)
     allowed = {
         'event', 'reason', 'type', 'anomaly', 'details', 'timestamp', 'time',
         'description', 'detail', 'meta', 'payload', 'window', 'count',
@@ -439,7 +441,9 @@ def speaking_audio_view(request, attempt_id, question_id):
     attempt = MockAttempt.objects.filter(id=attempt_id).first()
     if attempt is None:
         engine.fail('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404)
-    engine.assert_view(request.user, attempt.student_id, started_at=attempt.started_at if request.user.role == "teacher" else None)
+    from .classroom_results import assert_attempt_access
+
+    assert_attempt_access(request.user, attempt)
     answer = MockAnswer.objects.filter(attempt_id=attempt_id, question_id=question_id).first()
     path = resolve_key(answer.audio_key) if answer and answer.audio_key else None
     if path is None or not path.is_file() or not path.stat().st_size:
@@ -546,7 +550,9 @@ def writing_page_view(request, attempt_id, question_id, page):
     attempt = MockAttempt.objects.filter(id=attempt_id).first()
     if attempt is None:
         engine.fail('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404)
-    engine.assert_view(request.user, attempt.student_id, started_at=attempt.started_at)
+    from .classroom_results import assert_attempt_access
+
+    assert_attempt_access(request.user, attempt)
     scope = engine.scope(attempt)
     if scope and question_id not in scope['questionIds']:
         engine.fail('FILE_NOT_FOUND', 'Rasm topilmadi', 404)

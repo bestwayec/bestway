@@ -74,11 +74,11 @@ class AccessTests(SimpleTestCase):
                 groups.filter.assert_not_called()
 
     def test_unassigned_teacher_rejected_before_roster_query(self):
-        with patch.object(ranking.Group, 'objects') as groups, patch.object(ranking.StudentProfile, 'objects') as students:
+        with patch.object(ranking.Group, 'objects') as groups, patch.object(ranking, 'member_profiles') as students:
             groups.filter.return_value.first.return_value = SimpleNamespace(id='group', teacher_id='owner')
             with self.assertRaises(ContractAPIException):
                 ranking.rankings(SimpleNamespace(role='teacher', id='other'), 'group')
-            students.filter.assert_not_called()
+            students.assert_not_called()
 
     def test_endpoint_rejects_unknown_query_and_non_writing_speaking_skill(self):
         actor = SimpleNamespace(role='teacher', id='teacher', is_authenticated=True)

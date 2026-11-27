@@ -26,9 +26,12 @@ from types import SimpleNamespace
 from django.db.models import Q
 from django.utils import timezone
 
-from apps.legacy_schema.models import Group, StudentProfile, User
+from apps.legacy_schema.models import AssessmentJob, Group, MockAttempt, User
 from common.api.exceptions import ContractAPIException
 
+from .classroom_results import assignment_attempts
+from .classroom_roster import assert_active, member_profiles
+from .live_exam_guard import _teacher_alert_scope
 from . import class_quiz as cq
 from . import class_quiz_appeals as appeals
 from . import groups
@@ -39,10 +42,15 @@ from . import telegram_notify as notify
 from . import telegram_outbox as outbox
 from . import telegram_state as state
 from . import vocabulary_bot as vb
-from .models import ClassQuizAssignment, VocabularySet
+from .models import (
+    ClassQuizAssignment,
+    ExamIntegrityIncident,
+    TelegramClassroomBinding,
+    VocabularySet,
+)
 
 logger = logging.getLogger(__name__)
-PREFIXES = ('tg', 'tn', 'tq', 'tr', 'tc', 'tp', 'tm', 'ta', 'tv', 'ts', 'tb')
+PREFIXES = ('tg', 'tk', 'tn', 'tq', 'tr', 'tc', 'tp', 'tm', 'ta', 'tv', 'ts', 'tb')
 ID = re.compile(r'^[A-Za-z0-9_-]{8,64}$')
 STAFF = ('teacher', 'admin', 'super_admin')
 KEY_LINE = re.compile(r'(?im)^\s*(?:key|answers?|javoblar|kalit)\s*:?\s*$')
@@ -70,6 +78,8 @@ TEXT = {
         set_hidden="⚠️ Bu to'plam tanlangan guruhga ko'rinmaydi. Avval uni guruhga biriktiring (sayt).", announce_pick='📢 Qaysi guruhga e\'lon?', announce_text="E'lon matnini yozib yuboring (max 700 belgi):",
         announce_confirm="📢 Quyidagi e'lon <b>{n}</b> ta o'quvchiga yuboriladi:\n\n{text}", announce_ok="📢 E'lon navbatga qo'yildi: {n} ta o'quvchi.", back='⬅️ Orqaga', yes='✅ Yuborish', no='✖️ Bekor',
         stale="Bu tugma eskirgan. /ustoz buyrug'ini bosing.", denied="Bu ma'lumot sizga tegishli emas.", error="⚠️ Xatolik. Qayta urinib ko'ring.", expired_dialog='Vaqt tugadi. Qaytadan boshlang.',
+        tg_bound='Telegram guruh: ✅ Ulangan', tg_unbound='Telegram guruh: ⚪ Ulanmagan', guard_queue_btn='🛡 Nazorat va tekshirish ({n})',
+        guard_queue_title='🛡 <b>{group} · Nazorat va tekshirish</b>', pending_grading='✍️ Baholash kutilmoqda: {n}', open_guard='🚨 Yangi nazorat hodisalari: {n}', no_guard_pending='✅ Kutilayotgan tekshiruv yoki nazorat hodisasi yo\'q.',
     ),
     'en': dict(
         not_linked='🔗 Please link your account first: /start', staff_only='👨‍🏫 This section is for teachers.', private_only='🔒 Please message the bot in a private chat.',
@@ -91,6 +101,8 @@ TEXT = {
         set_hidden='⚠️ This set is not visible to that group. Attach it to the group first (website).', announce_pick='📢 Which group?', announce_text='Send the announcement text (max 700 chars):',
         announce_confirm='📢 This announcement will be sent to <b>{n}</b> students:\n\n{text}', announce_ok='📢 Announcement queued for {n} students.', back='⬅️ Back', yes='✅ Send', no='✖️ Cancel',
         stale='This button is outdated. Send /teacher.', denied='This is not yours.', error='⚠️ Something went wrong. Please try again.', expired_dialog='Timed out. Start again.',
+        tg_bound='Telegram chat: ✅ Connected', tg_unbound='Telegram chat: ⚪ Not connected', guard_queue_btn='🛡 Live Guard & Queue ({n})',
+        guard_queue_title='🛡 <b>{group} · Live Guard &amp; Grading</b>', pending_grading='✍️ Awaiting grading: {n}', open_guard='🚨 Unreviewed guard alerts: {n}', no_guard_pending='✅ No pending grading or guard observations.',
     ),
 }
 
@@ -136,6 +148,7 @@ def _own_groups(actor):
 def _group(actor, group_id):
     group = groups.get_group(group_id)
     groups.assert_manages_group(actor, group)        # teacher B gets FORBIDDEN for teacher A's group
+    assert_active(group.id)
     return group
 
 
@@ -144,7 +157,7 @@ def _assignment(actor, assignment_id):
 
 
 def _roster(group_id):
-    return list(StudentProfile.objects.filter(group_id=group_id).values_list('user_id', flat=True))
+    return list(member_profiles(group_id).values_list('user_id', flat=True))
 
 
 # ------------------------------------------------------------------------------------------------ views
@@ -170,11 +183,54 @@ def list_groups(chat_id, message_id, actor, lang):
 
 def group_card(chat_id, message_id, actor, lang, group_id):
     group = _group(actor, group_id)
-    names = dict(User.objects.filter(id__in=_roster(group.id)).values_list('id', 'name'))
-    lines = [f'👥 <b>{esc(group.name, 80)}</b>', tr(lang, 'students', n=len(names))] + [f'• {esc(n, 40)}' for n in sorted(names.values())[:40]]
+    roster_ids = _roster(group.id)
+    names = dict(User.objects.filter(id__in=roster_ids).values_list('id', 'name'))
+    binding = TelegramClassroomBinding.objects.filter(group_id=group.id, is_active=True).first()
+    guard_open = _teacher_alert_scope(ExamIntegrityIncident.objects.filter(group_id=group.id, status='open'), actor).count()
+    grading_pending = AssessmentJob.objects.filter(
+        attempt_id__in=assignment_attempts(MockAttempt.objects.all(), group_id=group.id).values('id'),
+        status__in=('PENDING', 'PROCESSING', 'RETRY', 'NEEDS_REVIEW'),
+    ).count()
+    lines = [
+        f'👥 <b>{esc(group.name, 80)}</b>',
+        tr(lang, 'students', n=len(names)),
+        tr(lang, 'tg_bound' if binding else 'tg_unbound'),
+        tr(lang, 'pending_grading', n=grading_pending),
+        tr(lang, 'open_guard', n=guard_open),
+    ] + [f'• {esc(n, 40)}' for n in sorted(names.values())[:30]]
     rows = ClassQuizAssignment.objects.filter(group_id=group.id, status='active').order_by('-created_at')[:6]
     keyboard = [[dict(text=esc(a.snapshot['title'], 45), callback_data=f'tr:{a.id}')] for a in rows]
+    keyboard.append([dict(text=tr(lang, 'guard_queue_btn', n=guard_open + grading_pending), callback_data=f'tk:{group.id}')])
     keyboard.append([dict(text=tr(lang, 'back'), callback_data='tg')])
+    _render(chat_id, message_id, '\n'.join(lines), keyboard)
+
+
+def group_monitoring_card(chat_id, message_id, actor, lang, group_id):
+    group = _group(actor, group_id)
+    incidents = list(
+        _teacher_alert_scope(
+            ExamIntegrityIncident.objects.select_related('student', 'exam').filter(group_id=group.id, status='open'),
+            actor,
+        )
+        .order_by('-updated_at')[:8]
+    )
+    jobs = list(
+        AssessmentJob.objects.filter(
+            attempt_id__in=assignment_attempts(MockAttempt.objects.all(), group_id=group.id).values('id'),
+            status__in=('PENDING', 'PROCESSING', 'RETRY', 'NEEDS_REVIEW'),
+        ).order_by('-created_at')[:8]
+    )
+    lines = [tr(lang, 'guard_queue_title', group=esc(group.name, 60))]
+    if not incidents and not jobs:
+        lines.append(tr(lang, 'no_guard_pending'))
+    else:
+        for inc in incidents:
+            lines.append(f'• 🚨 <b>{esc(getattr(inc.student, "name", ""), 32)}</b> — {esc(inc.event_type, 24)} ({esc(inc.skill or "-", 12)})')
+        if jobs:
+            snames = dict(User.objects.filter(id__in=[j.student_id for j in jobs]).values_list('id', 'name'))
+            for j in jobs:
+                lines.append(f'• ✍️ <b>{esc(snames.get(j.student_id, j.student_id), 32)}</b> — {esc(j.skill, 12)} ({esc(j.status, 16)})')
+    keyboard = [[dict(text=tr(lang, 'back'), callback_data=f'tg:{group.id}')]]
     _render(chat_id, message_id, '\n'.join(lines), keyboard)
 
 
@@ -471,6 +527,8 @@ def handle_callback(from_id, message_id, data, *, chat_type='private'):
             list_groups(chat_id, message_id, actor, lang)
         elif cmd == 'tg' and len(parts) == 2 and _valid(parts[1]):
             group_card(chat_id, message_id, actor, lang, parts[1])
+        elif cmd == 'tk' and len(parts) == 2 and _valid(parts[1]):
+            group_monitoring_card(chat_id, message_id, actor, lang, parts[1])
         elif cmd == 'tn' and len(parts) == 1:
             start_new_test(chat_id, message_id, actor, lang)
         elif cmd == 'tn' and len(parts) == 3 and parts[1] in ('c', 'q', 't'):

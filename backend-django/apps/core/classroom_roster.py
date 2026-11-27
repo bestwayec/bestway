@@ -2,10 +2,10 @@
 from datetime import UTC
 
 from django.db import transaction
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import Exists, OuterRef
 from django.utils import timezone
 
-from apps.legacy_schema.models import AssessmentJob, AssessmentJobStatus, Attendance, MockAttempt, StudentProfile, TestAttempt, User
+from apps.legacy_schema.models import AssessmentJob, AssessmentJobStatus, Attendance, StudentProfile, User
 
 from . import groups
 from .models import ClassroomArchive, ClassroomEnrollment, HomeworkSubmission
@@ -39,20 +39,33 @@ def assert_teacher_attempt_period(actor, student_id, started_at):
         groups.fail("FORBIDDEN", "Bu urinish sizning o‘quv davringizga tegishli emas", 403)
 
 
-def record_enrollment(student_id, old_group, new_group):
-    """The caller holds the StudentProfile row lock during the membership change."""
+def active_enrollments(**filters):
+    return ClassroomEnrollment.objects.filter(ended_at__isnull=True, **filters)
+
+
+def student_group_ids(student_id):
+    return active_enrollments(student_id=student_id).values_list("group_id", flat=True)
+
+
+def member_profiles(group_id):
+    return StudentProfile.objects.filter(user_id__in=active_enrollments(group_id=group_id).values("student_id"))
+
+
+def record_enrollment(student_id, old_group, new_group, *, source="staff"):
+    """Open or close one period per group while holding the student's row lock."""
     if old_group == new_group:
         return
     now = timezone.now()
-    open_enrollment = ClassroomEnrollment.objects.filter(student_id=student_id, ended_at__isnull=True)
-    tracked = open_enrollment.first()
-    open_enrollment.update(ended_at=now)
-    if old_group and (tracked is None or tracked.group_id != old_group):
-        # A legacy membership's true start is unknown. Only explicitly scoped records
-        # may be disclosed for this period.
-        ClassroomEnrollment.objects.create(student_id=student_id, group_id=old_group, ended_at=now)
+    if old_group:
+        closed = active_enrollments(student_id=student_id, group_id=old_group).update(ended_at=now)
+        if not closed:
+            ClassroomEnrollment.objects.create(
+                student_id=student_id, group_id=old_group, ended_at=now, source="legacy_profile",
+            )
     if new_group:
-        ClassroomEnrollment.objects.create(student_id=student_id, group_id=new_group, started_at=now)
+        active_enrollments(student_id=student_id, group_id=new_group).get_or_create(
+            student_id=student_id, group_id=new_group, defaults={"started_at": now, "source": source},
+        )
 
 
 def feedback_text(value):
@@ -99,23 +112,14 @@ def history(actor, group_id, student_id):
     group = groups.get_group(group_id)
     groups.assert_manages_group(actor, group)
     intervals = list(ClassroomEnrollment.objects.filter(student_id=student_id, group_id=group_id).order_by("-ended_at")[:100])
-    is_member = StudentProfile.objects.filter(user_id=student_id, group_id=group_id).exists()
+    is_member = any(row.ended_at is None for row in intervals)
     if not intervals and not is_member:
         groups.fail("STUDENT_NOT_IN_GROUP", "O‘quvchi bu guruhga tegishli emas", 404)
 
-    # When prior enrollment start is unknown, expose only records with a group FK.
-    in_group = Q(pk__in=[])
-    for period in intervals:
-        if period.started_at is None or (period.ended_at is None and not is_member):
-            continue
-        window = Q(started_at__gte=period.started_at)
-        if period.ended_at is not None:
-            window &= Q(started_at__lt=period.ended_at)
-        in_group |= window
-    mocks = list(MockAttempt.objects.filter(in_group, student_id=student_id, status="completed")
+    from .teacher_analytics import classroom_attempts
+
+    mocks = list(classroom_attempts(group_id).filter(student_id=student_id, status="completed")
                  .order_by("-started_at").values("id", "exam__title", "started_at", "overall_band", "overall_score")[:50])
-    tests = list(TestAttempt.objects.filter(in_group, student_id=student_id, status="completed")
-                 .order_by("-started_at").values("id", "test__title", "started_at", "total_score")[:50])
     feedback = AssessmentJob.objects.filter(
         attempt_id__in=[row["id"] for row in mocks], skill__in=["writing", "speaking"], status=AssessmentJobStatus.SUCCEEDED,
     ).exclude(approved_feedback=None).order_by("-completed_at").values(
@@ -128,7 +132,7 @@ def history(actor, group_id, student_id):
         "groupId": group.id,
         "groupName": group.name,
         "currentlyEnrolled": is_member,
-        "membership": [{"startedAt": row.started_at, "endedAt": row.ended_at} for row in intervals],
+        "membership": [{"startedAt": row.started_at, "endedAt": row.ended_at, "source": row.source} for row in intervals],
         "attendance": list(Attendance.objects.filter(group_id=group_id, student_id=student_id)
                            .order_by("-date").values("date", "state")[:100]),
         "homework": list(HomeworkSubmission.objects.filter(
@@ -138,7 +142,7 @@ def history(actor, group_id, student_id):
             "status", "score_percent", "is_passed", "completed_at",
         )[:100]),
         "mockExams": mocks,
-        "tests": tests,
+        "tests": [],
         "feedback": [{**row, "feedback_text": feedback_text(row["approved_feedback"])} for row in feedback],
     }
 
@@ -147,13 +151,12 @@ def member_history(actor, group_id, search, page):
     group = groups.get_group(group_id)
     groups.assert_manages_group(actor, group)
     periods = ClassroomEnrollment.objects.filter(group_id=group_id).values("student_id")
-    current = StudentProfile.objects.filter(group_id=group_id).values("user_id")
-    rows = User.objects.filter(Q(id__in=periods) | Q(id__in=current), name__icontains=search)
+    current = active_enrollments(group_id=group_id)
+    rows = User.objects.filter(id__in=periods, name__icontains=search)
     page_size = 25
     offset = (page - 1) * page_size
     members = list(rows.order_by("name", "id").values("id", "name")[offset:offset + page_size + 1])
-    current_ids = set(StudentProfile.objects.filter(group_id=group_id, user_id__in=[m["id"] for m in members])
-                      .values_list("user_id", flat=True))
+    current_ids = set(current.filter(student_id__in=[m["id"] for m in members]).values_list("student_id", flat=True))
     return {
         "members": [{**member, "currentlyEnrolled": member["id"] in current_ids} for member in members[:page_size]],
         "page": page,
