@@ -336,7 +336,12 @@ def start(actor, exam_id, data):
             # the request falls through to the full_test flow and a practice
             # exam is refused with MOCK_FULL_TEST_UNAVAILABLE.
             partial = True
-        existing_list = list(MockAttempt.objects.filter(exam_id=exam_id, student_id=actor.id, status='in_progress').order_by('-started_at'))
+        in_progress = MockAttempt.objects.filter(exam_id=exam_id, student_id=actor.id, status='in_progress')
+        if assignment:
+            in_progress = in_progress.filter(media_state__contains={ASSIGNMENT_KEY: assignment.id})
+        else:
+            in_progress = in_progress.exclude(media_state__has_key=ASSIGNMENT_KEY)
+        existing_list = list(in_progress.order_by('-started_at'))
         existing = existing_list[0] if existing_list else None
         if len(existing_list) > 1:
             for extra in existing_list[1:]:
@@ -362,12 +367,6 @@ def start(actor, exam_id, data):
             if partial and practice_options:
                 scope_mismatch = scope_mismatch or existing.mode != 'practice' or practice_mode.options(existing) != {
                     'groupIds': practice_options['groupIds'] or None, 'timer': practice_options['timer']}
-            if assignment:
-                linked = (existing.media_state or {}).get(ASSIGNMENT_KEY)
-                if linked and linked != assignment.id:
-                    fail('MOCK_ASSIGNMENT_ATTEMPT_ACTIVE', 'Finish the active assignment attempt before starting another', 409)
-                if aware(existing.started_at) < aware(assignment.created_at):
-                    scope_mismatch = True
             if (exp and aware(exp) <= now) or is_retake or scope_mismatch:
                 from .mock_submissions import submit
                 try:
@@ -377,9 +376,6 @@ def start(actor, exam_id, data):
                     existing.save(update_fields=['status'])
                 existing = None
             else:
-                if assignment and not linked:
-                    existing.media_state = {**(existing.media_state or {}), ASSIGNMENT_KEY: assignment.id}
-                    existing.save(update_fields=['media_state'])
                 return start_response(existing, exam, True)
         practice = (selected_scope(exam, data['skills'], _auto_seed=False) if implicit_practice
                     else selected_scope(exam, data['skills']) if partial else None)
@@ -1008,8 +1004,16 @@ def detail(actor, attempt_id):
     attempt = MockAttempt.objects.select_related('exam', 'student__user').filter(id=attempt_id).first()
     if not attempt:
         fail('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404)
-    assert_view(actor, attempt.student_id, started_at=attempt.started_at)
-    staff = mock_catalog.is_staff(actor)
+    teacher_can_grade = None
+    if actor.role == "teacher":
+        from .classroom_results import explicit_teacher_access
+
+        teacher_can_grade = explicit_teacher_access(actor, attempt, grade=True)
+        if not teacher_can_grade and not explicit_teacher_access(actor, attempt):
+            fail("FORBIDDEN", "Bu natijani ko‘rish huquqingiz yo‘q", 403)
+    else:
+        assert_view(actor, attempt.student_id)
+    staff = mock_catalog.is_staff(actor) and teacher_can_grade is not False
     show = staff or (attempt.status == 'completed' and not review_blocked(attempt))
     answers = {a.question_id: a for a in MockAnswer.objects.filter(attempt_id=attempt_id)}
     # One query per level instead of one per section and one per group (N+1).
@@ -1096,6 +1100,12 @@ def detail(actor, attempt_id):
     from .question_numbering import apply_display_numbers
     apply_display_numbers(attempt.exam.type, sections)
     result = summary(attempt, detail=True)
+    if teacher_can_grade is not None:
+        result['canGrade'] = teacher_can_grade
+    if actor.role == 'student' and actor.id == attempt.student_id and attempt.mode == 'practice':
+        from .classroom_results import is_personal_practice
+
+        result['canSharePractice'] = is_personal_practice(attempt)
     if show and getattr(actor, 'role', None) == 'student' and actor.id == attempt.student_id and attempt.status == 'completed':
         from .teacher_analytics import own_exam_benchmark
         if benchmark := own_exam_benchmark(attempt):

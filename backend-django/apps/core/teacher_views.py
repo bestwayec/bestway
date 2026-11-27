@@ -409,11 +409,13 @@ def student_join_cohort_view(request):
     Student enters 6-character invite code to join a teacher's cohort.
     """
     require_authenticated(request)
+    require_role(request, "student")
 
     data = request.data or {}
-    code = (data.get("invite_code") or "").strip().upper()
-    if not code:
+    raw_code = data.get("invite_code")
+    if not isinstance(raw_code, str) or not raw_code.strip() or len(raw_code) > 40:
         raise ContractAPIException("VALIDATION_ERROR", "Taklif kodi kiritilmadi", 400)
+    code = raw_code.strip().upper()
 
     cohort = Cohort.objects.filter(invite_code__iexact=code).select_related("teacher").first()
     if not cohort or classrooms.is_linked(cohort):
@@ -602,25 +604,11 @@ _MANUAL_SKILLS = ("writing", "speaking")
 
 def _grading_attempts(actor):
     from apps.legacy_schema.models import MockAttempt
-    from .models import ClassroomEnrollment
+    from .classroom_results import assignment_attempts
 
     attempts = MockAttempt.objects.filter(status__in=("grading", "completed"))
     if actor.role in ("teacher", "instructor"):
-        # The classroom history contract treats an undated legacy membership
-        # as unknown. A class-owned assignment supplies scope for those rows.
-        enrolled = ClassroomEnrollment.objects.filter(
-            student_id=OuterRef("student_id"),
-            group_id=OuterRef("student__group_id"),
-            ended_at__isnull=True,
-            started_at__isnull=False,
-        )
-        assigned = HomeworkAssignment.objects.filter(
-            cohort__classroom_id=OuterRef("student__group_id"),
-            exam_id=OuterRef("exam_id"), created_at__lte=OuterRef("started_at"),
-        )
-        attempts = attempts.filter(student__group__teacher_id=actor.id).filter(
-            Exists(enrolled.filter(started_at__lte=OuterRef("started_at"))) | (~Exists(enrolled) & Exists(assigned))
-        )
+        attempts = assignment_attempts(attempts, teacher_id=actor.id)
     return attempts
 
 

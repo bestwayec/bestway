@@ -82,6 +82,8 @@ def seed_classroom():
     ]
     cohort = Cohort.objects.create(classroom=group, name=group.name, teacher=owner, invite_code="exam4-p3")
     assignment = HomeworkAssignment.objects.create(cohort=cohort, exam=ielts, title="Assigned mock", deadline=now)
+    retakes = HomeworkAssignment.objects.create(cohort=cohort, exam=ielts, title="Separate IELTS practice assignment", deadline=now)
+    multilevel_assignment = HomeworkAssignment.objects.create(cohort=cohort, exam=multilevel, title="Multilevel assignment", deadline=now)
     HomeworkAssignment.objects.filter(pk=assignment.pk).update(created_at=now - timedelta(days=10))
     section = MockSection.objects.create(id="exam4-p3-reading", exam=ielts, skill="reading", sort_order=0)
     stimulus = MockQuestionGroup.objects.create(id="exam4-p3-passage", section=section, sort_order=0, created_at=now,
@@ -92,7 +94,7 @@ def seed_classroom():
         for i in range(1, 4)
     ]
 
-    def attempt(label, learner, day, band=None, exam=ielts, score=None, status="completed", assigned=False):
+    def attempt(label, learner, day, band=None, exam=ielts, score=None, status="completed", assigned=None):
         started = now - timedelta(days=day)
         return MockAttempt.objects.create(
             id=f"exam4-p3-{label}", student=people[learner], exam=exam, status=status, started_at=started,
@@ -100,20 +102,20 @@ def seed_classroom():
             overall_band=band, overall_score=score, anti_cheat_count=0, specification_version="fixture-v1",
             score_version="fixture-v1", section_bands={"reading": band},
             raw_scores={"reading": {"score": 1, "max": 3}} if label == "assigned" else None,
-            media_state={ASSIGNMENT_KEY: assignment.id} if assigned else {},
+            media_state={ASSIGNMENT_KEY: assigned.id} if assigned else {},
         )
 
-    assigned = attempt("assigned", "Ari", 5, band=7, assigned=True)
+    assigned = attempt("assigned", "Ari", 5, band=7, assigned=assignment)
     for index, (correct, response) in enumerate(((True, "alpha"), (False, "wrong"))):
         MockAnswer.objects.create(id=f"exam4-p3-answer-{index}", question=questions[index], attempt=assigned,
                                   response=response, is_correct=correct, is_graded=True, updated_at=now)
     attempt("outside-period", "Ari", 1, band=9)
     attempt("untimestamped-enrollment", "Drew", 1, band=8)
     attempt("unrelated", "Ellis", 3, band=9)
-    attempt("best-retake", "Beth", 9, band=7)
-    attempt("latest-zero", "Beth", 6, band=0)
-    attempt("pending", "Casey", 4, band=9, status="grading", assigned=True)
-    attempt("multilevel-score", "Beth", 5, band=7, exam=multilevel, score=65)
+    attempt("best-retake", "Beth", 9, band=7, assigned=retakes)
+    attempt("latest-zero", "Beth", 6, band=0, assigned=retakes)
+    attempt("pending", "Casey", 4, band=9, status="grading", assigned=assignment)
+    attempt("multilevel-score", "Beth", 5, band=7, exam=multilevel, score=65, assigned=multilevel_assignment)
     for day, state in ((1, "present"), (2, "absent")):
         Attendance.objects.create(id=f"exam4-p3-attendance-{day}", group=group, student=people["Beth"],
                                   date=timezone.localdate() - timedelta(days=day), state=state,
@@ -248,7 +250,7 @@ def test_student_benchmark_requires_five_comparable_peers(classroom):
         MockAttempt.objects.create(id=key, student=profile, exam=exam, status="completed", started_at=now,
                                    submitted_at=now, flow_mode="full_test", mode="timed", overall_band=score,
                                    anti_cheat_count=0, specification_version=own.specification_version,
-                                   score_version=own.score_version)
+                                   score_version=own.score_version, media_state=own.media_state)
     report = own_exam_benchmark(own)
     assert report == {"students": 5, "median": 5}
     MockAttempt.objects.filter(pk="exam4-p3-peer-4").update(score_version="different")
@@ -272,3 +274,28 @@ def test_prediction_keeps_full_mock_history_across_recent_practice(classroom, mo
     assert data["multilevel"]["currentScore"] == 65
     assert [row["ieltsBand"] for row in data["history"] if row["ieltsBand"] is not None] == [7, 0]
     assert all(row["multilevelScore"] is None or row["ieltsBand"] is None for row in data["history"])
+
+
+def test_personal_practice_sharing_requires_a_grant_and_cannot_grant_grading(classroom):
+    from apps.core.classroom_results import explicit_teacher_access
+    from apps.core.models import PracticeResultShare
+
+    teacher, outsider, _, student, exam, _ = classroom
+    attempt = MockAttempt.objects.create(
+        id="exam4-p3-private-practice", student_id=student.id, exam_id=exam.id,
+        started_at=timezone.now(), status="completed", mode="practice", anti_cheat_count=0,
+    )
+    assert not explicit_teacher_access(teacher, attempt)
+    client = APIClient()
+    client.force_authenticate(SimpleNamespace(id=student.id, role="student", is_authenticated=True))
+    route = f"/v1/mock/attempts/{attempt.id}/practice-shares"
+    assert client.put(route, {"teacherId": outsider.id, "shared": True}, format="json").status_code == 403
+    assert client.put(route, {"teacherId": teacher.id, "shared": True}, format="json").status_code == 200
+    assert explicit_teacher_access(teacher, attempt)
+    assert not explicit_teacher_access(teacher, attempt, grade=True)
+
+    classroom_roster = ClassroomEnrollment.objects.filter(group_id="exam4-p3-group", student_id=student.id)
+    classroom_roster.update(ended_at=timezone.now())
+    assert not explicit_teacher_access(teacher, attempt)
+    assert client.put(route, {"teacherId": teacher.id, "shared": False}, format="json").status_code == 200
+    assert not PracticeResultShare.objects.filter(attempt_id=attempt.id).exists()

@@ -15,8 +15,9 @@ from zoneinfo import ZoneInfo
 from django.db.models import Q
 from django.utils import timezone
 
-from apps.legacy_schema.models import Group, StudentProfile, User
+from apps.legacy_schema.models import Group, User
 
+from .classroom_roster import member_profiles
 from . import telegram_outbox as outbox
 from . import telegram_state as state
 from .models import ClassQuizAppeal, ClassQuizAssignment, ClassQuizAttempt, UserWeakWord
@@ -69,7 +70,7 @@ def local(value, lang='uz'):
 
 
 def _linked_students(group_id):
-    ids = list(StudentProfile.objects.filter(group_id=group_id).values_list('user_id', flat=True))
+    ids = list(member_profiles(group_id).values_list('user_id', flat=True))
     return list(User.objects.filter(id__in=ids, is_active=True, role='student').exclude(telegram_chat_id__isnull=True).exclude(telegram_chat_id='').values_list('id', flat=True))
 
 

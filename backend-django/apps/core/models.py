@@ -2,7 +2,7 @@
 import datetime
 import uuid
 from django.db import models
-from apps.legacy_schema.models import Group, User, MockExam
+from apps.legacy_schema.models import Group, MockAttempt, MockExam, User
 
 
 def uuid4_str() -> str:
@@ -395,13 +395,53 @@ class ClassroomEnrollment(models.Model):
     student = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False)
     started_at = models.DateTimeField(null=True, blank=True)
     ended_at = models.DateTimeField(null=True, blank=True)
+    source = models.CharField(max_length=20, default="staff")
 
     class Meta:
         indexes = [models.Index(fields=["group", "student", "ended_at"], name="classroom_enroll_history")]
         constraints = [
             models.UniqueConstraint(
-                fields=["student"], condition=models.Q(ended_at__isnull=True), name="unique_open_classroom_enrollment",
+                fields=["student", "group"], condition=models.Q(ended_at__isnull=True), name="unique_open_classroom_group",
             ),
+        ]
+
+
+class ClassroomInvitation(models.Model):
+    group = models.OneToOneField(Group, on_delete=models.CASCADE, db_constraint=False)
+    code_hash = models.CharField(max_length=64, unique=True)
+    version = models.PositiveIntegerField(default=1)
+    expires_at = models.DateTimeField()
+    max_uses = models.PositiveIntegerField(null=True, blank=True)
+    uses = models.PositiveIntegerField(default=0)
+    requires_approval = models.BooleanField(default=False)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+
+class ClassroomJoinRequest(models.Model):
+    invitation = models.ForeignKey(ClassroomInvitation, on_delete=models.CASCADE)
+    student = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False)
+    invitation_version = models.PositiveIntegerField()
+    status = models.CharField(max_length=10, default="pending")
+    source = models.CharField(max_length=20)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["invitation", "student", "invitation_version"], name="unique_classroom_join_request",
+            ),
+        ]
+
+
+class PracticeResultShare(models.Model):
+    attempt = models.ForeignKey(MockAttempt, on_delete=models.CASCADE, db_constraint=False)
+    teacher = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["attempt", "teacher"], name="unique_practice_result_share"),
         ]
 
 

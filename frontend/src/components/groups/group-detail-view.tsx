@@ -24,6 +24,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { StudentTransferDialog } from "@/components/groups/student-transfer-dialog";
+import { ClassroomInvitation } from "@/components/groups/classroom-invitation";
 import { ClassroomManagement } from "@/components/groups/classroom-management";
 import { ClassroomAssignments } from "@/components/groups/classroom-assignments";
 import { GroupFormDialog } from "@/components/groups/group-form-dialog";
@@ -275,6 +276,8 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
           <GroupAiRanking groupId={groupId} />
         </section>
       )}
+
+      {canSeePhones && tab === "students" && <ClassroomInvitation key={groupId} groupId={groupId} />}
 
       {(!canSeePhones || tab === "students") && (<div id="group-panel-students" role={canSeePhones ? "tabpanel" : undefined}>
       {/* O'quvchi qo'shish */}

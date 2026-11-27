@@ -26,9 +26,10 @@ from types import SimpleNamespace
 from django.db.models import Q
 from django.utils import timezone
 
-from apps.legacy_schema.models import Group, StudentProfile, User
+from apps.legacy_schema.models import Group, User
 from common.api.exceptions import ContractAPIException
 
+from .classroom_roster import member_profiles
 from . import class_quiz as cq
 from . import class_quiz_appeals as appeals
 from . import groups
@@ -144,7 +145,7 @@ def _assignment(actor, assignment_id):
 
 
 def _roster(group_id):
-    return list(StudentProfile.objects.filter(group_id=group_id).values_list('user_id', flat=True))
+    return list(member_profiles(group_id).values_list('user_id', flat=True))
 
 
 # ------------------------------------------------------------------------------------------------ views

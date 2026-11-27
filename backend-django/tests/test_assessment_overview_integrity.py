@@ -34,7 +34,7 @@ class AssessmentOverviewIntegrityTests(SimpleTestCase):
         answer = SimpleNamespace(question_id='q1', response='unverified answer', score=None, graded_by_id=None,
             feedback=None, rubric_scores={'transcript': 'unverified answer', 'speech_diagnostics': {'fluency_score': 10}})
         with ExitStack() as stack:
-            stack.enter_context(patch.object(assessment, 'assert_can_view'))
+            stack.enter_context(patch.object(assessment, 'authorize_attempt'))
             att = stack.enter_context(patch.object(assessment.MockAttempt.objects, 'filter'))
             att.return_value.select_related.return_value.first.return_value = attempt
             stack.enter_context(patch.object(assessment.MockAnswer.objects, 'filter', return_value=[answer]))

@@ -22,9 +22,10 @@ from django.db.models import Count, Q
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
-from apps.legacy_schema.models import Attendance, Group, MockExam, StudentProfile, User
+from apps.legacy_schema.models import Attendance, Group, MockExam, User
 from common.api.exceptions import ContractAPIException
 
+from .classroom_roster import active_enrollments, member_profiles
 from . import class_quiz as cq
 from . import classrooms, groups
 from .models import (ClassQuiz, ClassQuizAppeal, ClassQuizAssignment, ClassQuizAttempt, ClassroomArchive, ClassroomEnrollment,
@@ -91,7 +92,7 @@ def overview(actor) -> dict:
     today = timezone.localdate()
     own = _own_groups(actor)
     ids = [g.id for g in own]
-    counts = dict(StudentProfile.objects.filter(group_id__in=ids).values('group_id').annotate(n=Count('pk')).values_list('group_id', 'n'))
+    counts = dict(active_enrollments(group_id__in=ids).values('group_id').annotate(n=Count('pk')).values_list('group_id', 'n'))
     marks = {}
     for row in Attendance.objects.filter(group_id__in=ids, date=today).values('group_id', 'state').annotate(n=Count('pk')):
         marks.setdefault(row['group_id'], {})[row['state']] = row['n']
@@ -141,7 +142,7 @@ def attendance_day(actor, group_id, day_value=None) -> dict:
     from . import attendance as att
     group = att.manage_group(actor, group_id)
     day = _parse_day(day_value)
-    profiles = list(StudentProfile.objects.filter(group_id=group_id).select_related('user').order_by('user__name', 'user_id'))
+    profiles = list(member_profiles(group_id).select_related('user').order_by('user__name', 'user_id'))
     stored = {r.student_id: r for r in Attendance.objects.filter(group_id=group_id, date=day)}
     students = [dict(studentId=p.user_id, name=p.user.name, active=bool(p.user.is_active),
                      state=stored[p.user_id].state if p.user_id in stored else None) for p in profiles]
@@ -236,7 +237,7 @@ def _validate(actor, group, data: dict) -> dict:
         fail('VALIDATION_ERROR', "Vazifa turini tanlang")
     deadline = _parse_deadline(data.get('deadline'))
     plan = dict(type=kind, deadline=deadline, groupId=group.id, groupName=group.name,
-                studentCount=StudentProfile.objects.filter(group_id=group.id).count())
+                studentCount=member_profiles(group.id).count())
     if kind == 'quiz':
         limit, attempts = data.get('timeLimitMinutes'), data.get('maxAttempts', 1)
         if limit is not None and (type(limit) is not int or not 1 <= limit <= 300):
@@ -389,7 +390,7 @@ def assign_options(actor, group_id) -> dict:
         sets = sets.filter(Q(created_by_id=actor.id) | Q(group_id=group.id))
     sets = sets.annotate(n=Count('words', filter=Q(words__is_archived=False))).filter(n__gt=0)
     return dict(
-        group=dict(id=group.id, name=group.name, studentCount=StudentProfile.objects.filter(group_id=group.id).count()),
+        group=dict(id=group.id, name=group.name, studentCount=member_profiles(group.id).count()),
         quizzes=[dict(id=q.id, title=q.title, category=q.category, questionCount=q.n, status=q.status, timeLimitMinutes=q.time_limit_minutes,
                       maxAttempts=q.max_attempts) for q in quizzes.order_by('-updated_at')[:50]],
         vocabularySets=[dict(id=s.id, title=s.title, wordCount=s.n) for s in sets.order_by('title', 'id')[:100]],
@@ -401,7 +402,7 @@ def assign_options(actor, group_id) -> dict:
 # ================================================================================================ homework: results
 
 def _roster(group_id):
-    return dict(StudentProfile.objects.filter(group_id=group_id).select_related('user').values_list('user_id', 'user__name'))
+    return dict(member_profiles(group_id).select_related('user').values_list('user_id', 'user__name'))
 
 
 def _former(group_id, student_ids):

@@ -13,10 +13,11 @@ import { Avatar } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { AdjustPointsDialog } from "@/components/students/adjust-points-dialog";
+import { StudentMemberships } from "./student-memberships";
 import { DeleteStudentDialog } from "@/components/students/delete-student-dialog";
 import { Trash2 } from "lucide-react";
 import { UserFormDialog } from "@/components/users/user-form-dialog";
-import { useUserDetail, useApproveStudent, useDeactivateUser } from "@/hooks/use-users";
+import { useUserDetail, useApproveStudent, useDeactivateUser, useUpdateUser } from "@/hooks/use-users";
 import { useMe } from "@/hooks/use-me";
 import { usePoints } from "@/hooks/use-points";
 import { useStudentAttendance } from "@/hooks/use-attendance";
@@ -52,8 +53,11 @@ export function StudentDetailView({ studentId }: { studentId: string }) {
   const groupsQ = useGroups();
   const approve = useApproveStudent();
   const deactivate = useDeactivateUser();
+  const reactivate = useUpdateUser(studentId);
+  const management = useTranslations("studentManagement");
   const { data: me } = useMe();
   const isSuper = me?.user.role === "super_admin";
+  const office = isSuper || me?.user.role === "admin";
   const router = useRouter();
   const tst = useTranslations("staff");
   const [adjustOpen, setAdjustOpen] = React.useState(false);
@@ -180,7 +184,7 @@ export function StudentDetailView({ studentId }: { studentId: string }) {
               Talabani o&apos;chirish
             </Button>
           )}
-          {isSuper && user.isActive && user.id !== me?.user.id && user.role !== "super_admin" && (
+          {office && user.isActive && user.role === "student" && (
             <Button
               size="sm"
               variant="ghost"
@@ -201,9 +205,18 @@ export function StudentDetailView({ studentId }: { studentId: string }) {
               {tst("deactivate")}
             </Button>
           )}
+          {office && !user.isActive && user.role === "student" && (
+            <Button size="sm" variant="outline" loading={reactivate.isPending} onClick={() => {
+              if (confirm(management("reactivateConfirm"))) reactivate.mutate({ isActive: true }, {
+                onError: () => toast.error(tc("unknownError")),
+              });
+            }}>{management("reactivate")}</Button>
+          )}
           {!user.isActive && <Badge variant="danger">{tst("inactive")}</Badge>}
         </div>
       </Card>
+
+      {office && <StudentMemberships studentId={studentId} name={user.name} groups={groupsQ.data ?? []} />}
 
       {/* Davomat + to'lov */}
       <div className="mb-4 grid gap-4 sm:grid-cols-2">

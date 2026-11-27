@@ -185,7 +185,7 @@ class GroupExamExportServiceTests(SimpleTestCase):
     @patch("apps.core.group_exam_export.classroom_assessments")
     @patch("apps.core.group_exam_export.AssessmentJob.objects")
     @patch("apps.core.group_exam_export.classroom_attempts")
-    @patch("apps.core.group_exam_export.StudentProfile.objects")
+    @patch("apps.core.group_exam_export.member_profiles")
     @patch("apps.core.group_exam_export.MockExam.objects")
     @patch("apps.core.group_exam_export.Group.objects")
     def test_get_group_exam_export_data(
@@ -202,7 +202,7 @@ class GroupExamExportServiceTests(SimpleTestCase):
 
         student_user = SimpleNamespace(id="u-1", name="Komiljon Roziyev", phone="+998901234567")
         st_profile = MagicMock(user_id="u-1", user=student_user)
-        mock_roster_qs.filter.return_value.select_related.return_value.order_by.return_value = [st_profile]
+        mock_roster_qs.return_value.select_related.return_value.order_by.return_value = [st_profile]
 
         att = MagicMock(
             id="att-1",

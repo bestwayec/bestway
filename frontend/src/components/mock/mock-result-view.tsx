@@ -17,6 +17,7 @@ import {
   useReopenMock,
 } from "@/hooks/use-mock";
 import { useMe } from "@/hooks/use-me";
+import { PracticeResultSharing } from "./practice-result-sharing";
 import { ExamLogPanel } from "./exam-log-panel";
 import type { MockAttemptDetail, MockAttemptQuestion, MockAttemptSection, MockSkill } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -63,7 +64,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
   const t = useTranslations("mock");
   const { data: me } = useMe();
   const role = me?.user.role;
-  const isStaff = role === "teacher" || role === "admin" || role === "super_admin";
+  const isStaff = (role === "teacher" && attempt.canGrade !== false) || role === "admin" || role === "super_admin";
   const grade = useGradeMock(attempt.id);
   const [certModalOpen, setCertModalOpen] = React.useState(false);
   const [feedbackModalOpen, setFeedbackModalOpen] = React.useState(false);
@@ -358,6 +359,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
       {!isIelts && attempt.specificationVersion && <MultilevelResultBreakdown attempt={attempt} />}
       {isIelts && (completed || partialPractice) && <IeltsResultBreakdown attempt={attempt} />}
 
+      {role === "student" && attempt.canSharePractice && <PracticeResultSharing attemptId={attempt.id} />}
       {attempt.status !== "in_progress" && <AssessmentPanel attemptId={attempt.id} isStaff={isStaff} />}
 
       {/* Staff: what the exam window recorded, after the work to grade (also when no answer was given). */}

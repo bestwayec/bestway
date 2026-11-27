@@ -19,7 +19,7 @@ from common.auth.passwords import hash_password
 from common.auth.permissions import Authenticated
 
 from .auth_service import unique_link_code
-from .classroom_roster import assert_active, record_enrollment
+from .classroom_roster import active_enrollments, assert_active, member_profiles, record_enrollment
 from .domain_contracts import invalid, js_length, paginated, pagination, payload
 from .mock_attempt_views import success
 from .system_settings import audit, numeric_settings
@@ -99,11 +99,16 @@ def update(actor,identifier,data):
             assert_active(group_id)
         values={column:data[key] for key,column in [('isApproved','is_approved'),('groupId','group_id')] if key in data}
         StudentProfile.objects.filter(user_id=identifier).update(**values)
-        if 'groupId' in data:
-            record_enrollment(identifier, student.group_id, group_id)
+        if group_id:
+            record_enrollment(identifier, None, group_id)
     values={column:data[key] for key,column in [('name','name'),('phone','phone'),('role','role'),('isActive','is_active'),('telegramChatId','telegram_chat_id')] if key in data}
     if data.get('password'): values['password_hash']=hash_password(data['password'])
-    if values: User.objects.filter(id=identifier).update(**values,updated_at=timezone.now())
+    if values:
+        if data.get('isActive') is False and identifier == actor.id:
+            raise ContractAPIException('FORBIDDEN', "O'z akkauntingizni bloklay olmaysiz", 403)
+        User.objects.filter(id=identifier).update(**values, updated_at=timezone.now())
+    if data.get('isActive') is False:
+        RefreshToken.objects.filter(user_id=identifier).delete()
     new={key:(data[key] if data.get(key) is not None else old[key]) for key in old}
     if 'groupId' in data: new['groupId']=data['groupId']
     new['passwordChanged']=bool(data.get('password'))
@@ -130,7 +135,7 @@ def users(request):
         return success(create(request.user,validate(payload(request,{'name','phone','password','role','groupId'}))),201)
     if request.user.role not in ('admin', 'super_admin', 'teacher'):
         raise ContractAPIException('FORBIDDEN', 'Ruxsat berilmagan', 403)
-    q=pagination(request,{'role','groupId','search'})
+    q=pagination(request,{'role','groupId','search','teacherId','track','accountStatus'})
     if request.user.role == 'teacher':
         if q.get('role') and q['role'] != 'student':
             raise ContractAPIException('FORBIDDEN', "O'qituvchi faqat o'quvchilarni ko'ra oladi", 403)
@@ -138,7 +143,21 @@ def users(request):
     if q.get('role') and q['role'] not in ROLES: invalid('role must be one of the following values: super_admin, admin, teacher, student, parent')
     rows=User.objects.all()
     if q.get('role'): rows=rows.filter(role=q['role'])
-    if q.get('groupId'): rows=rows.filter(id__in=StudentProfile.objects.filter(group_id=q['groupId']).values('user_id'))
+    if q.get('groupId'):
+        rows = rows.filter(id__in=member_profiles(q['groupId']).values('user_id'))
+    if q.get('teacherId'):
+        rows = rows.filter(id__in=active_enrollments(group__teacher_id=q['teacherId']).values('student_id'))
+    if q.get('track'):
+        if q['track'] not in ('IELTS', 'MULTILEVEL'):
+            invalid('Invalid assessment track')
+        rows = rows.filter(studentprofile__active_program=q['track'])
+    account_status = q.get('accountStatus')
+    if account_status:
+        if account_status not in ('active', 'suspended', 'pending'):
+            invalid('Invalid account status')
+        rows = rows.filter(is_active=account_status != 'suspended')
+        if account_status == 'pending':
+            rows = rows.filter(studentprofile__is_approved=False)
     search_term = (q.get('search') or '').strip()
     if search_term and request.user.role == 'teacher' and User.objects.filter(id=search_term).exists():
         rows = rows.filter(id=search_term)
@@ -300,3 +319,21 @@ def user(request,user_id):
         return success(deactivate(request.user,user_id))
     data=validate(payload(request,{'name','phone','password','role','isActive','isApproved','groupId','telegramChatId'}),True)
     return success(update(request.user,user_id,data))
+
+
+@api_view(["GET"])
+@permission_classes([Authenticated])
+def student_memberships(request, user_id):
+    require_role(request, "admin", "super_admin")
+    from .models import ClassroomArchive
+
+    rows = active_enrollments(student_id=user_id).select_related("group__teacher").order_by("group__name", "group_id")
+    archived = set(ClassroomArchive.objects.filter(group_id__in=rows.values("group_id")).values_list("group_id", flat=True))
+    return success([
+        {
+            "groupId": row.group_id, "name": row.group.name,
+            "teacherName": row.group.teacher.name if row.group.teacher else None,
+            "startedAt": row.started_at, "source": row.source, "archived": row.group_id in archived,
+        }
+        for row in rows
+    ])

@@ -76,8 +76,11 @@ export function useUpdateUser(id: string) {
 export function useDeactivateUser() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.delete(`/users/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+    mutationFn: (id: string) => api.patch(`/users/${id}`, { isActive: false }),
+    onSuccess: (_, id) => Promise.all([
+      qc.invalidateQueries({ queryKey: ["users"] }),
+      qc.invalidateQueries({ queryKey: ["user", id] }),
+    ]),
   });
 }
 

@@ -2,7 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl";
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   BookOpen,
@@ -64,6 +64,8 @@ export interface StudentAssignmentsWidgetProps {
 export function StudentAssignmentsWidget({ groupName }: StudentAssignmentsWidgetProps) {
   const format = useFormatter();
   const tu = useTranslations("uiText");
+  const inviteText = useTranslations("classroomInvitation");
+  const queryClient = useQueryClient();
   const router = useRouter();
   const [openingId, setOpeningId] = React.useState<string | null>(null);
 
@@ -98,6 +100,15 @@ export function StudentAssignmentsWidget({ groupName }: StudentAssignmentsWidget
   const [joinModalOpen, setJoinModalOpen] = React.useState(false);
   const [inviteCode, setInviteCode] = React.useState("");
   const [isJoining, setIsJoining] = React.useState(false);
+  const [invitation, setInvitation] = React.useState<{ groupName: string; requiresApproval: boolean } | null>(null);
+
+  React.useEffect(() => {
+    const code = new URLSearchParams(window.location.hash.slice(1)).get("join");
+    if (!code || !/^BW5-[A-F0-9]{24}$/i.test(code)) return;
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    setInviteCode(code.toUpperCase());
+    setJoinModalOpen(true);
+  }, []);
 
   const handleJoinCohort = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,13 +120,31 @@ export function StudentAssignmentsWidget({ groupName }: StudentAssignmentsWidget
 
     try {
       setIsJoining(true);
-      const res = await apiClient.post<{ cohort_name: string }>("/student/join-cohort", {
-        invite_code: code,
-      });
-      toast.success(tu("assignments.joined", { name: res.cohort_name }));
+      if (code.startsWith("BW5-")) {
+        if (!invitation) {
+          setInvitation(await apiClient.post<{ groupName: string; requiresApproval: boolean }>(
+            "/classroom-invitations/join", { code, preview: true },
+          ));
+          return;
+        }
+        const joined = await apiClient.post<{ groupName: string; status: "active" | "pending" | "rejected" }>(
+          "/classroom-invitations/join", { code, preview: false },
+        );
+        const name = joined.groupName;
+        if (joined.status === "active") toast.success(tu("assignments.joined", { name }));
+        else toast.info(inviteText(joined.status === "pending" ? "pendingStudent" : "rejectedStudent", { name }));
+      } else {
+        const legacy = await apiClient.post<{ cohort_name: string }>("/student/join-cohort", { invite_code: code });
+        toast.success(tu("assignments.joined", { name: legacy.cohort_name }));
+      }
+      setInvitation(null);
       setInviteCode("");
       setJoinModalOpen(false);
-      fetchAssignments();
+      await Promise.all([
+        fetchAssignments(),
+        queryClient.invalidateQueries({ queryKey: ["groups"] }),
+        queryClient.invalidateQueries({ queryKey: ["me"] }),
+      ]);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : tu("assignments.codeInvalid");
       toast.error(msg);
@@ -318,7 +347,12 @@ export function StudentAssignmentsWidget({ groupName }: StudentAssignmentsWidget
       )}
 
       {/* Join Cohort Modal */}
-      <Dialog open={joinModalOpen} onOpenChange={setJoinModalOpen}>
+      <Dialog open={joinModalOpen} onOpenChange={(open) => {
+        if (!isJoining) {
+          setJoinModalOpen(open);
+          if (!open) setInvitation(null);
+        }
+      }}>
         <DialogContent className="max-w-md border border-border/80 bg-surface-elevated/95 p-6 backdrop-blur-xl sm:rounded-2xl">
           <DialogHeader className="space-y-1 text-left">
             <DialogTitle className="text-lg font-bold text-fg flex items-center gap-2">
@@ -332,24 +366,37 @@ export function StudentAssignmentsWidget({ groupName }: StudentAssignmentsWidget
 
           <form onSubmit={handleJoinCohort} className="mt-4 space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-fg-muted">{tu("assignments.codeLabel")}</label>
+              <label htmlFor="classroom-join-code" className="text-xs font-medium text-fg-muted">{tu("assignments.codeLabel")}</label>
               <input
+                id="classroom-join-code"
                 type="text"
                 value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                placeholder="BW-XXXX"
-                maxLength={10}
+                onChange={(e) => {
+                  setInviteCode(e.target.value.toUpperCase());
+                  setInvitation(null);
+                }}
+                spellCheck={false}
+                autoComplete="off"
+                placeholder="BW5-…"
+                maxLength={40}
+                disabled={isJoining}
                 className="w-full text-center tracking-widest font-mono text-lg font-bold uppercase rounded-xl border border-brand/40 bg-surface px-4 py-2.5 text-brand placeholder:text-fg-subtle focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                 required
               />
             </div>
 
+            {invitation && (
+              <p role="status" className="rounded-control border border-border p-3 text-sm text-fg">
+                <strong className="block">{invitation.groupName}</strong>
+                {inviteText(invitation.requiresApproval ? "approvalMode" : "automaticMode")}
+              </p>
+            )}
             <div className="flex items-center justify-end gap-2.5 pt-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setJoinModalOpen(false)}
+                onClick={() => { setInvitation(null); setJoinModalOpen(false); }}
                 disabled={isJoining}
               >
                 {tu("assignments.cancel")}
@@ -366,7 +413,7 @@ export function StudentAssignmentsWidget({ groupName }: StudentAssignmentsWidget
                     {tu("assignments.checking")}
                   </>
                 ) : (
-                  tu("assignments.submit")
+                  invitation ? inviteText("confirm") : inviteCode.startsWith("BW5-") ? inviteText("preview") : tu("assignments.submit")
                 )}
               </Button>
             </div>

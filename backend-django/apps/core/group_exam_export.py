@@ -20,11 +20,11 @@ from apps.legacy_schema.models import (
     Group,
     MockAttempt,
     MockExam,
-    StudentProfile,
     User,
 )
 from common.api.exceptions import ContractAPIException
 
+from .classroom_roster import member_profiles
 from .mock_scoring import MULTILEVEL_BELOW_B1, cefr_band, multilevel_level
 from .teacher_analytics import classroom_assessments, classroom_attempts, comparable_score, skill_score, valid_score
 
@@ -98,7 +98,7 @@ def get_group_exam_export_data(actor: User, group_id: str, exam_id: str) -> Dict
 
     # 1. Group student roster
     roster = list(
-        StudentProfile.objects.filter(group_id=group.id)
+        member_profiles(group.id)
         .select_related("user")
         .order_by("user__name", "user_id")
     )

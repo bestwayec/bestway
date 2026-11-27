@@ -4,6 +4,8 @@ import * as React from "react";
 import { Ban, BookOpen, Check, ChevronRight, Plus, Search, Star, Trash2, Users } from "lucide-react";
 import { DeleteStudentDialog } from "@/components/students/delete-student-dialog";
 import type { UserListItem } from "@/lib/types";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api-client";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
@@ -16,7 +18,7 @@ import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/app/page-header";
 import { ExportButton } from "@/components/app/export-button";
 import { UserFormDialog } from "@/components/users/user-form-dialog";
-import { useStudents, useApproveStudent, useDeactivateUser, useDebouncedValue } from "@/hooks/use-users";
+import { useTeachers, useApproveStudent, useDeactivateUser, useDebouncedValue } from "@/hooks/use-users";
 import { useGroups } from "@/hooks/use-groups";
 import { useMe } from "@/hooks/use-me";
 import { formatPhone } from "@/lib/utils";
@@ -30,13 +32,26 @@ export function StudentsView() {
   const [search, setSearch] = React.useState("");
   const [createOpen, setCreateOpen] = React.useState(false);
   const [deleteTarget, setDeleteTarget] = React.useState<UserListItem | null>(null);
+  const tf = useTranslations("studentManagement");
+  const [page, setPage] = React.useState(1);
+  const [groupId, setGroup] = React.useState("");
+  const [teacherId, setTeacher] = React.useState("");
+  const [track, setTrack] = React.useState("");
+  const [accountStatus, setStatus] = React.useState("");
   const debounced = useDebouncedValue(search);
-  const { data, isLoading, isError, refetch } = useStudents(debounced);
+  const filter = { role: "student", search: debounced || undefined, page, limit: 25, groupId: groupId || undefined,
+    teacherId: teacherId || undefined, track: track || undefined, accountStatus: accountStatus || undefined };
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["users", "students-page", filter],
+    queryFn: () => api.getPaged<UserListItem[]>("/users", filter),
+  });
   const groupsQ = useGroups();
+  const teachersQ = useTeachers();
   const approve = useApproveStudent();
   const deactivate = useDeactivateUser();
 
-  const students = data ?? [];
+  const students = data?.data ?? [];
+  const total = data?.meta?.total ?? 0;
 
   function onApprove(id: string) {
     approve.mutate(id, {
@@ -72,7 +87,7 @@ export function StudentsView() {
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-fg-subtle" />
         <Input
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           placeholder={t("search")}
           aria-label={t("search")}
           type="search"
@@ -80,6 +95,23 @@ export function StudentsView() {
         />
       </div>
 
+      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {([
+          [tf("group"), groupId, setGroup, (groupsQ.data ?? []).map((group) => [group.id, group.name])],
+          [tf("teacher"), teacherId, setTeacher, (teachersQ.data ?? []).map((teacher) => [teacher.id, teacher.name])],
+          [tf("track"), track, setTrack, [["IELTS", "IELTS"], ["MULTILEVEL", "Multilevel"]]],
+          [tf("account"), accountStatus, setStatus, [["active", tf("active")], ["pending", tf("pending")], ["suspended", tf("suspended")]]],
+        ] as const).map(([label, value, select, options]) => (
+          <label key={label} className="min-w-0 text-xs text-fg-muted">
+            {label}
+            <select value={value} onChange={(event) => { select(event.target.value); setPage(1); }}
+              className="mt-1 w-full rounded-control border border-border bg-surface px-2 py-2 text-sm text-fg">
+              <option value="">{tf("all")}</option>
+              {options.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+            </select>
+          </label>
+        ))}
+      </div>
       {isError ? (
         <ErrorState
           title={t("error")}
@@ -169,6 +201,13 @@ export function StudentsView() {
         </div>
       )}
 
+      {(page > 1 || total > filter.limit) && (
+        <nav aria-label={tf("pagination")} className="my-4 flex items-center justify-between gap-2">
+          <Button size="sm" variant="outline" onClick={() => setPage(page - 1)} disabled={page <= 1 || isLoading}>{tf("previous")}</Button>
+          <span className="text-sm text-fg-muted">{tf("page", { current: page, total: Math.max(1, Math.ceil(total / filter.limit)) })}</span>
+          <Button size="sm" variant="outline" onClick={() => setPage(page + 1)} disabled={page * filter.limit >= total || isLoading}>{tf("next")}</Button>
+        </nav>
+      )}
       <UserFormDialog
         open={createOpen}
         onClose={() => setCreateOpen(false)}

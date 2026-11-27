@@ -231,6 +231,10 @@ export interface NotificationItem {
 export interface DashboardStats {
   students: number;
   approvedStudents: number;
+  activeStudents: number;
+  studentsWithoutGroups: number;
+  activeGroups: number;
+  classroomExams: { assignments: number; submitted: number; finalized: number; pendingReview: number };
   teachers: number;
   parents: number;
   groups: number;
@@ -956,6 +960,8 @@ export interface DiagnosticFeedback {
 }
 
 export interface MockAttemptDetail extends MockAttemptSummary {
+  canSharePractice?: boolean;
+  canGrade?: boolean;
   annotations: unknown[];
   sections: MockAttemptSection[];
   cheatEvents?: { event: string; date: string }[];

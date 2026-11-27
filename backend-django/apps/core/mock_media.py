@@ -359,13 +359,14 @@ def review_audio_view(request, attempt_id, group_id):
     Only the attempt's own viewers (assert_view), only once the result is released, only a
     part of that attempt's exam, and never while the student has an attempt of the same
     exam in progress (review must not replay the audio of a running exam)."""
-    from .mock_attempts import assert_view, review_blocked
+    from .classroom_results import assert_attempt_access
+    from .mock_attempts import review_blocked
     from .mock_catalog import is_staff
     actor = request.user
     attempt = MockAttempt.objects.select_related('exam').filter(id=attempt_id).first()
     if attempt is None:
         raise ContractAPIException('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404)
-    assert_view(actor, attempt.student_id, started_at=attempt.started_at)
+    assert_attempt_access(actor, attempt)
     group = _group_or_throw(group_id)
     if group.section.exam_id != attempt.exam_id or group.section.skill != 'listening':
         raise ContractAPIException('FILE_NOT_FOUND', 'Fayl topilmadi', 404)

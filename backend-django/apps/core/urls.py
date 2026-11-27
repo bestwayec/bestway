@@ -13,6 +13,7 @@ from . import auth_views, exam_mode_views, topic_views, user_admin
 from . import content_views as content
 from . import game_points_views as game_points
 from . import group_views as groups
+from . import classroom_invitation_views, classroom_result_views
 from . import group_report_views as group_reports
 from . import study_plan_views as study_plans
 from . import group_report_views as group_reports
@@ -141,6 +142,9 @@ urlpatterns = [
     path('notifications/<str:notification_id>/read', notifications.read_view),
     path('groups', groups.groups_view),
     path('groups/', groups.groups_view),
+    path('classroom-invitations/join', classroom_invitation_views.join),
+    path('groups/<str:group_id>/invitation', classroom_invitation_views.manage),
+    path('groups/<str:group_id>/invitation/requests/<int:request_id>', classroom_invitation_views.decide),
     path('groups/<str:group_id>', groups.group_view),
     path('groups/<str:group_id>/', groups.group_view),
     path('groups/<str:group_id>/analytics', group_reports.group_analytics_view),
@@ -240,6 +244,7 @@ urlpatterns = [
     path('mock/attempts/start/', start_view),
     path('mock/attempts/mine/type-accuracy', type_accuracy_view),
     path('mock/attempts/<str:attempt_id>/reveal', reveal_view),
+    path('mock/attempts/<str:attempt_id>/practice-shares', classroom_result_views.shares),
     path('mock/attempts/mine', mine_view),
     path('mock/item-bank', item_bank_view),
     path('mock/attempts/<str:attempt_id>', detail_view),
@@ -460,6 +465,7 @@ urlpatterns = [
     path('teachers', content.cards, {'teacher':True}), path('teachers/all', content.all_cards, {'teacher':True}),
     path('teachers/<str:identifier>/photo', content.card_image, {'teacher':True}), path('teachers/<str:identifier>', content.card, {'teacher':True}),
     path("users", user_admin.users), path("users/<str:user_id>", user_admin.user),
+    path("users/<str:user_id>/memberships", user_admin.student_memberships),
     path("topics", topic_views.topics_view),
     path("topics/", topic_views.topics_view),
     path("topics/<str:topic_id>", topic_views.topic_detail_view),

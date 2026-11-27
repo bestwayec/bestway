@@ -22,9 +22,10 @@ from datetime import timedelta
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from apps.legacy_schema.models import Group, StudentProfile, User
+from apps.legacy_schema.models import Group, User
 from common.api.exceptions import ContractAPIException
 
+from .classroom_roster import active_enrollments, member_profiles, student_group_ids
 from . import groups
 from .mock_scoring import variants as _text_variants
 from .models import ClassQuiz, ClassQuizAcceptedAnswer, ClassQuizAnswer, ClassQuizAssignment, ClassQuizAttempt, ClassQuizQuestion
@@ -375,7 +376,7 @@ def _require_student(actor):
 
 
 def _assert_member(student_id, assignment: ClassQuizAssignment):
-    if not StudentProfile.objects.filter(user_id=student_id, group_id=assignment.group_id).exists():
+    if not active_enrollments(student_id=student_id, group_id=assignment.group_id).exists():
         # Not disclosed: someone outside the group cannot learn the assignment exists.
         fail('QUIZ_NOT_FOUND', 'Test topilmadi', 404)
 
@@ -396,12 +397,9 @@ def _attempt_payload(attempt: ClassQuizAttempt, *, resumed=False) -> dict:
 
 def my_assignments(actor) -> list[dict]:
     _require_student(actor)
-    profile = StudentProfile.objects.filter(user_id=actor.id).first()
-    if profile is None or not profile.group_id:
-        return []
     now = timezone.now()
     out = []
-    for row in ClassQuizAssignment.objects.filter(group_id=profile.group_id, status='active').order_by('deadline'):
+    for row in ClassQuizAssignment.objects.filter(group_id__in=student_group_ids(actor.id), status='active').order_by('deadline'):
         attempts = list(ClassQuizAttempt.objects.filter(assignment=row, student_id=actor.id).order_by('attempt_no'))
         submitted = [a for a in attempts if a.status == 'submitted']
         active = next((a for a in attempts if a.status == 'in_progress'), None)
@@ -641,7 +639,7 @@ def assignment_overview(actor, assignment_id) -> dict:
     now = timezone.now()
     for attempt in ClassQuizAttempt.objects.filter(assignment=row, status='in_progress', deadline_at__lte=now):
         finalize(attempt.id, auto=True)
-    roster = list(StudentProfile.objects.filter(group_id=row.group_id).values_list('user_id', flat=True))
+    roster = list(member_profiles(row.group_id).values_list('user_id', flat=True))
     names = dict(User.objects.filter(id__in=roster).values_list('id', 'name'))
     attempts = list(ClassQuizAttempt.objects.filter(assignment=row, student_id__in=roster).order_by('student_id', 'attempt_no'))
     by_student: dict[str, list] = {}

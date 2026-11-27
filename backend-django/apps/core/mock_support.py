@@ -95,7 +95,10 @@ def history(actor,query):
     for key,field in [('status','status'),('studentId','student_id'),('examId','exam_id')]:
         if query.get(key): rows=rows.filter(**{field:query[key]})
     if query.get('program'): rows=rows.filter(exam__type__in=['multilevel'] if query['program']=='MULTILEVEL' else ['ielts_academic','ielts_general'])
-    if actor.role=='teacher': rows=rows.filter(student__group__teacher_id=actor.id)
+    if actor.role == 'teacher':
+        from .classroom_results import assignment_attempts
+
+        rows = assignment_attempts(rows, teacher_id=actor.id, include_practice_shares=True)
     def shape(a):
         value=summary(a,detail=True); value['examTitle']=a.exam.title
         return value
@@ -105,7 +108,12 @@ def history(actor,query):
 def locked(actor,attempt_id):
     row=MockAttempt.objects.select_for_update().filter(id=attempt_id).first()
     if row is None: fail('MOCK_ATTEMPT_NOT_FOUND','Urinish topilmadi',404)
-    assert_view(actor,row.student_id)
+    if actor.role == 'teacher':
+        from .classroom_results import assert_attempt_access
+
+        assert_attempt_access(actor, row, grade=True)
+    else:
+        assert_view(actor, row.student_id)
     return row
 
 
@@ -191,7 +199,12 @@ def verify_certificate(attempt_id, code):
 def certificate_data(actor,attempt_id):
     row=MockAttempt.objects.select_related('exam','student__user').filter(id=attempt_id).first()
     if row is None: fail('MOCK_ATTEMPT_NOT_FOUND','Urinish topilmadi',404)
-    assert_view(actor,row.student_id)
+    if actor.role == 'teacher':
+        from .classroom_results import assert_attempt_access
+
+        assert_attempt_access(actor, row)
+    else:
+        assert_view(actor, row.student_id)
     from .mock_practice import is_partial, scope
     is_part = is_partial(row)
     internal = {}

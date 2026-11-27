@@ -4,13 +4,13 @@ from datetime import UTC, date, datetime, time, timedelta
 from math import isfinite
 from statistics import mean, median
 
-from django.db.models import Exists, F, OuterRef, Q
-from django.db.models.fields.json import KeyTextTransform
+from django.db.models import F, Q
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from apps.legacy_schema.models import AssessmentJob, Attendance, AuditLog, MockAnswer, MockAttempt, MockExamType, MockQuestion, SpeechTranscript, StudentProfile
 from common.api.exceptions import ContractAPIException
+from .classroom_roster import member_profiles
 from .groups import get_group
 from .homework_scoring import ASSIGNMENT_KEY
 from .mock_practice import is_partial, scope
@@ -58,19 +58,9 @@ def authorize(actor, group_id):
 
 
 def classroom_attempts(group_id):
-    """Use a dated enrollment or an explicit link from a classroom assignment."""
-    enrolled = ClassroomEnrollment.objects.filter(
-        group_id=group_id, student_id=OuterRef("student_id"), started_at__lte=OuterRef("started_at"),
-    ).filter(Q(ended_at__isnull=True) | Q(ended_at__gt=OuterRef("started_at")))
-    linked = HomeworkSubmission.objects.filter(
-        assignment__cohort__classroom_id=group_id, assignment__exam_id=OuterRef("exam_id"),
-        student_id=OuterRef("student_id"), attempt_id=OuterRef("id"), source="exam_attempt",
-    )
-    launch = HomeworkAssignment.objects.filter(cohort__classroom_id=group_id, exam_id=OuterRef("exam_id"),
-                                               id=OuterRef("assignment_for_report"))
-    return MockAttempt.objects.alias(assignment_for_report=KeyTextTransform(ASSIGNMENT_KEY, "media_state")).filter(
-        Exists(enrolled) | Exists(linked) | Exists(launch),
-    )
+    from .classroom_results import assignment_attempts
+
+    return assignment_attempts(MockAttempt.objects.all(), group_id=group_id)
 
 
 def valid_score(value, maximum):
@@ -113,7 +103,7 @@ def classroom_assessments(attempts):
     return by_attempt
 
 
-def grading_queue(attempts, eligible, names, profiles, actor, skill):
+def grading_queue(attempts, eligible, names, skill):
     by_attempt = classroom_assessments(attempts)
     latest = {}
     for attempt in attempts:
@@ -161,9 +151,8 @@ def grading_queue(attempts, eligible, names, profiles, actor, skill):
         outstanding = {entry["state"] for entry in states.values()} - {"fullyGraded"}
         for state in outstanding:
             counts[state] += 1
-        if actor.role != "teacher" or attempt.student_id in profiles:
-            rows.append(dict(attemptId=attempt.id, studentId=attempt.student_id, name=names[attempt.student_id],
-                exam=attempt.exam.title, track=attempt.exam.type, status=attempt.status, skills=states))
+        rows.append(dict(attemptId=attempt.id, studentId=attempt.student_id, name=names[attempt.student_id],
+            exam=attempt.exam.title, track=attempt.exam.type, status=attempt.status, skills=states))
     return dict(counts=counts, rows=rows)
 
 
@@ -175,12 +164,15 @@ def own_exam_benchmark(attempt):
     if comparable_score(attempt) is None:
         return None
     started = attempt.started_at
-    membership = ClassroomEnrollment.objects.filter(student_id=attempt.student_id, started_at__lte=started).filter(
-        Q(ended_at__isnull=True) | Q(ended_at__gt=started),
-    ).order_by("-started_at").first()
-    if membership is None:
+    assignment_id = (attempt.media_state or {}).get(ASSIGNMENT_KEY)
+    if not assignment_id:
         return None
-    rows = list(classroom_attempts(membership.group_id).filter(
+    group_id = HomeworkAssignment.objects.filter(pk=assignment_id, exam_id=attempt.exam_id).values_list(
+        "cohort__classroom_id", flat=True,
+    ).first()
+    if not group_id:
+        return None
+    rows = list(classroom_attempts(group_id).filter(
         status="completed", flow_mode="full_test", exam_id=attempt.exam_id,
         specification_version=attempt.specification_version, score_version=attempt.score_version,
         submitted_at__isnull=False, submitted_at__lte=attempt.submitted_at,
@@ -271,7 +263,7 @@ def objective_metrics(attempts, skill, include_questions=False):
 def get_group_analytics(actor, group_id, params=None):
     group = authorize(actor, group_id)
     options = filters(params or {})
-    profiles = dict(StudentProfile.objects.filter(group_id=group_id).values_list("user_id", "user__name"))
+    profiles = dict(member_profiles(group_id).values_list("user_id", "user__name"))
     rows = classroom_attempts(group_id)
     assignment = None
     eligible = set(profiles)
@@ -325,7 +317,7 @@ def get_group_analytics(actor, group_id, params=None):
         by_student[attempt.student_id].append(attempt)
     for student, name in StudentProfile.objects.filter(user_id__in=eligible - names.keys()).values_list("user_id", "user__name"):
         names[student] = name
-    queue = grading_queue(attempts, eligible, names, profiles, actor, skill)
+    queue = grading_queue(attempts, eligible, names, skill)
     chosen = latest_attempts(attempts, skill, options["policy"])
     comparable = defaultdict(list)
     for attempt in chosen.values():

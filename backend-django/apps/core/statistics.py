@@ -2,11 +2,15 @@
 import math
 from datetime import datetime, timedelta
 
+from django.db.models import Count
 from django.utils import timezone
 
 from apps.legacy_schema import models as m
 
 from .attendance import csv_cell
+from .classroom_results import assignment_attempts
+from .classroom_roster import active_enrollments
+from .models import ClassroomArchive, HomeworkAssignment
 from .mock_scoring import skipped_skills
 
 
@@ -31,17 +35,28 @@ def income(months=6):
 
 def dashboard():
     now=timezone.localtime();today=now.date()
-    active=m.StudentProfile.objects.filter(user__is_active=True)
+    students = m.User.objects.filter(role="student")
+    active = students.filter(is_active=True)
+    active_groups = m.Group.objects.exclude(id__in=ClassroomArchive.objects.values("group_id"))
+    grouped_students = active_enrollments(group_id__in=active_groups.values("id")).values("student_id")
+    assignments = HomeworkAssignment.objects.filter(cohort__classroom_id__isnull=False, exam_id__isnull=False)
+    results = assignment_attempts(m.MockAttempt.objects.all(), linked_classrooms_only=True)
+    submitted = results.filter(submitted_at__isnull=False)
+    assignment_totals = dict(submitted.values_list("status").annotate(total=Count("id")))
     attendance=list(m.Attendance.objects.filter(date=today).values_list('state',flat=True))
     payments=m.Payment.objects.filter(year=now.year,month=now.month)
     present=attendance.count('present');late=attendance.count('late')
     paid_ids=payments.filter(state='paid').values_list('student_id',flat=True)
-    return dict(students=active.count(),approvedStudents=active.filter(is_approved=True).count(),
+    return dict(students=students.count(), activeStudents=active.count(),
+        approvedStudents=students.filter(studentprofile__is_approved=True).count(),
+        studentsWithoutGroups=students.exclude(id__in=grouped_students).count(), activeGroups=active_groups.count(),
+        classroomExams=dict(assignments=assignments.count(), submitted=sum(assignment_totals.values()),
+                           finalized=assignment_totals.get("completed", 0), pendingReview=assignment_totals.get("grading", 0)),
         teachers=m.User.objects.filter(role='teacher',is_active=True).count(),parents=m.User.objects.filter(role='parent',is_active=True).count(),
         groups=m.Group.objects.count(),tests=m.Test.objects.filter(is_active=True).count(),videos=m.VideoLesson.objects.count(),
         mock=dict(exams=m.MockExam.objects.filter(is_published=True).count(),gradingQueue=m.MockAttempt.objects.filter(status='grading').count(),pendingPurchases=m.MockPurchase.objects.filter(status='pending_confirmation').count()),
         today=dict(date=today.isoformat(),marked=len(attendance),present=present,absent=attendance.count('absent'),late=late,attendanceRate=rounded((present+late)/len(attendance)*100) if attendance else None),
-        month=dict(month=now.month,year=now.year,income=sum(payments.filter(state__in=['paid','partial']).values_list('amount',flat=True)),paidCount=payments.filter(state='paid').count(),debtors=active.filter(group_id__isnull=False).exclude(user_id__in=paid_ids).count()),
+        month=dict(month=now.month,year=now.year,income=sum(payments.filter(state__in=['paid','partial']).values_list('amount',flat=True)),paidCount=payments.filter(state='paid').count(),debtors=active.filter(id__in=grouped_students).exclude(id__in=paid_ids).count()),
         queue=dict(grading=m.TestAttempt.objects.filter(status='grading').count(),pendingPurchases=m.VideoPurchase.objects.filter(status='pending_confirmation').count()))
 
 

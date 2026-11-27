@@ -10,13 +10,12 @@ from apps.legacy_schema.models import (
     AssessmentEvaluation,
     AssessmentJob,
     Group,
-    MockAttempt,
     MockExam,
     SpeechTranscript,
-    StudentProfile,
 )
 from common.api.exceptions import ContractAPIException
 
+from .classroom_roster import member_profiles
 from .mock_practice import SCOPE_KEY, is_partial, scope
 
 
@@ -103,9 +102,12 @@ def rankings(actor, group_id, exam_id=None, skill='writing'):
         fail('GROUP_NOT_FOUND', 'Guruh topilmadi', 404)
     if actor.role == 'teacher' and group.teacher_id != actor.id:
         fail('FORBIDDEN', 'Bu guruh sizga biriktirilmagan')
-    roster = list(StudentProfile.objects.filter(group_id=group.id).select_related('user').order_by('user__name', 'user_id'))
+    from .teacher_analytics import classroom_attempts
+
+    roster = list(member_profiles(group.id).select_related('user').order_by('user__name', 'user_id'))
     student_ids = [student.user_id for student in roster]
-    exams = list(MockExam.objects.filter(type='multilevel', mockattempt__student_id__in=student_ids)
+    group_attempts = classroom_attempts(group_id).filter(student_id__in=student_ids)
+    exams = list(MockExam.objects.filter(type='multilevel', id__in=group_attempts.values('exam_id'))
         .distinct().order_by('title', 'id').values('id', 'title', 'type')) if student_ids else []
     result = dict(group=dict(id=group.id, name=group.name), skill=skill, exams=exams,
         selectedExamId=exam_id, cohorts=[], unranked=[])
@@ -117,11 +119,11 @@ def rankings(actor, group_id, exam_id=None, skill='writing'):
     # Exact frozen version/selection is required; damaged/unknown scopes stay in
     # the latest-attempt check rather than silently reviving an older grade.
     other_skill = 'speaking' if skill == 'writing' else 'writing'
-    unrelated = MockAttempt.objects.filter(exam_id=exam_id, student_id__in=student_ids,
+    unrelated = group_attempts.filter(exam_id=exam_id,
         flow_mode='partial_practice').annotate(ranking_scope=KeyTransform(SCOPE_KEY, 'media_state'))
     unrelated = unrelated.filter(ranking_scope__version=1, ranking_scope__skills=[other_skill]).values('id')
     # PostgreSQL DISTINCT ON chooses each student's latest relevant attempt.
-    attempts = list(MockAttempt.objects.filter(exam_id=exam_id, student_id__in=student_ids)
+    attempts = list(group_attempts.filter(exam_id=exam_id)
         .exclude(id__in=unrelated)
         .order_by('student_id', '-started_at', '-id').distinct('student_id'))
     by_student = {attempt.student_id: attempt for attempt in attempts}

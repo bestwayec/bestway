@@ -42,6 +42,10 @@ def latest_attempt(assignment, student_id):
     ).order_by("-started_at").first()
     if linked is not None:
         return linked
+    from .classrooms import is_linked
+
+    if is_linked(assignment.cohort):
+        return None
     return rows.exclude(media_state__has_key=ASSIGNMENT_KEY).order_by("-started_at").first()
 
 

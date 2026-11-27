@@ -45,7 +45,10 @@ export function StudentTransferDialog({
     if (!student || !targetGroupId || busy) return;
     setBusy(true);
     try {
-      await api.post(`/groups/${encodeURIComponent(targetGroupId)}/students`, { studentId: student.id });
+      await api.post(`/groups/${encodeURIComponent(targetGroupId)}/students`, {
+        studentId: student.id,
+        sourceGroupId,
+      });
       toast.success(t("transferSuccess"));
       setTargetGroupId("");
       onClose();

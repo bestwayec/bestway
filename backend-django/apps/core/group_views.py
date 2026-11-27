@@ -138,12 +138,15 @@ def export_group_results_view(request, group_id):
 @permission_classes([Authenticated])
 def add_student_view(request, group_id):
     require_role(request, 'teacher', 'admin', 'super_admin')
-    data = payload(request, {'studentId'})
+    data = payload(request, {'studentId', 'sourceGroupId'})
     if data.get('studentId') in ('', None):
         invalid('studentId should not be empty')
     if not isinstance(data['studentId'], str):
         invalid('studentId must be a string')
-    return success(service.add_student(request.user, group_id, data['studentId']), 201)
+    source = data.get('sourceGroupId')
+    if 'sourceGroupId' in data and (not isinstance(source, str) or not source or len(source) > 255):
+        invalid('sourceGroupId must identify a group')
+    return success(service.add_student(request.user, group_id, data['studentId'], source_group_id=source), 201)
 
 
 @api_view(['DELETE'])

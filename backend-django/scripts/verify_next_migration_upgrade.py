@@ -143,12 +143,14 @@ def verify():
     call_command("check_legacy_schema")
     call_command("migrate", check=True)
 
-    from apps.core.models import HomeworkSubmission, UserWeakWord, VocabularyHomeworkSession
+    from apps.core.models import ClassroomEnrollment, HomeworkSubmission, UserWeakWord, VocabularyHomeworkSession
     from apps.legacy_schema.models import Attendance, Group, MockAnswer, StudentProfile
 
     assert Group.objects.get(pk=group_id).teacher_id == teacher_id
     profile = StudentProfile.objects.get(user_id=student_id)
     assert (profile.group_id, profile.current_points) == (group_id, 42)
+    period = ClassroomEnrollment.objects.get(student_id=student_id, group_id=group_id, ended_at__isnull=True)
+    assert period.started_at is None and period.source == "legacy_profile"
     assert Attendance.objects.get(pk="upgrade-attendance").state == "late"
     grade = HomeworkSubmission.objects.get(assignment_id=assignment_id, student_id=student_id)
     assert (grade.score_percent, grade.is_passed) == (100, True)
