@@ -55,6 +55,9 @@ class StandaloneWritingSpeakingReadinessTests(SimpleTestCase):
 
 class TeacherOverrideServiceTests(SimpleTestCase):
     def setUp(self):
+        self.addCleanup(patch.stopall)
+        patch("apps.core.classroom_results.explicit_teacher_access", return_value=True).start()
+        patch("apps.core.homework_scoring.propagate_attempt_finalization").start()
         self.teacher = SimpleNamespace(id="teacher-1", name="Teacher Komil", role="teacher")
         self.admin = SimpleNamespace(id="admin-1", name="Admin Boss", role="admin")
         self.student = SimpleNamespace(id="student-1", name="Student Alisher", role="student")

@@ -942,7 +942,7 @@ def detail(actor, attempt_id):
     from .classroom_results import answer_disclosure_status
 
     staff = mock_catalog.is_staff(actor) and teacher_can_grade is not False
-    disclosure = answer_disclosure_status(actor, attempt, is_review_blocked=review_blocked(attempt))
+    disclosure = answer_disclosure_status(actor, attempt, is_review_blocked=attempt.status == "completed" and review_blocked(attempt))
     show = disclosure["disclosed"]
     answers = {a.question_id: a for a in MockAnswer.objects.filter(attempt_id=attempt_id)}
     # One query per level instead of one per section and one per group (N+1).

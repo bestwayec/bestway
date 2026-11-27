@@ -9,7 +9,7 @@ from apps.core import homework_scoring as scoring
 
 
 def attempt(status="completed", raw=None):
-    return SimpleNamespace(id="att-1", status=status, raw_scores=raw)
+    return SimpleNamespace(id="att-1", status=status, raw_scores=raw, media_state={})
 
 
 class HomeworkScoringTests(SimpleTestCase):

@@ -20,6 +20,12 @@ from common.api.exceptions import ContractAPIException
 
 class TeacherGradingOverrideTests(SimpleTestCase):
     def setUp(self):
+        self.addCleanup(patch.stopall)
+        patch("apps.core.homework_scoring.propagate_attempt_finalization").start()
+        patch(
+            "apps.core.classroom_results.explicit_teacher_access",
+            side_effect=lambda teacher, attempt, *, grade=False: teacher.id == self.teacher.id and grade,
+        ).start()
         self.factory = APIRequestFactory()
         self.teacher = SimpleNamespace(
             id="teacher-001",
@@ -52,6 +58,7 @@ class TeacherGradingOverrideTests(SimpleTestCase):
 
         self.fake_attempt = SimpleNamespace(
             id="att-123",
+            student_id=self.student.id,
             overall_band=5.0,
             overall_score=50.0,
             section_bands={"writing": 5.0, "speaking": 5.0},
@@ -151,7 +158,7 @@ class TeacherGradingOverrideTests(SimpleTestCase):
         with self.assertRaises(ContractAPIException) as ctx:
             assessment.teacher_grade_attempt(self.other_teacher, "att-123", {"final_score": 6.0})
         self.assertEqual(ctx.exception.status_code, 403)
-        self.assertIn("biriktirilmagan", ctx.exception.contract_message)
+        self.assertEqual(ctx.exception.contract_code, "FORBIDDEN")
 
 
 class GroupExamExportServiceTests(SimpleTestCase):

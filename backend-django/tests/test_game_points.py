@@ -53,16 +53,22 @@ class GamePointsTests(SimpleTestCase):
             with self.subTest(url=url):self.assertEqual(self.client.get(url).status_code,400)
 
     def test_teacher_foreign_group_denied_before_any_points_write(self):
-        student=SimpleNamespace(group_id='group',group=SimpleNamespace(teacher_id='other'))
-        with patch.object(points.StudentProfile.objects,'filter') as query:
+        student = SimpleNamespace()
+        with patch.object(points.StudentProfile.objects, 'filter') as query, \
+             patch('apps.core.classroom_roster.active_enrollments') as enrollments:
+            enrollments.return_value.exists.return_value = False
             query.return_value.select_related.return_value.first.return_value=student
             with self.assertRaises(ContractAPIException) as raised:
                 points.adjust(SimpleNamespace(id='teacher',role='teacher'),'student',dict(change=1,reason='valid'))
             self.assertEqual(raised.exception.contract_code,'FORBIDDEN')
+            enrollments.assert_called_once_with(student_id='student', group__teacher_id='teacher')
 
     def test_teacher_limit_denied_before_any_points_write(self):
-        student=SimpleNamespace(group_id='group',group=SimpleNamespace(teacher_id='teacher'))
-        with patch.object(points.StudentProfile.objects,'filter') as query,patch.object(game,'setting',return_value=20):
+        student = SimpleNamespace()
+        with patch.object(points.StudentProfile.objects, 'filter') as query, \
+             patch.object(game, 'setting', return_value=20), \
+             patch('apps.core.classroom_roster.active_enrollments') as enrollments:
+            enrollments.return_value.exists.return_value = True
             query.return_value.select_related.return_value.first.return_value=student
             with self.assertRaises(ContractAPIException) as raised:
                 points.adjust(SimpleNamespace(id='teacher',role='teacher'),'student',dict(change=21,reason='valid'))
