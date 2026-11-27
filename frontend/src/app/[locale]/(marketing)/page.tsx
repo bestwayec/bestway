@@ -23,6 +23,8 @@ import { buttonVariants } from "@/components/ui/button-variants";
 import { Card } from "@/components/ui/card";
 import { TiltCard } from "@/components/ui/tilt-card";
 import { Reveal } from "@/components/marketing/reveal";
+import { HeroShowcase } from "@/components/marketing/hero-showcase";
+import { BentoFeatures } from "@/components/marketing/bento-features";
 import { TeachersCarousel } from "@/components/marketing/teachers-carousel";
 import type { TeacherProfile } from "@/components/marketing/teacher-card";
 import PixelCard from "@/components/ui/pixel-card-dynamic";
@@ -188,22 +190,11 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               ))}
             </ul>
           </div>
-          {/* A real screenshot of the exam window (seeded IELTS Academic mock, local stack). */}
-          <figure className="min-w-0">
-            <div className="overflow-hidden rounded-card border border-border bg-bg-subtle shadow-e3">
-              <div className="flex items-center gap-1.5 border-b border-border bg-surface px-3 py-2" aria-hidden>
-                <span className="size-2.5 rounded-full bg-border-strong" />
-                <span className="size-2.5 rounded-full bg-border-strong" />
-                <span className="size-2.5 rounded-full bg-border-strong" />
-                <span className="ml-3 truncate text-xs text-fg-subtle">{t("previewLabel")}</span>
-              </div>
-              <Image src="/product/exam-light.webp" alt={t("productExamAlt")} width={1366} height={768} priority sizes="(min-width: 1024px) 640px, 100vw" className="block h-auto w-full dark:hidden" />
-              <Image src="/product/exam-dark.webp" alt={t("productExamAlt")} width={1366} height={768} priority sizes="(min-width: 1024px) 640px, 100vw" className="hidden h-auto w-full dark:block" />
-            </div>
-            <figcaption className="mt-3 text-sm text-fg-subtle">{t("productExamCaption")}</figcaption>
-          </figure>
+          <HeroShowcase />
         </div>
       </section>
+
+      <BentoFeatures />
 
       {/* ── Exam formats: IELTS-style and Multilevel, honest about status ──── */}
       <section id="exams" className="marketing-section border-b border-border bg-bg-subtle scroll-mt-20">

@@ -383,6 +383,18 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
       )}
 
       {/* Savollar tahlili */}
+      {attempt.answerDisclosure && attempt.answerDisclosure.disclosed === false && (
+        <Card className="mt-6 border-warning-border bg-warning-bg p-4" data-testid="answer-disclosure-notice">
+          <p className="text-sm font-semibold text-warning">{t("resultView.disclosureLockedTitle")}</p>
+          <p className="mt-1 text-xs text-fg-muted">
+            {attempt.answerDisclosure.discloseAt
+              ? t("resultView.disclosureLockedDeadline", {
+                  date: new Date(attempt.answerDisclosure.discloseAt).toLocaleString(),
+                })
+              : t("resultView.disclosureLockedGroup")}
+          </p>
+        </Card>
+      )}
       <div className="mt-6 space-y-4">
         {attempt.sections.map((s) => {
           const canGrade = isStaff && MANUAL_SKILLS.has(s.skill);

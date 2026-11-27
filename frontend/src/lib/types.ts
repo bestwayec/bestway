@@ -969,6 +969,12 @@ export interface MockAttemptDetail extends MockAttemptSummary {
   classroomBenchmark?: { students: number; median: number };
   /** Writing/Speaking skills whose score is still an AI estimate (not yet confirmed by a teacher). */
   provisionalSkills?: string[];
+  answerDisclosure?: {
+    disclosed: boolean;
+    reason: string;
+    discloseAt: string | null;
+  };
+  groupName?: string | null;
 }
 
 export interface MockPurchaseItem {
@@ -1483,4 +1489,52 @@ export interface GroupAttendanceSummaryResponse {
     isExcused: boolean;
     note: string;
   }>;
+}
+
+export type GuardIncidentStatus = "new" | "acknowledged" | "explained" | "flagged";
+export type GuardIncidentSeverity = "info" | "warning" | "high" | "critical";
+
+export interface GuardAlertIncident {
+  id: string;
+  attemptId: string;
+  examId: string;
+  examTitle: string;
+  studentId: string;
+  studentName: string;
+  groupId: string | null;
+  groupName: string;
+  sessionId: string | null;
+  assignmentId: string | null;
+  supervisorId: string | null;
+  eventType: string;
+  severity: GuardIncidentSeverity;
+  skill: string;
+  questionRef: string;
+  integrityMode: string;
+  occurrenceCount: number;
+  status: GuardIncidentStatus;
+  offlineSynced: boolean;
+  metadata: Record<string, unknown>;
+  firstObservedAt: string;
+  lastObservedAt: string;
+  reviewedAt: string | null;
+  reviewNote: string;
+}
+
+export interface GroupLiveGuardStudent {
+  attemptId: string;
+  studentId: string;
+  studentName: string;
+  examId: string;
+  examTitle: string;
+  status: string;
+  currentSkill: string;
+  questionProgress: string;
+  lastActivityAt: string | null;
+  connectionStatus: "online" | "offline" | "idle";
+  incidentCount: number;
+  unacknowledgedCount: number;
+  highestSeverity: GuardIncidentSeverity;
+  latestIncidentAt: string | null;
+  incidents: GuardAlertIncident[];
 }

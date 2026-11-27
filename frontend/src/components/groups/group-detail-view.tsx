@@ -66,7 +66,7 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
   const [editOpen, setEditOpen] = React.useState(false);
   const [createOpen, setCreateOpen] = React.useState(false);
   const params = useSearchParams();
-  const TABS = ["overview", "students", "attendance", "homework", "results"] as const;
+  const TABS = ["overview", "students", "attendance", "homework", "results", "guard"] as const;
   type Tab = (typeof TABS)[number];
   const requestedTab = params.get("tab") as Tab | null;
   const [tab, setTabState] = React.useState<Tab>(requestedTab && TABS.includes(requestedTab) ? requestedTab : "overview");
@@ -274,6 +274,12 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
           <GroupAnalyticsDashboard groupId={groupId} groupName={group.name} className="mb-4" />
           <GroupLiveMonitoring groupId={groupId} />
           <GroupAiRanking groupId={groupId} />
+        </section>
+      )}
+
+      {canSeePhones && tab === "guard" && (
+        <section id="group-panel-guard" role="tabpanel" aria-labelledby="group-tab-guard">
+          <GroupLiveMonitoring groupId={groupId} />
         </section>
       )}
 

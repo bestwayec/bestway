@@ -14,7 +14,7 @@ class CoreMigrationGraph(SimpleTestCase):
 
     def test_no_conflicting_leaves(self):
         self.assertEqual(self.loader.detect_conflicts(), {})
-        self.assertEqual(self.loader.graph.leaf_nodes('core'), [('core', '0031_account_reconciliation_log')])
+        self.assertEqual(self.loader.graph.leaf_nodes('core'), [('core', '0032_live_exam_guard_and_telegram')])
 
     def test_merge_node_joins_both_branches(self):
         parents = set(self.loader.graph.node_map[('core', '0026_merge_mock27_and_telegram_bot2')].parents)

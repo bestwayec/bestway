@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { AppSidebar } from "@/components/app/app-sidebar";
 import { AppTopbar } from "@/components/app/app-topbar";
 import { MobileNav } from "@/components/app/mobile-nav";
+import { TeacherGuardAlertsProvider } from "@/components/app/teacher-guard-alerts";
 import type { Role } from "@/lib/types";
 
 export function AppLayoutShell({
@@ -45,13 +46,15 @@ export function AppLayoutShell({
   }
 
   return (
-    <div className="flex min-h-dvh bg-bg">
-      <AppSidebar role={role} />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <AppTopbar role={role} />
-        <main className="flex-1 px-4 pt-6 pb-32 sm:px-6 sm:pb-36 lg:pb-8">{children}</main>
+    <TeacherGuardAlertsProvider role={role}>
+      <div className="flex min-h-dvh bg-bg">
+        <AppSidebar role={role} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <AppTopbar role={role} />
+          <main className="flex-1 px-4 pt-6 pb-32 sm:px-6 sm:pb-36 lg:pb-8">{children}</main>
+        </div>
+        <MobileNav role={role} />
       </div>
-      <MobileNav role={role} />
-    </div>
+    </TeacherGuardAlertsProvider>
   );
 }

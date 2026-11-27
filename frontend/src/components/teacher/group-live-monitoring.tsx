@@ -3,25 +3,34 @@
 import * as React from "react";
 import {
   BookOpenText,
+  Check,
   Clock,
+  Flag,
   Headphones,
+  MessageSquare,
   Mic,
   PenLine,
   Radio,
   RefreshCw,
   ShieldAlert,
   ShieldCheck,
+  Wifi,
+  WifiOff,
   X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/feedback";
 import { examLogEventText } from "@/components/mock/exam-log-panel";
+import { useTeacherGuardAlerts } from "@/components/app/guard-alerts-context";
 import { useGroupLiveMonitoring } from "@/hooks/use-group-monitoring";
+import { api } from "@/lib/api-client";
 import type { CheatAnomalyEvent, LiveMonitoringStudent } from "@/lib/group-monitoring-types";
+import type { GroupLiveGuardStudent, GuardAlertIncident, GuardIncidentStatus } from "@/lib/types";
 
 const SECTION_ICONS = [
   { match: "listen", label: "Listening", icon: Headphones, tone: "text-info" },
@@ -55,13 +64,70 @@ function elapsedParts(startedAt: string, activeSeconds?: number): { hours: numbe
 
 export function GroupLiveMonitoring({ groupId }: { groupId: string }) {
   const t = useTranslations("liveMonitoring");
+  const tg = useTranslations("liveMonitoring.guard");
   const tl = useTranslations("mock.examLog");
+  const guardAlertsCtx = useTeacherGuardAlerts();
   const { data, isLoading, isError, refetch, isFetching } = useGroupLiveMonitoring(groupId);
   const [selectedStudent, setSelectedStudent] = React.useState<LiveMonitoringStudent | null>(null);
+  const [filter, setFilter] = React.useState<"all" | "flagged" | "unreviewed" | "offline">("all");
+  const [guardByAttempt, setGuardByAttempt] = React.useState<Record<string, GroupLiveGuardStudent>>({});
+  const [busyIncidentId, setBusyIncidentId] = React.useState<string | null>(null);
   const closeRef = React.useRef<HTMLButtonElement>(null);
   React.useEffect(() => { if (selectedStudent) closeRef.current?.focus(); }, [selectedStudent]);
 
+  const fetchGuardRoster = React.useCallback(async () => {
+    if (!groupId || typeof window === "undefined") return;
+    try {
+      const res = await api.get<{ students?: GroupLiveGuardStudent[] }>(
+        `/teacher/groups/${encodeURIComponent(groupId)}/live-guard`,
+      );
+      if (res && Array.isArray(res.students)) {
+        const next: Record<string, GroupLiveGuardStudent> = {};
+        for (const item of res.students) {
+          if (item.attemptId) next[item.attemptId] = item;
+        }
+        setGuardByAttempt(next);
+      }
+    } catch {
+      // keep existing live-monitoring data cleanly if live-guard endpoint is unavailable in tests
+    }
+  }, [groupId]);
+
+  React.useEffect(() => {
+    void fetchGuardRoster();
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void fetchGuardRoster();
+      }
+    }, 3000);
+    return () => window.clearInterval(timer);
+  }, [fetchGuardRoster]);
+
+  async function handleReviewIncident(incidentId: string, status: Exclude<GuardIncidentStatus, "new">) {
+    setBusyIncidentId(incidentId);
+    try {
+      if (guardAlertsCtx) {
+        await guardAlertsCtx.reviewIncident(incidentId, status);
+      } else {
+        await api.post(`/teacher/guard-alerts/${encodeURIComponent(incidentId)}/review`, { status, note: "" });
+        toast.success(tg("acknowledgedToast"));
+      }
+      await fetchGuardRoster();
+    } finally {
+      setBusyIncidentId(null);
+    }
+  }
+
   const students = data?.students ?? [];
+  const filteredStudents = React.useMemo(() => {
+    return students.filter((st) => {
+      const g = guardByAttempt[st.attemptId];
+      if (filter === "flagged") return st.antiCheatCount > 0 || (g?.incidentCount ?? 0) > 0;
+      if (filter === "unreviewed") return (g?.unacknowledgedCount ?? 0) > 0;
+      if (filter === "offline") return g ? g.connectionStatus !== "online" : false;
+      return true;
+    });
+  }, [students, guardByAttempt, filter]);
   const activeCount = students.length;
   const elapsedText = (st: LiveMonitoringStudent) => {
     const parts = elapsedParts(st.startedAt, st.timeActiveSeconds);
@@ -130,9 +196,37 @@ export function GroupLiveMonitoring({ groupId }: { groupId: string }) {
             <p className="mt-1 max-w-sm text-xs text-fg-muted">{t("emptyBody")}</p>
           </div>
         ) : (
+          <>
+          {students.length > 0 && (
+            <div className="mb-3 flex flex-wrap items-center gap-1.5">
+              {(
+                [
+                  { id: "all", label: tg("filterAll") },
+                  { id: "flagged", label: tg("filterFlagged") },
+                  { id: "unreviewed", label: tg("filterUnreviewed") },
+                  { id: "offline", label: tg("filterOffline") },
+                ] as const
+              ).map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setFilter(item.id)}
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                    filter === item.id
+                      ? "bg-brand text-brand-fg"
+                      : "border border-border bg-bg-subtle text-fg-muted hover:text-fg"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          )}
           <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border">
-            {students.map((st) => {
-              const recorded = st.antiCheatCount > 0;
+            {filteredStudents.map((st) => {
+              const guardInfo = guardByAttempt[st.attemptId];
+              const totalEvents = Math.max(st.antiCheatCount, guardInfo?.incidentCount ?? 0);
+              const recorded = totalEvents > 0;
               return (
                 <li
                   key={st.attemptId || st.studentId}
@@ -149,11 +243,34 @@ export function GroupLiveMonitoring({ groupId }: { groupId: string }) {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3 sm:justify-center">
-                    <SectionBadge skill={st.currentSection} />
+                    <SectionBadge skill={guardInfo?.currentSkill || st.currentSection} />
                     <span className="flex items-center gap-1 text-xs text-fg-muted">
                       <Clock className="size-3.5" aria-hidden />
                       {elapsedText(st)}
                     </span>
+                    {guardInfo && (
+                      <Badge
+                        variant={
+                          guardInfo.connectionStatus === "online"
+                            ? "success"
+                            : guardInfo.connectionStatus === "offline"
+                              ? "danger"
+                              : "warning"
+                        }
+                        className="inline-flex items-center gap-1 text-[11px]"
+                      >
+                        {guardInfo.connectionStatus === "online" ? (
+                          <Wifi className="size-3" aria-hidden />
+                        ) : (
+                          <WifiOff className="size-3" aria-hidden />
+                        )}
+                        {guardInfo.connectionStatus === "online"
+                          ? tg("connOnline")
+                          : guardInfo.connectionStatus === "offline"
+                            ? tg("connOffline")
+                            : tg("connIdle")}
+                      </Badge>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between gap-2 sm:justify-end">
@@ -171,7 +288,12 @@ export function GroupLiveMonitoring({ groupId }: { groupId: string }) {
                         aria-haspopup="dialog"
                       >
                         <ShieldAlert className="size-3.5" aria-hidden />
-                        <span>{t("recordedCount", { count: st.antiCheatCount })}</span>
+                        <span>{t("recordedCount", { count: totalEvents })}</span>
+                        {(guardInfo?.unacknowledgedCount ?? 0) > 0 && (
+                          <span className="rounded-full bg-warning px-1.5 py-0.2 text-[10px] font-bold text-bg">
+                            {guardInfo!.unacknowledgedCount}
+                          </span>
+                        )}
                       </button>
                     )}
                   </div>
@@ -179,6 +301,7 @@ export function GroupLiveMonitoring({ groupId }: { groupId: string }) {
               );
             })}
           </ul>
+          </>
         )}
 
         {selectedStudent && (
@@ -217,7 +340,71 @@ export function GroupLiveMonitoring({ groupId }: { groupId: string }) {
               </div>
 
               <div className="mt-4 max-h-60 divide-y divide-border overflow-y-auto rounded-xl border border-border bg-bg-subtle" tabIndex={0}>
-                {(selectedStudent.anomalies ?? []).length === 0 ? (
+                {(guardByAttempt[selectedStudent.attemptId]?.incidents?.length ?? 0) > 0 ? (
+                  guardByAttempt[selectedStudent.attemptId].incidents.map((inc: GuardAlertIncident) => (
+                    <div key={inc.id} className="space-y-1.5 p-2.5 text-xs">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-medium text-fg">
+                          {examLogEventText(tl, inc.eventType)}
+                          {inc.occurrenceCount > 1 ? ` · ${tg("occurrences", { count: inc.occurrenceCount })}` : ""}
+                          {inc.offlineSynced ? ` · ${tg("offlineRecovered")}` : ""}
+                        </span>
+                        <span className="shrink-0 tabular-nums text-fg-muted">
+                          {inc.lastObservedAt
+                            ? new Date(inc.lastObservedAt).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                second: "2-digit",
+                                hourCycle: "h23",
+                              })
+                            : ""}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge variant={inc.status === "flagged" ? "danger" : inc.status === "new" ? "warning" : "neutral"}>
+                          {tg(`statuses.${inc.status}`)}
+                        </Badge>
+                        {inc.status === "new" && (
+                          <>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={busyIncidentId === inc.id}
+                              onClick={() => void handleReviewIncident(inc.id, "acknowledged")}
+                              className="h-6 px-2 text-[11px]"
+                            >
+                              <Check className="mr-1 size-3" aria-hidden />
+                              {tg("acknowledge")}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              disabled={busyIncidentId === inc.id}
+                              onClick={() => void handleReviewIncident(inc.id, "explained")}
+                              className="h-6 px-2 text-[11px]"
+                            >
+                              <MessageSquare className="mr-1 size-3" aria-hidden />
+                              {tg("explained")}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              disabled={busyIncidentId === inc.id}
+                              onClick={() => void handleReviewIncident(inc.id, "flagged")}
+                              className="h-6 px-2 text-[11px] text-danger"
+                            >
+                              <Flag className="mr-1 size-3" aria-hidden />
+                              {tg("flag")}
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (selectedStudent.anomalies ?? []).length === 0 ? (
                   <div className="p-3 text-center text-xs text-fg-muted">
                     {t("logNoTypes", { count: selectedStudent.antiCheatCount })}
                   </div>

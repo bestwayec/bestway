@@ -20,6 +20,7 @@ from . import study_plan_views as study_plans
 from . import group_report_views as group_reports
 from . import study_plan_views as study_plans
 from . import legacy_authoring_views as legacy_admin
+from . import live_exam_guard_views as guard_views
 from . import legacy_test_views as legacy
 from . import mock_support_views as support
 from . import notification_views as notifications
@@ -299,6 +300,11 @@ urlpatterns = [
     path('mock/attempts/<str:attempt_id>/flag-cheat/', cheat_view),
     path('mock/attempts/<str:attempt_id>/anomaly', cheat_view),
     path('mock/attempts/<str:attempt_id>/anomaly/', cheat_view),
+    path('mock/attempts/<str:attempt_id>/guard-events', guard_views.record_guard_events_view),
+    path('mock/attempts/<str:attempt_id>/guard-events/', guard_views.record_guard_events_view),
+    path('teacher/guard-alerts', guard_views.teacher_guard_alerts_view),
+    path('teacher/guard-alerts/<str:incident_id>/review', guard_views.review_guard_incident_view),
+    path('teacher/groups/<str:group_id>/live-guard', guard_views.group_live_guard_view),
     path('mock/attempts/<str:attempt_id>/telemetry', telemetry_view),
     path('mock/attempts/<str:attempt_id>/telemetry/', telemetry_view),
     path('v1/mock/attempts/<str:attempt_id>/telemetry', telemetry_view),

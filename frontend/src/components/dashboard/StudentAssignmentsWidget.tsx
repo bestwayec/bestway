@@ -54,6 +54,7 @@ export interface StudentAssignmentItem {
 
 export interface StudentAssignmentsWidgetProps {
   groupName?: string | null;
+  cohortFilterId?: string | null;
 }
 
 /**
@@ -61,7 +62,7 @@ export interface StudentAssignmentsWidgetProps {
  * `null` when the student has no classroom. An empty assignment list only means
  * "not in a group" when the profile says so.
  */
-export function StudentAssignmentsWidget({ groupName }: StudentAssignmentsWidgetProps) {
+export function StudentAssignmentsWidget({ groupName, cohortFilterId }: StudentAssignmentsWidgetProps) {
   const format = useFormatter();
   const tu = useTranslations("uiText");
   const inviteText = useTranslations("classroomInvitation");
@@ -159,11 +160,15 @@ export function StudentAssignmentsWidget({ groupName }: StudentAssignmentsWidget
     return <Skeleton className="h-32 w-full rounded-2xl" />;
   }
 
+  const scopedAssignments = React.useMemo(
+    () => (cohortFilterId ? assignments.filter((a) => a.cohort_id === cohortFilterId) : assignments),
+    [assignments, cohortFilterId],
+  );
   // Active / pending assignments first
-  const pendingAssignments = assignments.filter((a) => !a.is_submitted);
-  const completedAssignments = assignments.filter((a) => a.is_submitted);
+  const pendingAssignments = scopedAssignments.filter((a) => !a.is_submitted);
+  const completedAssignments = scopedAssignments.filter((a) => a.is_submitted);
   const displayedAssignments =
-    filter === "active" ? pendingAssignments : filter === "completed" ? completedAssignments : assignments;
+    filter === "active" ? pendingAssignments : filter === "completed" ? completedAssignments : scopedAssignments;
 
   return (
     <div className="space-y-4">

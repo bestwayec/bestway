@@ -10,15 +10,19 @@ import {
   CheckCircle2,
   Copy,
   Play,
+  Plus,
   Trophy,
   Users,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { ErrorState, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/app/page-header";
 import { StatTile } from "@/components/ui/stat-tile";
@@ -26,7 +30,9 @@ import { NamePromptCard } from "@/components/dashboard/name-prompt-card";
 import { LiveExamPinCard } from "@/components/mock/live-exam-pin-card";
 import { StudentAssignmentsWidget } from "@/components/dashboard/StudentAssignmentsWidget";
 import { TodayCard } from "@/components/dashboard/today-card";
+import { useGroups } from "@/hooks/use-groups";
 import { useMe } from "@/hooks/use-me";
+import { apiClient } from "@/lib/api-client";
 import {
   useMockExams,
   useMyMockAttempts,
@@ -41,17 +47,79 @@ export function StudentDashboard() {
   const tc = useTranslations("common");
   const tn = useTranslations("nav");
   const tm = useTranslations("mock");
+  const tu = useTranslations("uiText");
+  const inviteText = useTranslations("classroomInvitation");
+  const queryClient = useQueryClient();
 
   const { data: me, isLoading: meLoading, refetch } = useMe();
+  const { data: myGroups = [] } = useGroups();
   const { data: attempts, isError: attemptsFailed } = useMyMockAttempts();
   const { data: mockExams, isPending: examsLoading, isError: examsFailed, refetch: refetchExams } = useMockExams();
   const { data: prediction } = useStudentScorePrediction();
 
-  const [copied, setCopied] = React.useState(false);
-
   const firstName = me?.user.name.split(" ")[0] ?? "";
   const profile =
     me?.profile && "linkCode" in me.profile ? (me.profile as StudentSelfProfile) : null;
+
+  const [copied, setCopied] = React.useState(false);
+  const [selectedGroupId, setSelectedGroupId] = React.useState<string | null>(null);
+  const [joinOpen, setJoinOpen] = React.useState(false);
+  const [joinCode, setJoinCode] = React.useState("");
+  const [joinPreview, setJoinPreview] = React.useState<{ groupName: string; requiresApproval: boolean } | null>(null);
+  const [joinBusy, setJoinBusy] = React.useState(false);
+
+  const activeGroups = React.useMemo(
+    () => myGroups.filter((g) => !g.archived),
+    [myGroups],
+  );
+  const headerGroupSummary = React.useMemo(() => {
+    if (activeGroups.length > 0) return activeGroups.map((g) => g.name).join(" · ");
+    return profile?.groupName ?? ts("noGroup");
+  }, [activeGroups, profile?.groupName, ts]);
+
+  async function handleJoinSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const code = joinCode.trim().toUpperCase();
+    if (!code) {
+      toast.error(tu("assignments.codeRequired"));
+      return;
+    }
+    setJoinBusy(true);
+    try {
+      if (code.startsWith("BW5-")) {
+        if (!joinPreview) {
+          setJoinPreview(
+            await apiClient.post<{ groupName: string; requiresApproval: boolean }>(
+              "/classroom-invitations/join",
+              { code, preview: true },
+            ),
+          );
+          return;
+        }
+        const joined = await apiClient.post<{ groupName: string; status: "active" | "pending" | "rejected" }>(
+          "/classroom-invitations/join",
+          { code, preview: false },
+        );
+        if (joined.status === "active") toast.success(tu("assignments.joined", { name: joined.groupName }));
+        else toast.info(inviteText(joined.status === "pending" ? "pendingStudent" : "rejectedStudent", { name: joined.groupName }));
+      } else {
+        const legacy = await apiClient.post<{ cohort_name: string }>("/student/join-cohort", { invite_code: code });
+        toast.success(tu("assignments.joined", { name: legacy.cohort_name }));
+      }
+      setJoinPreview(null);
+      setJoinCode("");
+      setJoinOpen(false);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["groups"] }),
+        queryClient.invalidateQueries({ queryKey: ["me"] }),
+        queryClient.invalidateQueries({ queryKey: ["student", "my-assignments"] }),
+      ]);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : tu("assignments.codeInvalid"));
+    } finally {
+      setJoinBusy(false);
+    }
+  }
 
   async function copyCode() {
     if (!profile?.linkCode) return;
@@ -156,10 +224,18 @@ export function StudentDashboard() {
   return (
     <div className="mx-auto max-w-4xl space-y-8">
       {/* 1. Yuqorida "Salom, {ism}" */}
-      <PageHeader title={t("greeting", { name: firstName })} description={profile.groupName ?? ts("noGroup")}
-        actions={<Button asChild variant="outline" className="min-h-11">
-          <Link href="/vocabulary"><BookOpen aria-hidden />{tn("vocabulary")}</Link>
-        </Button>}
+      <PageHeader title={t("greeting", { name: firstName })} description={headerGroupSummary}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant="outline" className="min-h-11 gap-1.5" onClick={() => setJoinOpen(true)}>
+              <Plus className="size-4" aria-hidden />
+              {ts("joinGroup")}
+            </Button>
+            <Button asChild variant="outline" className="min-h-11">
+              <Link href="/vocabulary"><BookOpen aria-hidden />{tn("vocabulary")}</Link>
+            </Button>
+          </div>
+        }
       />
 
       {!profile.isApproved && (
@@ -169,13 +245,56 @@ export function StudentDashboard() {
         </div>
       )}
 
+      {activeGroups.length > 0 && (
+        <Card className="rounded-card border border-border bg-surface p-4" data-testid="student-active-groups">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Users className="size-4 text-brand" aria-hidden />
+              <h2 className="text-sm font-semibold text-fg">{ts("activeGroups")}</h2>
+              <Badge variant="neutral">{ts("groupsSummary", { count: activeGroups.length })}</Badge>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setSelectedGroupId(null)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  selectedGroupId === null
+                    ? "bg-brand text-brand-fg"
+                    : "border border-border bg-bg-subtle text-fg-muted hover:text-fg"
+                }`}
+              >
+                {ts("allGroupsFilter")}
+              </button>
+              {activeGroups.map((g) => (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => setSelectedGroupId((cur) => (cur === g.id ? null : g.id))}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    selectedGroupId === g.id
+                      ? "bg-brand text-brand-fg"
+                      : "border border-border bg-bg-subtle text-fg-muted hover:text-fg"
+                  }`}
+                >
+                  {g.name}
+                  {g.teacherName ? ` · ${g.teacherName}` : ""}
+                </button>
+              ))}
+            </div>
+          </div>
+        </Card>
+      )}
+
       <NamePromptCard />
 
       {/* 2. Today's plan first: continue the open exam, homework, words to review, latest result */}
       <div className="grid min-w-0 gap-4 lg:grid-cols-5">
         <div className="min-w-0 lg:col-span-3"><TodayCard /></div>
         <div id="assignments" className="min-w-0 scroll-mt-20 lg:col-span-2">
-          <StudentAssignmentsWidget groupName={profile.groupName ?? null} />
+          <StudentAssignmentsWidget
+            groupName={activeGroups[0]?.name ?? profile.groupName ?? null}
+            cohortFilterId={selectedGroupId}
+          />
         </div>
       </div>
 
@@ -308,6 +427,42 @@ export function StudentDashboard() {
           </Card>
         </div>
       </div>
+
+      <Dialog open={joinOpen} onOpenChange={(next) => { setJoinOpen(next); if (!next) setJoinPreview(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{tu("assignments.joinGroup")}</DialogTitle>
+            <DialogDescription>{tu("assignments.joinHint")}</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => void handleJoinSubmit(e)} className="space-y-4">
+            <Input
+              value={joinCode}
+              onChange={(e) => {
+                setJoinCode(e.target.value.toUpperCase());
+                setJoinPreview(null);
+              }}
+              placeholder={tu("assignments.codePlaceholder")}
+              autoFocus
+            />
+            {joinPreview && (
+              <div className="rounded-control border border-border bg-bg-subtle p-3 text-xs text-fg">
+                <p className="font-semibold">{joinPreview.groupName}</p>
+                <p className="mt-0.5 text-fg-muted">
+                  {joinPreview.requiresApproval ? inviteText("approvalNeeded") : inviteText("instantJoin")}
+                </p>
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => { setJoinOpen(false); setJoinPreview(null); }}>
+                {tc("cancel")}
+              </Button>
+              <Button type="submit" disabled={joinBusy}>
+                {joinPreview ? inviteText("confirmJoin") : tu("assignments.joinButton")}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

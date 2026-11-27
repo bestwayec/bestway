@@ -371,10 +371,15 @@ def review_audio_view(request, attempt_id, group_id):
     if group.section.exam_id != attempt.exam_id or group.section.skill != 'listening':
         raise ContractAPIException('FILE_NOT_FOUND', 'Fayl topilmadi', 404)
     if not is_staff(actor):
+        from .classroom_results import answer_disclosure_status
+
+        disclosure = answer_disclosure_status(actor, attempt, is_review_blocked=review_blocked(attempt))
         if attempt.status != 'completed':
             raise ContractAPIException('REVIEW_NOT_AVAILABLE', 'The review opens when the result is released', 403)
         if review_blocked(attempt):
             raise ContractAPIException('REVIEW_BLOCKED_DURING_ATTEMPT', 'Finish the attempt in progress before reviewing this recording', 403)
+        if not disclosure["disclosed"]:
+            raise ContractAPIException('REVIEW_NOT_AVAILABLE', 'Correct answers and audio review open after the cohort finishes or the deadline passes', 403)
     from .mock_practice import scope
     practice = scope(attempt)
     if practice is not None:

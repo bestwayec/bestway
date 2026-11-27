@@ -5,8 +5,8 @@ Branch `feat/bestway-5-smart-classroom`, based on fetched `origin/main` at `910e
 | Phase | Status |
 | --- | --- |
 | 1. Universal Classroom and Administrator Management | Completed. Unified multi-group memberships across exports/payments/points/vocabulary/live-exam, historical teacher authorization, admin student management overview + bulk operations, and safe account reconciliation (`AccountReconciliationLog`, `core.0031`). |
-| 2. Premium UI, Results, and Live Exam Guard | In progress next. |
-| 3. Telegram and Teacher Intelligence | Classroom enrollment command uses the shared invitation service. Remaining teacher intelligence & Telegram classroom binding/reports pending. |
+| 2. Premium UI, Results, and Live Exam Guard | Completed. Server-side Answer Disclosure gating (`classroom_results.py`, `mock_attempts.py`, `mock_media.py`), Live Exam Guard 5.0 incident pipeline (`ExamIntegrityIncident`, `core.0032`, supervisor scoping, offline batch sync, bell/toast review drawer, group live guard monitor), interactive HeroShowcase & BentoFeatures landing upgrade, Vocabulary action bar wrap fix, Student multi-group dashboard & join modal, and Group Live Guard tab. |
+| 3. Telegram and Teacher Intelligence | Classroom enrollment command uses the shared invitation service. Telegram classroom binding, durable group announcements/reports, grade propagation, and enhanced teacher bot menu in progress next. |
 | 4. Integration and delivery | Pending. |
 
 ## Verified locally

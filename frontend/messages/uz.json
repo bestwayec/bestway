@@ -1293,7 +1293,12 @@
     "resumeWhereLeft": "Imtihonni to‘xtagan joyingizdan davom ettiring",
     "minutes": "{count} daqiqa",
     "latestResult": "Oxirgi natija",
-    "noResultYet": "Hali to'liq natija yo'q"
+    "noResultYet": "Hali to'liq natija yo'q",
+    "activeGroups": "Guruhlarim",
+    "joinGroup": "Guruhga qo'shilish",
+    "allGroupsFilter": "Barcha guruhlar",
+    "groupsSummary": "{count} ta faol guruh",
+    "teacherLabel": "Ustoz: {name}"
   },
   "parent": {
     "children": "Farzandlarim",
@@ -1820,7 +1825,10 @@
       "print": "Chop etish",
       "teacherReviewed": "Ustoz tomonidan tasdiqlangan",
       "teacherComment": "Ustozning izohi:",
-      "internalCertificate": "BestWay ichki natija (PDF)"
+      "internalCertificate": "BestWay ichki natija (PDF)",
+      "disclosureLockedTitle": "To'g'ri javoblar va skriptlar vaqtincha yopiq",
+      "disclosureLockedDeadline": "To'g'ri javoblar, audio skriptlar va tahlillar {date} dan keyin yoki barcha guruh o'quvchilari topshirgach ochiladi.",
+      "disclosureLockedGroup": "To'g'ri javoblar, audio skriptlar va tahlillar guruh muddati tugagach yoki barcha o'quvchilar topshirgach ochiladi."
     },
     "submitDialog": {
       "title": "Imtihonni topshirish",
@@ -2477,6 +2485,54 @@
       "demoCta": "Demo imtihonlarni ochish",
       "examsCta": "To‘liq mock imtihonlar",
       "note": "BestWay mock natijalari mashq natijalaridir. Ular rasmiy IELTS bali yoki milliy sertifikat emas."
+    },
+    "preview": {
+      "badge": "Interaktiv namuna · Demo ma'lumotlar",
+      "tabs": {
+        "ielts": "IELTS CBT",
+        "multilevel": "Multilevel",
+        "vocab": "Lug'at",
+        "teacher": "Ustoz kabineti"
+      },
+      "ieltsTitle": "Reading · 1-matn",
+      "ieltsTimer": "54:20",
+      "ieltsPassage": "Matn ichida dalillarni belgilang va bayroqchali savollarni bir oynada kuzating.",
+      "ieltsQuestion": "14-savol · True / False / Not Given",
+      "ieltsStatus": "Server vaqti · 2s oldin saqlandi",
+      "multilevelTitle": "Multilevel (CEFR) · Umumiy 58 / 75",
+      "multilevelBadge": "C1 Taxminiy",
+      "multilevelNote": "Writing va Speaking natijalari ustoz tasdiqlamaguncha taxminiy holatda bo'ladi.",
+      "vocabTitle": "Takrorlash kartalari · B2–C1",
+      "vocabWord": "ubiquitous",
+      "vocabPhonetic": "/juːˈbɪk.wɪ.təs/ · sifat",
+      "vocabHint": "Hamma joyda uchraydigan, keng tarqalgan",
+      "vocabDue": "Bugun 12 ta so'z · Bellashuv va o'yin tayyor",
+      "teacherTitle": "IELTS Advanced · Jonli nazorat va baholash",
+      "teacherAlert": "Jonli nazorat · 1 ta holat qayd etildi",
+      "teacherQueue": "3 ta Writing inshosi mezonlar bo'yicha tasdiqlashni kutmoqda"
+    },
+    "bento": {
+      "badge": "Platforma imkoniyatlari",
+      "title": "Yagona bog'langan o'quv ekotizimi",
+      "subtitle": "IELTS CBT, Multilevel CEFR, Jonli nazorat va Telegram guruh hisobotlari yagona tizimda ishlaydi.",
+      "c1Tag": "Imtihonlar",
+      "c1Title": "IELTS va Multilevel CBT",
+      "c1Text": "Ikki oynali Reading, bir martalik Listening audiosi, so'z hisoblagichli Writing va avto-saqlash.",
+      "c2Tag": "Ko'p guruhli",
+      "c2Title": "Universal guruh tizimi",
+      "c2Text": "O'quvchi bir vaqtda bir nechta guruhda o'qishi, taklif kodi bilan qo'shilishi va ko'chish tarixini saqlashi mumkin.",
+      "c3Tag": "Xolislik",
+      "c3Title": "Jonli imtihon nazorati 5.0",
+      "c3Text": "Ustozga darhol bildirishnoma boradi, lekin o'quvchi imtihoni to'xtatilmaydi va avtomatik kesilmaydi.",
+      "c4Tag": "Lug'at",
+      "c4Title": "Lug'at studiyasi",
+      "c4Text": "Intervalli takrorlash, 1v1 janglar va guruh reytingi bilan bog'langan lug'at o'yinlari.",
+      "c5Tag": "Baholash",
+      "c5Title": "AI + Ustoz mezonlari",
+      "c5Text": "Writing va Speaking uchun tezkor tahlil, ustoz tasdiqlaguniga qadar taxminiy belgisi bilan.",
+      "c6Tag": "Telegram",
+      "c6Title": "Guruh boti va hisobotlar",
+      "c6Text": "Guruh e'lonlari, muddat eslatmalari va xavfsiz natija hisobotlari ishonchli tarzda Telegramga boradi."
     },
     "placementNote": "Daraja testi 20 ta savol asosida taxminiy CEFR darajasini ko‘rsatadi. Bu rasmiy sertifikat yoki imtihon natijasi emas.",
     "audience": {
@@ -3483,7 +3539,37 @@
     "logTitle": "Imtihon jurnali",
     "close": "Yopish",
     "logSummary": "Imtihon: {exam} · qayd etilgan hodisalar: {count}",
-    "logNoTypes": "Hodisa turi qayd etilmagan (jami {count})."
+    "logNoTypes": "Hodisa turi qayd etilmagan (jami {count}).",
+    "guard": {
+      "bellTitle": "Jonli imtihon nazorati",
+      "unreadBadge": "{count} ta yangi",
+      "emptyBell": "Hozircha ko'rilmagan imtihon holatlari yo'q.",
+      "viewGroup": "Jonli nazoratni ochish",
+      "toastTitle": "{student} · {event}",
+      "toastMeta": "{group} · {skill}",
+      "acknowledge": "Tasdiqlash",
+      "explained": "Izohlandi",
+      "flag": "Belgilash",
+      "acknowledgedToast": "Holat ko'rilgan deb belgilandi",
+      "muteSound": "Ovozni o'chirish",
+      "unmuteSound": "Ovozni yoqish",
+      "filterAll": "Barchasi",
+      "filterFlagged": "Holat qayd etilganlar",
+      "filterUnreviewed": "Ko'rilmaganlar",
+      "filterOffline": "Oflayn / nofaol",
+      "connOnline": "Onlayn",
+      "connIdle": "Nofaol",
+      "connOffline": "Oflayn",
+      "occurrences": "{count}x",
+      "offlineRecovered": "Oflayndan sinxronlandi",
+      "timelineTitle": "Nazorat hodisalari jurnali",
+      "statuses": {
+        "new": "Yangi",
+        "acknowledged": "Tasdiqlandi",
+        "explained": "Izohlandi",
+        "flagged": "Belgilandi"
+      }
+    }
   },
   "liveRoom": {
     "pickExamFirst": "Avval mock imtihonni tanlang",
@@ -4140,7 +4226,8 @@
         "students": "O'quvchilar",
         "attendance": "Davomat",
         "homework": "Vazifalar",
-        "results": "Natijalar"
+        "results": "Natijalar",
+        "guard": "Jonli nazorat"
       },
       "assignHint": "Test, lug'at, imtihon yoki dars",
       "resultsHint": "Vazifalar va imtihon natijalari",

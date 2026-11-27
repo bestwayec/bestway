@@ -8,6 +8,7 @@ import { Brand } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/feedback";
 import { useMe } from "@/hooks/use-me";
@@ -168,6 +169,7 @@ export function SiteHeader({ hidden = [] }: { hidden?: string[] }) {
           </Button>
           <div className="hidden items-center gap-1.5 sm:flex">
             <LanguageSwitcher />
+            <ThemeToggle />
           </div>
           {meLoading ? (
             <Skeleton className="hidden size-9 rounded-full sm:inline-flex" />
@@ -226,6 +228,7 @@ export function SiteHeader({ hidden = [] }: { hidden?: string[] }) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <LanguageSwitcher />
+                <ThemeToggle />
               </div>
               <div className="flex items-center gap-2">
                 {meLoading ? (

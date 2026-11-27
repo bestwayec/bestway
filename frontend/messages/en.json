@@ -1293,7 +1293,12 @@
     "resumeWhereLeft": "Continue where you stopped",
     "minutes": "{count} min",
     "latestResult": "Latest result",
-    "noResultYet": "No full result yet"
+    "noResultYet": "No full result yet",
+    "activeGroups": "My groups",
+    "joinGroup": "Join group",
+    "allGroupsFilter": "All groups",
+    "groupsSummary": "{count, plural, one {# active group} other {# active groups}}",
+    "teacherLabel": "Teacher: {name}"
   },
   "parent": {
     "children": "My children",
@@ -1820,7 +1825,10 @@
       "print": "Print",
       "teacherReviewed": "Reviewed by the teacher",
       "teacherComment": "Teacher's comment:",
-      "internalCertificate": "BestWay internal result (PDF)"
+      "internalCertificate": "BestWay internal result (PDF)",
+      "disclosureLockedTitle": "Answer key & scripts temporarily withheld",
+      "disclosureLockedDeadline": "Correct answers, audio scripts, and model explanations unlock on {date} or once all group students submit.",
+      "disclosureLockedGroup": "Correct answers, audio scripts, and model explanations unlock after the group deadline or once all classmates submit."
     },
     "submitDialog": {
       "title": "Finish the exam",
@@ -2477,6 +2485,54 @@
       "demoCta": "Open demo exams",
       "examsCta": "Full mock exams",
       "note": "BestWay mock results are practice results. They are not an official IELTS score or a national certificate."
+    },
+    "preview": {
+      "badge": "Sample interactive preview · Synthetic data",
+      "tabs": {
+        "ielts": "IELTS CBT",
+        "multilevel": "Multilevel",
+        "vocab": "Vocabulary",
+        "teacher": "Teacher Workspace"
+      },
+      "ieltsTitle": "Reading · Passage 1",
+      "ieltsTimer": "54:20",
+      "ieltsPassage": "Highlight key evidence directly in the passage while tracking flagged questions across parts.",
+      "ieltsQuestion": "Q14 · True / False / Not Given",
+      "ieltsStatus": "Server-timed · Auto-saved 2s ago",
+      "multilevelTitle": "Multilevel (CEFR) · Overall 58 / 75",
+      "multilevelBadge": "C1 Provisional",
+      "multilevelNote": "Writing and Speaking stay provisional until confirmed by your group teacher.",
+      "vocabTitle": "Spaced-repetition deck · B2–C1",
+      "vocabWord": "ubiquitous",
+      "vocabPhonetic": "/juːˈbɪk.wɪ.təs/ · adj.",
+      "vocabHint": "Present, appearing, or found everywhere",
+      "vocabDue": "12 cards due today · Battle & Arcade ready",
+      "teacherTitle": "IELTS Advanced · Live Guard & Grading",
+      "teacherAlert": "Live Guard · 1 observation recorded",
+      "teacherQueue": "3 Writing essays awaiting criteria confirmation"
+    },
+    "bento": {
+      "badge": "Platform capabilities",
+      "title": "Built as one connected classroom",
+      "subtitle": "IELTS CBT, Multilevel CEFR, Live Exam Guard, and Telegram classroom reporting share one PostgreSQL source of truth.",
+      "c1Tag": "Exams",
+      "c1Title": "IELTS & Multilevel CBT",
+      "c1Text": "Resizable split-screen Reading, one-play Listening audio, word-counted Writing and offline-safe auto-save.",
+      "c2Tag": "Multi-group",
+      "c2Title": "Universal Classroom",
+      "c2Text": "One student can learn in IELTS, Multilevel and Vocabulary cohorts together with invite links and clean transfer history.",
+      "c3Tag": "Integrity",
+      "c3Title": "Live Exam Guard 5.0",
+      "c3Text": "Instant teacher bell alerts and offline recovery log window switches without interrupting or auto-failing students.",
+      "c4Tag": "Vocabulary",
+      "c4Title": "Vocabulary Studio",
+      "c4Text": "Spaced repetition decks, 1v1 Bamboozle battles and Subway runner tied directly to group XP.",
+      "c5Tag": "Grading",
+      "c5Title": "AI + Teacher Criteria",
+      "c5Text": "Instant rubric feedback for Writing and Speaking, clearly labeled provisional until teacher sign-off.",
+      "c6Tag": "Telegram",
+      "c6Title": "Group Bot & Outbox",
+      "c6Text": "Durable outbox delivers group announcements, deadline reminders and safe aggregate summaries in Tashkent time."
     },
     "placementNote": "The placement test gives an estimated CEFR level from 20 questions. It is not an official certificate or exam result.",
     "audience": {
@@ -3483,7 +3539,37 @@
     "logTitle": "Exam log",
     "close": "Close",
     "logSummary": "Exam: {exam} · recorded events: {count}",
-    "logNoTypes": "The kind of event was not recorded ({count} in total)."
+    "logNoTypes": "The kind of event was not recorded ({count} in total).",
+    "guard": {
+      "bellTitle": "Live Exam Guard",
+      "unreadBadge": "{count} new",
+      "emptyBell": "No unreviewed exam observations right now.",
+      "viewGroup": "Open live guard",
+      "toastTitle": "{student} · {event}",
+      "toastMeta": "{group} · {skill}",
+      "acknowledge": "Acknowledge",
+      "explained": "Explained",
+      "flag": "Flag",
+      "acknowledgedToast": "Observation marked as reviewed",
+      "muteSound": "Mute alert sound",
+      "unmuteSound": "Enable alert sound",
+      "filterAll": "All",
+      "filterFlagged": "With observations",
+      "filterUnreviewed": "Unreviewed",
+      "filterOffline": "Offline / idle",
+      "connOnline": "Online",
+      "connIdle": "Idle",
+      "connOffline": "Offline",
+      "occurrences": "{count}x",
+      "offlineRecovered": "Offline synced",
+      "timelineTitle": "Guard incident timeline",
+      "statuses": {
+        "new": "New",
+        "acknowledged": "Acknowledged",
+        "explained": "Explained",
+        "flagged": "Flagged"
+      }
+    }
   },
   "liveRoom": {
     "pickExamFirst": "Choose a mock exam first",
@@ -4140,7 +4226,8 @@
         "students": "Students",
         "attendance": "Attendance",
         "homework": "Homework",
-        "results": "Results"
+        "results": "Results",
+        "guard": "Live Guard"
       },
       "assignHint": "Quiz, vocabulary, exam or lesson",
       "resultsHint": "Homework and exam results",

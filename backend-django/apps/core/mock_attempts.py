@@ -540,88 +540,10 @@ def save_answers(actor, attempt_id, items, *, bulk=False):
 
 
 def notify_teacher_proctoring_alert(attempt, actor, event):
-    import logging
-    import os
-
-    from django.core.cache import cache
-
-    from apps.legacy_schema.models import StudentProfile, User
-
-    from . import telegram_delivery
-
-    attempt_id = getattr(attempt, 'id', 'unknown')
-    cache_key = f"proctoring_alert_throttle:{attempt_id}"
-    if cache.get(cache_key):
-        return
-    cache.set(cache_key, True, timeout=10)
-
     try:
-        student_id = getattr(attempt, 'student_id', None) or getattr(actor, 'id', None)
-        if not student_id:
-            return
+        from . import live_exam_guard
 
-        profile = StudentProfile.objects.filter(user_id=student_id).select_related('group__teacher', 'user').first()
-        teacher = profile.group.teacher if (profile and profile.group and profile.group.teacher) else None
-
-        chat_id = getattr(teacher, 'telegram_chat_id', None) if teacher else None
-        if not chat_id:
-            chat_id = os.environ.get('TELEGRAM_CHANNEL_ID')
-
-        if not chat_id:
-            return
-
-        desc_map = {
-            'blur': 'Oynadan chiqib ketish (Window Blur / Focus Lost)',
-            'window_blur': 'Oynadan chiqib ketish (Window Blur / Focus Lost)',
-            'window_loss': 'Oyna yo‘qolishi / minimallashtirish (Window Loss)',
-            'focus_lost': 'Oynadan fokus yo‘qoldi (Focus Lost)',
-            'exit_fullscreen': 'To‘liq ekran rejimidan chiqish (Exit Fullscreen)',
-            'fullscreen_exit': 'To‘liq ekran rejimidan chiqish (Exit Fullscreen)',
-            'tab_switch': 'Boshqa oynaga/tabga o‘tish (Tab Switch)',
-            'webcam_blocked': 'Veb-kamera to‘sildi yoki o‘chirildi (Webcam Blocked)',
-            'camera_blocked': 'Veb-kamera to‘sildi yoki o‘chirildi (Webcam Blocked)',
-            'camera_error': 'Veb-kamera uzilishi (Camera Error)',
-            'cheat_attempt': 'Taqiqlangan harakat yoki dastur (Cheat Attempt)',
-            'copy_paste': 'Matn nusxalash yoki qo‘yish (Copy/Paste)',
-            'devtools_open': 'Dasturchi asboblari ochildi (DevTools)',
-            'multiple_monitors': 'Ikkinchi monitor aniqlandi (Multiple Monitors)',
-        }
-        event_lower = (event or '').lower().strip()
-        violation_desc = desc_map.get(event_lower, f"{event} (Xavfsizlik ogohlantirishi)")
-
-        student_name = ""
-        if profile and profile.user and profile.user.name:
-            student_name = profile.user.name
-        elif hasattr(actor, 'name') and actor.name:
-            student_name = actor.name
-        else:
-            student_user = User.objects.filter(id=student_id).first()
-            student_name = student_user.name if student_user else "Noma'lum o'quvchi"
-
-        exam_title = "Mock Imtihon"
-        if hasattr(attempt, 'exam') and attempt.exam:
-            exam_title = getattr(attempt.exam, 'title', None) or "Mock Imtihon"
-        elif getattr(attempt, 'exam_id', None):
-            from apps.legacy_schema.models import MockExam
-            ex = MockExam.objects.filter(id=attempt.exam_id).first()
-            if ex and ex.title:
-                exam_title = ex.title
-
-        count = getattr(attempt, 'anti_cheat_count', 1)
-        now_str = timezone.now().strftime("%H:%M:%S")
-
-        text = (
-            "⚠️ <b>DIQQAT! Imtihon xavfsizligi buzildi:</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━━\n"
-            f"👤 <b>O'quvchi:</b> {student_name}\n"
-            f"💻 <b>Imtihon:</b> {exam_title}\n"
-            f"🚨 <b>Qoidabuzarlik:</b> {violation_desc}\n"
-            f"🔢 <b>Jami ogohlantirishlar:</b> {count} ta\n"
-            f"🕒 <b>Vaqt:</b> {now_str}\n"
-            "━━━━━━━━━━━━━━━━━━━━━\n"
-            "<i>BestWay Teacher Live Monitoring panelida jarayonni kuzatishingiz mumkin.</i>"
-        )
-        telegram_delivery.send(chat_id, text)
+        live_exam_guard.record_event(actor, attempt, event)
     except Exception as e:
         logging.getLogger(__name__).warning("notify_teacher_proctoring_alert failed: %s", e)
 
@@ -1017,8 +939,11 @@ def detail(actor, attempt_id):
             fail("FORBIDDEN", "Bu natijani ko‘rish huquqingiz yo‘q", 403)
     else:
         assert_view(actor, attempt.student_id)
+    from .classroom_results import answer_disclosure_status
+
     staff = mock_catalog.is_staff(actor) and teacher_can_grade is not False
-    show = staff or (attempt.status == 'completed' and not review_blocked(attempt))
+    disclosure = answer_disclosure_status(actor, attempt, is_review_blocked=review_blocked(attempt))
+    show = disclosure["disclosed"]
     answers = {a.question_id: a for a in MockAnswer.objects.filter(attempt_id=attempt_id)}
     # One query per level instead of one per section and one per group (N+1).
     section_rows = list(MockSection.objects.filter(exam_id=attempt.exam_id).order_by('sort_order'))
@@ -1118,7 +1043,7 @@ def detail(actor, attempt_id):
         result['examTitle'] = attempt.exam.title
         result['cheatEvents'] = [dict(event=e.event, date=e.created_at) for e in MockCheatEvent.objects.filter(attempt_id=attempt_id).order_by('created_at')]
     result.update(serverTime=timezone.now(), annotations=attempt.annotations or [], sections=scope_sections(attempt, sections),
-        sessionSignature=attempt_signature.sign(attempt), attemptId=attempt.id)
+        sessionSignature=attempt_signature.sign(attempt), attemptId=attempt.id, answerDisclosure=disclosure)
     try:
         from apps.legacy_schema.models import AssessmentEvaluation, AssessmentJob
 

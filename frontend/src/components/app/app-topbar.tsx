@@ -6,6 +6,7 @@ import { Brand } from "@/components/brand";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { NotificationsBell } from "./notifications-bell";
+import { GuardAlertsBell } from "./teacher-guard-alerts";
 import { UserMenu } from "./user-menu";
 import { navForRole, isActive } from "@/lib/nav";
 import type { Role } from "@/lib/types";
@@ -31,6 +32,7 @@ export function AppTopbar({ role }: { role: Role }) {
           <LanguageSwitcher />
           <ThemeToggle />
         </div>
+        <GuardAlertsBell />
         <NotificationsBell />
         <UserMenu />
       </div>

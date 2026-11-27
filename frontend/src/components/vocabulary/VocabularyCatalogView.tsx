@@ -334,20 +334,25 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                         </div>
                       )}
 
-                      <div className="flex items-center gap-2">
-                        <Link href={`/vocabulary/${s.id}`} className="flex-1">
-                          <Button className="w-full bg-brand hover:bg-brand-hover text-brand-fg font-medium">
-                            <Play className="mr-1.5 h-4 w-4" />
-                            {tc("startPractice")}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Link href={`/vocabulary/${s.id}`} className="min-w-[140px] flex-1">
+                          <Button className="min-h-10 w-full bg-brand text-brand-fg font-medium hover:bg-brand-hover">
+                            <Play className="mr-1.5 h-4 w-4 shrink-0" />
+                            <span className="truncate">{tc("startPractice")}</span>
                           </Button>
                         </Link>
 
-                        {isTeacherOrAdmin && s.canEdit && <Button type="button" variant="outline" onClick={() => setEditSetId(s.id)}>{te("edit")}</Button>}
                         {isTeacherOrAdmin && (
-                          <>
+                          <div className="flex shrink-0 flex-wrap items-center gap-2">
+                            {s.canEdit && (
+                              <Button type="button" variant="outline" size="sm" onClick={() => setEditSetId(s.id)}>
+                                {te("edit")}
+                              </Button>
+                            )}
                             <Button
                               type="button"
                               variant="outline"
+                              size="icon"
                               onClick={() => setBattleSetId(s.id)}
                               title={tc("battleForSet")}
                               aria-label={tc("battleForSet")}
@@ -357,6 +362,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                             <Button
                               type="button"
                               variant="outline"
+                              size="icon"
                               onClick={() => setReportSetId(s.id)}
                               className="border-border text-fg hover:bg-bg-subtle"
                               title={tc("groupReport")}
@@ -364,7 +370,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                             >
                               <FileSpreadsheet className="h-4 w-4 text-brand" />
                             </Button>
-                          </>
+                          </div>
                         )}
                       </div>
                     </div>
