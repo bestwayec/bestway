@@ -21,6 +21,7 @@ The assigned-exam workflow supports one attempt per participant. Separate schedu
 
 - Hosted CI on `e3fed55` passed Django pytest and the frontend job. The downstream PostgreSQL grading fixture then exposed a missing assignment link. The recovery updates those fixtures to exercise assignment-based access and checks the final SHA separately.
 - Focused local checks passed for classroom transfers, assignment-scoped assessment access, account verification, Telegram permissions and outbox invalidation, and live exam observation recovery.
-- Telegram delivery checks use mocked provider calls. Browser verification uses Chromium and synthetic accounts.
+- Chromium verified two invitation joins, an explicit administrator transfer, a persisted Writing response, a browser focus observation and teacher alert, and an authorized Speaking grade on a synthetic WAV. The headless browser used a dispatched blur to test the alert path.
+- The local PostgreSQL migration upgrade, HTTP integration and worker checks passed. Telegram tests used mocked provider calls and synthetic accounts.
 
 See [Database audit](BESTWAY_5_DATABASE_AUDIT.md) and [Classroom architecture](BESTWAY_5_CLASSROOM_ARCHITECTURE.md).

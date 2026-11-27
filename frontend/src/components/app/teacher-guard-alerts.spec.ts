@@ -59,11 +59,15 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   host.remove();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 describe("TeacherGuardAlertsProvider & GuardAlertsBell", () => {
-  it("renders guard bell for teacher with unread badge and allows acknowledge review", async () => {
-    apiMock.get.mockResolvedValue({
+  it("shows a newly polled open incident and allows acknowledge review", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    apiMock.get.mockResolvedValueOnce({ incidents: [], seq: 0, unreadCount: 0 }).mockResolvedValue({
       incidents: [
         {
           id: "inc-1",
@@ -74,21 +78,14 @@ describe("TeacherGuardAlertsProvider & GuardAlertsBell", () => {
           studentName: "Aziza",
           groupId: "grp-1",
           groupName: "IELTS Advanced",
-          sessionId: null,
-          assignmentId: null,
-          supervisorId: "t-1",
-          eventType: "window_blur",
-          severity: "warning",
+          eventType: "WINDOW_FOCUS_LOST",
           skill: "reading",
           questionRef: "Q12",
           integrityMode: "supervised_mock",
           occurrenceCount: 1,
-          status: "new",
+          status: "open",
           offlineSynced: false,
-          metadata: {},
-          firstObservedAt: "2026-11-27T10:00:00Z",
-          lastObservedAt: "2026-11-27T10:00:00Z",
-          reviewedAt: null,
+          observedAt: "2026-11-27T10:00:00Z",
           reviewNote: "",
         },
       ],
@@ -113,6 +110,11 @@ describe("TeacherGuardAlertsProvider & GuardAlertsBell", () => {
       );
     });
 
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_500); });
+    expect(toastMock.warning).toHaveBeenCalledWith(
+      "Aziza · The exam window lost focus",
+      expect.objectContaining({ description: "IELTS Advanced · reading" }),
+    );
     const bell = host.querySelector('[data-testid="guard-alerts-bell"]') as HTMLButtonElement;
     expect(bell).toBeTruthy();
     expect(bell.textContent).toContain("1");
