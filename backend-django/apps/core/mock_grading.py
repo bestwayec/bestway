@@ -103,6 +103,8 @@ def grade(actor,attempt_id,data):
     from .system_settings import audit
     audit(actor,'mock.answer.grade','mockAnswer',question.id,old=dict(score=before.score if before else None,gradedById=before.graded_by_id if before else None,feedback=before.feedback if before else None),new=dict(attemptId=attempt_id,score=final,status=result['status']))
     if result['status']=='completed':
+        from .homework_scoring import propagate_attempt_finalization
         from .mock_submission_snapshots import notify
         notify(attempt)
+        propagate_attempt_finalization(attempt, actor=actor)
     return dict(saved=True,status=result['status'])

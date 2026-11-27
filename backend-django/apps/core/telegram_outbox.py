@@ -21,7 +21,7 @@ from apps.legacy_schema.models import User
 
 from . import telegram_delivery as api
 from . import telegram_state as state
-from .models import TelegramOutbox
+from .models import TelegramClassroomBinding, TelegramOutbox
 
 logger = logging.getLogger(__name__)
 KINDS = ('tests', 'deadlines', 'vocab', 'results', 'feedback', 'attendance', 'teacher', 'announcements')
@@ -62,21 +62,46 @@ def allowed(user_id: str, kind: str) -> bool:
     return bool(pref.notify_enabled) and kind not in (pref.muted_kinds or [])
 
 
-def enqueue(user_id: str, kind: str, dedupe_key: str, text: str, keyboard=None, *, now=None, urgent=False):
-    """Insert one notification. Returns the row, or None when it already existed / the user opted out."""
+def enqueue(user_id: str, kind: str, dedupe_key: str, text: str, keyboard=None, *, now=None, urgent=False, group_id: str | None = None, chat_id_override: str | None = None):
+    """Insert one notification. Returns the row, or None when it already existed / opted out / group unbound."""
     if kind not in KINDS:
         raise ValueError('unknown notification kind')
     now = now or timezone.now()
-    if not allowed(user_id, kind):
-        return None
-    pref = state.get_preference(user_id)
-    send_after = now if urgent else (quiet_until(pref, now) or now)
+    chat_target = str(chat_id_override) if chat_id_override is not None else None
+    if group_id or chat_target:
+        if not group_id or not chat_target:
+            return None
+        if not TelegramClassroomBinding.objects.filter(group_id=group_id, chat_id=chat_target, is_active=True, bot_can_post=True).exists():
+            return None
+        send_after = now
+    else:
+        if not allowed(user_id, kind):
+            return None
+        pref = state.get_preference(user_id)
+        send_after = now if urgent else (quiet_until(pref, now) or now)
     try:
         with transaction.atomic():
-            return TelegramOutbox.objects.create(recipient_id=user_id, kind=kind, dedupe_key=dedupe_key[:255], text=text[:MAX_TEXT],
-                                                 keyboard=keyboard, send_after=send_after, next_attempt_at=send_after)
+            return TelegramOutbox.objects.create(
+                recipient_id=user_id,
+                kind=kind,
+                dedupe_key=dedupe_key[:255],
+                group_id=group_id,
+                chat_id_override=chat_target,
+                text=text[:MAX_TEXT],
+                keyboard=keyboard,
+                send_after=send_after,
+                next_attempt_at=send_after,
+            )
     except IntegrityError:
         return None
+
+
+def invalidate_group_queue(group_id: str, reason: str = 'group_disconnected') -> int:
+    """Immediately invalidate all pending/sending outbox items targeting a disconnected classroom."""
+    return TelegramOutbox.objects.filter(
+        group_id=group_id,
+        status__in=('pending', 'sending'),
+    ).update(status='skipped', last_error=reason[:60], locked_until=None)
 
 
 def _claim(now, limit):
@@ -121,23 +146,40 @@ def deliver_due(now=None, *, sleep=time.sleep, limit=MAX_PER_TICK) -> dict:
         if not _renew_lease(row, now):                                       # our lease expired and another worker owns it now
             stats['lost'] = stats.get('lost', 0) + 1
             continue
-        user = User.objects.filter(id=row.recipient_id, is_active=True).values('telegram_chat_id').first()
-        chat = (user or {}).get('telegram_chat_id')
-        if not chat:
-            _finish(row, 'skipped', 'no_chat', now=now)
-            stats['skipped'] += 1
-            continue
-        if not allowed(row.recipient_id, row.kind):                     # opted out after it was queued
-            _finish(row, 'skipped', 'opted_out', now=now)
-            stats['skipped'] += 1
-            continue
-        pref = state.get_preference(row.recipient_id)
-        until = quiet_until(pref, now)
-        if until is not None:                                           # quiet hours began after it was queued
-            row.status, row.locked_until, row.send_after, row.next_attempt_at = 'pending', None, until, until
-            row.save(update_fields=['status', 'locked_until', 'send_after', 'next_attempt_at'])
-            stats['deferred'] += 1
-            continue
+        if row.group_id or row.chat_id_override:
+            binding_ok = bool(
+                row.group_id
+                and row.chat_id_override
+                and TelegramClassroomBinding.objects.filter(
+                    group_id=row.group_id,
+                    chat_id=str(row.chat_id_override),
+                    is_active=True,
+                    bot_can_post=True,
+                ).exists()
+            )
+            if not binding_ok:
+                _finish(row, 'skipped', 'group_disconnected', now=now)
+                stats['skipped'] += 1
+                continue
+            chat = str(row.chat_id_override)
+        else:
+            user = User.objects.filter(id=row.recipient_id, is_active=True).values('telegram_chat_id').first()
+            chat = (user or {}).get('telegram_chat_id')
+            if not chat:
+                _finish(row, 'skipped', 'no_chat', now=now)
+                stats['skipped'] += 1
+                continue
+            if not allowed(row.recipient_id, row.kind):                     # opted out after it was queued
+                _finish(row, 'skipped', 'opted_out', now=now)
+                stats['skipped'] += 1
+                continue
+            pref = state.get_preference(row.recipient_id)
+            until = quiet_until(pref, now)
+            if until is not None:                                           # quiet hours began after it was queued
+                row.status, row.locked_until, row.send_after, row.next_attempt_at = 'pending', None, until, until
+                row.save(update_fields=['status', 'locked_until', 'send_after', 'next_attempt_at'])
+                stats['deferred'] += 1
+                continue
         if chat in chats_used:                                          # at most one message per chat per tick
             row.status, row.locked_until, row.next_attempt_at = 'pending', None, now + timedelta(seconds=2)
             row.save(update_fields=['status', 'locked_until', 'next_attempt_at'])

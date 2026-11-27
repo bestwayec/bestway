@@ -26,7 +26,9 @@ from common.auth.throttling import SensitiveAuthThrottle
 
 from . import auth_service, telegram_sso
 from . import telegram_bot as bot
+from . import telegram_classroom_service as classroom_binding
 from . import telegram_links as links
+from . import telegram_notify as tg_notify
 from .mock_attempt_views import success
 
 
@@ -309,3 +311,35 @@ def webhook(request):
         raise ContractAPIException('FORBIDDEN', 'Webhook secret mos kelmadi', 403)
     bot.handle(request.data)
     return success(dict(ok=True))
+
+
+@api_view(['GET', 'POST', 'DELETE'])
+@permission_classes([Authenticated])
+def group_telegram_binding_view(request, group_id: str):
+    if request.method == 'GET':
+        return success(classroom_binding.get_binding(request.user, group_id))
+    if request.method == 'DELETE':
+        return success(classroom_binding.disconnect_group_chat(request.user, group_id))
+    data = request.data if isinstance(request.data, dict) else {}
+    return success(
+        classroom_binding.bind_group_chat(
+            request.user,
+            group_id,
+            data.get('chatId') or data.get('chat_id') or '',
+            chat_title=str(data.get('chatTitle') or data.get('chat_title') or ''),
+        )
+    )
+
+
+@api_view(['POST'])
+@permission_classes([Authenticated])
+def group_telegram_report_view(request, group_id: str):
+    from . import groups as group_service
+
+    group = group_service.get_group(group_id)
+    group_service.assert_manages_group(request.user, group)
+    data = request.data if isinstance(request.data, dict) else {}
+    assignment_id = str(data.get('assignmentId') or data.get('assignment_id') or '').strip()
+    if not assignment_id:
+        raise ContractAPIException('VALIDATION_ERROR', 'assignmentId majburiy', 400)
+    return success(tg_notify.homework_group_report(assignment_id, reason='manual'))

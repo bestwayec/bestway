@@ -6,8 +6,8 @@ Branch `feat/bestway-5-smart-classroom`, based on fetched `origin/main` at `910e
 | --- | --- |
 | 1. Universal Classroom and Administrator Management | Completed. Unified multi-group memberships across exports/payments/points/vocabulary/live-exam, historical teacher authorization, admin student management overview + bulk operations, and safe account reconciliation (`AccountReconciliationLog`, `core.0031`). |
 | 2. Premium UI, Results, and Live Exam Guard | Completed. Server-side Answer Disclosure gating (`classroom_results.py`, `mock_attempts.py`, `mock_media.py`), Live Exam Guard 5.0 incident pipeline (`ExamIntegrityIncident`, `core.0032`, supervisor scoping, offline batch sync, bell/toast review drawer, group live guard monitor), interactive HeroShowcase & BentoFeatures landing upgrade, Vocabulary action bar wrap fix, Student multi-group dashboard & join modal, and Group Live Guard tab. |
-| 3. Telegram and Teacher Intelligence | Classroom enrollment command uses the shared invitation service. Telegram classroom binding, durable group announcements/reports, grade propagation, and enhanced teacher bot menu in progress next. |
-| 4. Integration and delivery | Pending. |
+| 3. Telegram and Teacher Intelligence | Completed. Classroom Telegram group binding/disconnect service (`telegram_classroom_service.py`, `/bind`, `/unbind`, `GET/POST/DELETE /v1/groups/<id>/telegram-binding`) with immediate queued outbox invalidation, exam announcements, aggregate group reports with small-group privacy suppression (< 5) & Provisional labeling, configurable Asia/Tashkent student reminders adapting to deadline changes, private teacher monitoring in bot menu (`tk:<group_id>`), and finalized Writing/Speaking grade propagation into `HomeworkSubmission` & Telegram notifications (`homework_scoring.py`, `assessment.py`, `mock_grading.py`). |
+| 4. Integration and delivery | Completed. Cumulative verification passed across Django checks, Phase 1–4 pytest integration & acceptance suites, TypeScript, ESLint, Next.js build, and core Vitest component/i18n/design-system suites. Branch pushed and PR prepared for owner review. |
 
 ## Verified locally
 

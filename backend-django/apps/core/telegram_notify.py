@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import html
 import logging
+import os
 from datetime import timedelta
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
@@ -15,12 +16,20 @@ from zoneinfo import ZoneInfo
 from django.db.models import Q
 from django.utils import timezone
 
-from apps.legacy_schema.models import Group, User
+from apps.legacy_schema.models import Group, MockAttempt, User
 
 from .classroom_roster import member_profiles
 from . import telegram_outbox as outbox
 from . import telegram_state as state
-from .models import ClassQuizAppeal, ClassQuizAssignment, ClassQuizAttempt, UserWeakWord
+from .models import (
+    ClassQuizAppeal,
+    ClassQuizAssignment,
+    ClassQuizAttempt,
+    HomeworkAssignment,
+    HomeworkSubmission,
+    TelegramClassroomBinding,
+    UserWeakWord,
+)
 
 logger = logging.getLogger(__name__)
 TASHKENT = ZoneInfo('Asia/Tashkent')
@@ -40,6 +49,11 @@ T = {
         new_homework="📝 <b>Yangi uy vazifasi</b>\n{title}\n{detail}Muddat: {when}", open_homework='🌐 Vazifani ochish',
         homework_reminder="⏰ <b>{title}</b> vazifasini hali topshirmadingiz. Muddat: {when}", hw_vocabulary="Lug'at mashqi · {n} ta so'z\n",
         hw_exam='Imtihon\n', hw_lesson='Dars / vazifa\n', hw_questions='{n} ta savol\n',
+        group_homework="📢 <b>{group}</b> · Yangi topshiriq: <b>{title}</b>\n{detail}Muddat: {when} (Toshkent vaqti)",
+        group_report="📊 <b>{group}</b> · <b>{title}</b> hisoboti\nTopshirganlar: {s}/{t}\nO'rtacha natija: {a}%{provisional}",
+        group_report_small="📊 <b>{group}</b> · <b>{title}</b> hisoboti\nTopshirganlar: {s}/{t}\n<i>Kichik guruh maxfiyligi sabab ballar umumiy xabar sifatida berkitildi.</i>{provisional}",
+        teacher_report="👨‍🏫 <b>{group}</b> · <b>{title}</b> ustoz hisoboti\nTopshirganlar: {s}/{t}\nO'rtacha: {a}%\nTekshirish kutilmoqda: {pending}{provisional}",
+        provisional_note="\n⏳ <i>Taxminiy (Provisional): Writing/Speaking ustoz tasdig'ini kutmoqda.</i>",
     ),
     'en': dict(
         deadline24='⏰ The deadline for <b>{title}</b> is near: submit before {when}.', deadline2='⏰ Less than 2 hours left for <b>{title}</b>!',
@@ -53,6 +67,11 @@ T = {
         new_homework='📝 <b>New homework</b>\n{title}\n{detail}Deadline: {when}', open_homework='🌐 Open homework',
         homework_reminder='⏰ You have not submitted <b>{title}</b> yet. Deadline: {when}', hw_vocabulary='Vocabulary practice · {n} words\n',
         hw_exam='Exam\n', hw_lesson='Lesson / task\n', hw_questions='{n} questions\n',
+        group_homework='📢 <b>{group}</b> · New assignment: <b>{title}</b>\n{detail}Deadline: {when} (Asia/Tashkent)',
+        group_report='📊 <b>{group}</b> · <b>{title}</b> summary\nSubmitted: {s}/{t}\nAverage: {a}%{provisional}',
+        group_report_small='📊 <b>{group}</b> · <b>{title}</b> summary\nSubmitted: {s}/{t}\n<i>Score breakdown suppressed for small-group privacy.</i>{provisional}',
+        teacher_report='👨‍🏫 <b>{group}</b> · <b>{title}</b> teacher summary\nSubmitted: {s}/{t}\nAverage: {a}%\nAwaiting grading: {pending}{provisional}',
+        provisional_note='\n⏳ <i>Provisional: Writing/Speaking awaits teacher confirmation.</i>',
     ),
 }
 
@@ -97,10 +116,10 @@ def quiz_assigned(assignment_id, now=None):
 
 
 def homework_assigned(assignment_id, now=None):
-    """Lesson / vocabulary / exam homework from the website: a short notice + a button to the website homework page."""
+    """Lesson / vocabulary / exam homework from the website: private DMs + bound group announcement."""
     from .models import HomeworkAssignment
     from .teacher_workspace import homework_kind, site_url, student_href
-    row = HomeworkAssignment.objects.select_related('cohort', 'vocabulary_set').filter(id=assignment_id).first()
+    row = HomeworkAssignment.objects.select_related('cohort', 'cohort__classroom', 'vocabulary_set').filter(id=assignment_id).first()
     if row is None or not row.cohort.classroom_id:
         return 0
     kind = homework_kind(row)
@@ -113,7 +132,186 @@ def homework_assigned(assignment_id, now=None):
         text = T[lang]['new_homework'].format(title=esc(row.title), detail=detail, when=local(row.deadline))
         if outbox.enqueue(student_id, 'tests', f'homework_assigned:{row.id}:{student_id}', text, [[dict(text=T[lang]['open_homework'], url=web)]], now=now):
             count += 1
+    binding = TelegramClassroomBinding.objects.filter(
+        group_id=row.cohort.classroom_id,
+        is_active=True,
+        bot_can_post=True,
+    ).first()
+    if binding is not None:
+        classroom = row.cohort.classroom
+        lang = state.language_of(classroom.teacher_id) if classroom and classroom.teacher_id else 'uz'
+        detail = T[lang]['hw_' + kind].format(n=words)
+        gtext = T[lang]['group_homework'].format(
+            group=esc(classroom.name if classroom else row.cohort.name),
+            title=esc(row.title),
+            detail=detail,
+            when=local(row.deadline),
+        )
+        if outbox.enqueue(
+            f'group:{row.cohort.classroom_id}',
+            'announcements',
+            f'group_homework:{row.id}:{binding.chat_id}',
+            gtext,
+            [[dict(text=T[lang]['open_homework'], url=web)]],
+            now=now,
+            group_id=row.cohort.classroom_id,
+            chat_id_override=binding.chat_id,
+        ):
+            count += 1
     return count
+
+
+def _reminder_windows_hours() -> tuple[int, ...]:
+    raw = os.environ.get('TELEGRAM_REMINDER_HOURS', '24,2')
+    parsed = []
+    for part in str(raw).split(','):
+        part = part.strip()
+        if part.isdigit() and int(part) > 0:
+            parsed.append(int(part))
+    return tuple(sorted(set(parsed), reverse=True)) or (24, 2)
+
+
+def homework_deadline_sweep(now=None, *, windows=None):
+    """Queue configurable Tashkent-local reminders for active classroom homework, skipping submitted learners."""
+    now = now or timezone.now()
+    horizon_list = sorted(set(windows or _reminder_windows_hours()), reverse=True)
+    max_h = max(horizon_list)
+    count = 0
+    for row in HomeworkAssignment.objects.select_related('cohort').filter(
+        cohort__classroom_id__isnull=False,
+        deadline__gt=now,
+        deadline__lte=now + timedelta(hours=max_h),
+    ):
+        remaining_sec = (row.deadline - now).total_seconds()
+        matched_h = None
+        for h in sorted(horizon_list):
+            if remaining_sec <= h * 3600:
+                matched_h = h
+                break
+        if matched_h is None:
+            continue
+        done_ids = set(
+            HomeworkSubmission.objects.filter(
+                assignment=row,
+                status__in=('graded', 'awaiting_review', 'submitted'),
+            ).values_list('student_id', flat=True)
+        )
+        if row.exam_id:
+            done_ids.update(
+                MockAttempt.objects.filter(
+                    exam_id=row.exam_id,
+                    started_at__gte=row.created_at,
+                    status__in=('completed', 'grading'),
+                ).values_list('student_id', flat=True)
+            )
+        deadline_stamp = int(row.deadline.timestamp())
+        for student_id in _linked_students(row.cohort.classroom_id):
+            if student_id in done_ids:
+                continue
+            text = tx(
+                student_id,
+                'homework_reminder',
+                title=esc(row.title),
+                when=local(row.deadline),
+            )
+            dedupe = f'hw_deadline:{row.id}:{student_id}:{matched_h}h:{deadline_stamp}'
+            if outbox.enqueue(student_id, 'deadlines', dedupe, text, now=now, urgent=matched_h <= 2):
+                count += 1
+    return count
+
+
+def homework_group_report(assignment_id: str, *, reason: str = 'closed', now=None) -> dict:
+    """Enqueue aggregate classroom group report (small-group privacy aware + provisional labeled) and private teacher report."""
+    from apps.legacy_schema.models import AssessmentJob
+    from . import homework_scoring
+
+    now = now or timezone.now()
+    row = HomeworkAssignment.objects.select_related('cohort', 'cohort__classroom').filter(id=assignment_id).first()
+    if row is None or not row.cohort.classroom_id:
+        return {'sent': False, 'reason': 'missing_classroom'}
+    group_id = row.cohort.classroom_id
+    classroom = row.cohort.classroom
+    roster_ids = list(member_profiles(group_id).values_list('user_id', flat=True))
+    total = len(roster_ids)
+
+    for sid in roster_ids:
+        homework_scoring.sync_from_exam(row, sid)
+
+    subs = list(HomeworkSubmission.objects.filter(assignment=row, student_id__in=roster_ids))
+    submitted_subs = [s for s in subs if s.status in ('graded', 'awaiting_review', 'submitted')]
+    graded_subs = [s for s in subs if s.status == 'graded']
+    avg = round(sum(s.score_percent for s in graded_subs) / len(graded_subs), 1) if graded_subs else 0
+    pending_count = sum(1 for s in subs if s.status in ('awaiting_review', 'awaiting_result'))
+
+    has_provisional = bool(pending_count > 0)
+    if row.exam_id and not has_provisional:
+        attempt_ids = [s.attempt_id for s in subs if s.attempt_id]
+        if attempt_ids:
+            has_provisional = AssessmentJob.objects.filter(attempt_id__in=attempt_ids).filter(
+                Q(status__in=('PENDING', 'PROCESSING', 'RETRY', 'NEEDS_REVIEW')) | ~Q(final_score_source='TEACHER')
+            ).exists()
+
+    small_group = total < 5 or len(submitted_subs) < 5
+    binding = TelegramClassroomBinding.objects.filter(group_id=group_id, is_active=True, bot_can_post=True).first()
+    queued_group = False
+    queued_teacher = False
+
+    teacher_id = classroom.teacher_id if classroom and classroom.teacher_id else row.cohort.teacher_id
+    if binding is not None:
+        lang = state.language_of(teacher_id) if teacher_id else 'uz'
+        prov = T[lang]['provisional_note'] if has_provisional else ''
+        template_key = 'group_report_small' if small_group else 'group_report'
+        text = T[lang][template_key].format(
+            group=esc(classroom.name if classroom else row.cohort.name),
+            title=esc(row.title),
+            s=len(submitted_subs),
+            t=total,
+            a=f'{avg:g}',
+            provisional=prov,
+        )
+        queued_group = bool(
+            outbox.enqueue(
+                f'group:{group_id}',
+                'announcements',
+                f'hw_group_report:{row.id}:{reason}:{binding.chat_id}:{int(now.timestamp()) if reason == "manual" else "closed"}',
+                text,
+                now=now,
+                group_id=group_id,
+                chat_id_override=binding.chat_id,
+            )
+        )
+
+    if teacher_id:
+        lang = state.language_of(teacher_id)
+        prov = T[lang]['provisional_note'] if has_provisional else ''
+        ttext = T[lang]['teacher_report'].format(
+            group=esc(classroom.name if classroom else row.cohort.name),
+            title=esc(row.title),
+            s=len(submitted_subs),
+            t=total,
+            a=f'{avg:g}',
+            pending=pending_count,
+            provisional=prov,
+        )
+        queued_teacher = bool(
+            outbox.enqueue(
+                teacher_id,
+                'teacher',
+                f'hw_teacher_report:{row.id}:{reason}:{int(now.timestamp()) if reason == "manual" else "closed"}',
+                ttext,
+                now=now,
+            )
+        )
+    return {
+        'groupId': group_id,
+        'assignmentId': row.id,
+        'submitted': len(submitted_subs),
+        'total': total,
+        'smallGroupSuppressed': small_group,
+        'provisional': has_provisional,
+        'queuedGroup': queued_group,
+        'queuedTeacher': queued_teacher,
+    }
 
 
 def deadline_sweep(now=None):
@@ -249,7 +447,12 @@ def send_recent_feedback(chat_id):
 def tick(now=None, *, deliver=True):
     now = now or timezone.now()
     made = {}
-    for name, sweep in (('deadlines', deadline_sweep), ('vocab', vocab_due_sweep), ('closed', assignment_closed_sweep)):
+    for name, sweep in (
+        ('deadlines', deadline_sweep),
+        ('homework_deadlines', homework_deadline_sweep),
+        ('vocab', vocab_due_sweep),
+        ('closed', assignment_closed_sweep),
+    ):
         try:
             made[name] = sweep(now)
         except Exception:  # noqa: BLE001 - one failing sweep must not stop delivery

@@ -4,15 +4,44 @@ from html import escape
 from common.api.exceptions import ContractAPIException
 
 from . import classroom_invitations as invitations
+from . import telegram_classroom_service as binding_service
 from . import telegram_delivery as api
 from . import telegram_links as links
 
 
-def command(chat_id, text, *, chat_type):
+def command(chat_id, text, *, chat_type, sender_id=None, chat_title=""):
     if not text:
         return False
     command_name, *args = text.split(maxsplit=3)
-    if command_name.split("@", 1)[0] not in ("/join", "/guruh"):
+    cmd = command_name.split("@", 1)[0]
+    if cmd in ("/bind", "/unbind"):
+        if chat_type == "private" or links._is_private_chat(chat_id):
+            api.plain(chat_id, "Guruhni bog'lash uchun buyruqni Telegram guruh ichida yuboring.")
+            return True
+        actor = links.find(sender_id or "", active=True) if sender_id else None
+        if actor is None or getattr(actor, "role", None) not in ("teacher", "admin", "super_admin"):
+            api.plain(chat_id, "Faqat bog'langan o'qituvchi yoki administrator guruhni ulay oladi.")
+            return True
+        if cmd == "/unbind":
+            if not args:
+                api.plain(chat_id, "Guruh ID sini ko'rsating: <code>/unbind GROUP_ID</code>")
+                return True
+            try:
+                res = binding_service.disconnect_group_chat(actor, args[0])
+                api.plain(chat_id, f"🔌 Guruh Telegramdan uzildi (bekor qilingan xabarlar: {res['invalidatedCount']}).")
+            except ContractAPIException as error:
+                api.plain(chat_id, escape(str(error.detail)))
+            return True
+        if not args:
+            api.plain(chat_id, "Guruhni bog'lash uchun yuboring: <code>/bind GROUP_ID</code>")
+            return True
+        try:
+            binding_service.bind_group_chat(actor, args[0], str(chat_id), chat_title=chat_title)
+            api.plain(chat_id, "✅ Telegram guruh BestWay sinfiga muvaffaqiyatli bog'landi.")
+        except ContractAPIException as error:
+            api.plain(chat_id, escape(str(error.detail)))
+        return True
+    if cmd not in ("/join", "/guruh"):
         return False
     if chat_type != "private" or not links._is_private_chat(chat_id):
         api.plain(chat_id, "Taklif kodini botning shaxsiy chatiga yuboring.")

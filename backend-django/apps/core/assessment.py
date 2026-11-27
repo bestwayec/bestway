@@ -427,8 +427,12 @@ def review(actor,identifier,data):
             values=dict(status='SUCCEEDED',failure_code=None,teacher_score=score,final_score=score,final_score_source='TEACHER',
                 final_result=result,approved_feedback=result,lease_token=None,lease_expires_at=None,completed_at=timezone.now(),version=F('version')+1)
             updated=update(job,**values)
+            from .homework_scoring import propagate_attempt_finalization
             from .mock_grading import recompute
             recompute(job.attempt_id)
+            refreshed_attempt = MockAttempt.objects.select_related('exam').filter(id=job.attempt_id).first()
+            if refreshed_attempt is not None:
+                propagate_attempt_finalization(refreshed_attempt, actor=actor)
         # Unlike best-effort administration audit, review audit belongs to the
         # caller-owned transaction and must roll back the entire review on error.
         AuditLog.objects.create(id=str(uuid4()),user_id=actor.id,action='assessment.'+action.lower(),entity='AssessmentJob',entity_id=job.id,old_value=old,
@@ -664,6 +668,10 @@ def teacher_grade_attempt(actor, attempt_id: str, data: dict) -> dict:
     attempt.status = 'completed'
     attempt.finished_at = attempt.finished_at or now
     attempt.save(update_fields=['overall_band', 'section_bands', 'standard_scores', 'media_state', 'status', 'finished_at'])
+
+    from .homework_scoring import propagate_attempt_finalization
+
+    propagate_attempt_finalization(attempt, actor=actor, now=now)
 
     return {
         'success': True,

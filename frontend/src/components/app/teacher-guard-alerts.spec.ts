@@ -105,10 +105,11 @@ describe("TeacherGuardAlertsProvider & GuardAlertsBell", () => {
 
     await act(async () => {
       root.render(
-        React.createElement(TeacherGuardAlertsProvider, {
-          role: "teacher",
-          children: React.createElement(GuardAlertsBell),
-        }),
+        React.createElement(
+          TeacherGuardAlertsProvider,
+          { role: "teacher" },
+          React.createElement(GuardAlertsBell),
+        ),
       );
     });
 
@@ -136,10 +137,11 @@ describe("TeacherGuardAlertsProvider & GuardAlertsBell", () => {
   it("hides guard bell for student role", async () => {
     await act(async () => {
       root.render(
-        React.createElement(TeacherGuardAlertsProvider, {
-          role: "student",
-          children: React.createElement(GuardAlertsBell),
-        }),
+        React.createElement(
+          TeacherGuardAlertsProvider,
+          { role: "student" },
+          React.createElement(GuardAlertsBell),
+        ),
       );
     });
     expect(host.querySelector('[data-testid="guard-alerts-bell"]')).toBeNull();

@@ -367,7 +367,7 @@ def handle(update):
                 telegram_quiz.send_my_tests(chat_id)
             return
         _ctype = (msg.get('chat') or {}).get('type', 'private')
-        if telegram_classrooms.command(chat_id, text, chat_type=_ctype):
+        if telegram_classrooms.command(chat_id, text, chat_type=_ctype, sender_id=from_user.get('id'), chat_title=(msg.get('chat') or {}).get('title', '')):
             return
         if text.startswith('/') and (telegram_vocab.command(chat_id, text, chat_type=_ctype) or telegram_teacher.command(chat_id, text, chat_type=_ctype)
                                      or telegram_settings.command(chat_id, text, chat_type=_ctype)):

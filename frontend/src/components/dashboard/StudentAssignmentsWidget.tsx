@@ -160,10 +160,9 @@ export function StudentAssignmentsWidget({ groupName, cohortFilterId }: StudentA
     return <Skeleton className="h-32 w-full rounded-2xl" />;
   }
 
-  const scopedAssignments = React.useMemo(
-    () => (cohortFilterId ? assignments.filter((a) => a.cohort_id === cohortFilterId) : assignments),
-    [assignments, cohortFilterId],
-  );
+  const scopedAssignments = cohortFilterId
+    ? assignments.filter((a) => a.cohort_id === cohortFilterId)
+    : assignments;
   // Active / pending assignments first
   const pendingAssignments = scopedAssignments.filter((a) => !a.is_submitted);
   const completedAssignments = scopedAssignments.filter((a) => a.is_submitted);

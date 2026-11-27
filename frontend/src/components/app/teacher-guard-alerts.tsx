@@ -67,7 +67,7 @@ export function TeacherGuardAlertsProvider({
   children,
 }: {
   role: Role;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }) {
   const tg = useTranslations("liveMonitoring.guard");
   const tl = useTranslations("mock.examLog");
@@ -81,7 +81,9 @@ export function TeacherGuardAlertsProvider({
   const lastSeqRef = React.useRef(0);
   const seenIdsRef = React.useRef<Set<string>>(new Set());
   const mutedRef = React.useRef(muted);
-  mutedRef.current = muted;
+  React.useEffect(() => {
+    mutedRef.current = muted;
+  }, [muted]);
 
   React.useEffect(() => {
     try {

@@ -178,7 +178,7 @@ def _queue_private_telegram_alert(supervisor_id: str, incident: ExamIntegrityInc
     action_text = UZ_EVENT_LABELS.get(incident.event_type, incident.event_type)
     skill_label = (incident.skill or "Exam").capitalize()
     monitor_url = (
-        site_url(f"/groups/{incident.group_id}?tab=results")
+        site_url(f"/groups/{incident.group_id}?tab=guard")
         if incident.group_id
         else site_url("/teacher")
     )
