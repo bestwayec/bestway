@@ -334,6 +334,12 @@ def homework_report_sweep(now=None):
     return queued
 
 
+def exam_reports_sweep(now=None):
+    """BESTWAY 5.1: durable preliminary/final exam reports (no 48-hour window)."""
+    from . import exam_report_delivery
+    return exam_report_delivery.sweep(now)
+
+
 def deadline_sweep(now=None):
     now = now or timezone.now()
     count = 0
@@ -470,7 +476,7 @@ def tick(now=None, *, deliver=True):
     for name, sweep in (
         ('deadlines', deadline_sweep),
         ('homework_deadlines', homework_deadline_sweep),
-        ('homework_reports', homework_report_sweep),
+        ('homework_reports', exam_reports_sweep),
         ('vocab', vocab_due_sweep),
         ('closed', assignment_closed_sweep),
     ):
