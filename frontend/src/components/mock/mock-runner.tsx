@@ -807,9 +807,10 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
 
   React.useEffect(() => {
     if (!deadline) return;
-    const clock = setInterval(() => setServerNow(Date.now() + serverOffset), 1000);
     let nextRetry = 0;
+    // One tick a second updates the clock and the server time together (one render, not two).
     const id = setInterval(() => {
+      setServerNow(Date.now() + serverOffset);
       const r = deadline - Date.now() - serverOffset;
       setRemaining(r);
       if (r <= 0 && !sessionElsewhereRef.current) {
@@ -822,7 +823,7 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
         } else void doSubmit(true);
       }
     }, 1000);
-    return () => { clearInterval(id); clearInterval(clock); };
+    return () => clearInterval(id);
   }, [deadline, doSubmit, serverOffset, overallDeadline, isFullTest, attempt.currentSkill, goNextSection, exam]);
 
   // Listening review tugashi: full_test da keyingi bo'limga, single_skill da

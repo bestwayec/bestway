@@ -45,3 +45,28 @@ never changed. The refinement replaces that fallback with compact inline rows an
 ## Known behaviour noticed (not changed)
 - The Speaking microphone check re-opens after a page reload in IELTS Speaking (existing 5.0 behaviour).
 - Locally, uploaded recording duration shows "unavailable" (no ffprobe in this container).
+
+## CBT Exam Experience 2.0 (final cycle on this branch)
+
+Same local stack (PostgreSQL 16, Prisma 5.22 `migrate deploy` + Django `migrate`, `seed_local_dev`, `seed_ielts_mock1_academic`,
+`next build` + `next start`, Django `runserver`), headless Chromium with a **fake** microphone and emulated fullscreen.
+
+| Gate | Result | Status |
+| --- | --- | --- |
+| Vitest (full) | 1036 passed (153 files) — was 1012 | VERIFIED |
+| `tsc --noEmit` | clean | VERIFIED |
+| ESLint (all files changed since `91d6a8b`) | 0 errors (warnings only, existing patterns) | VERIFIED |
+| `next build` | success | VERIFIED |
+| Django pytest (full) | 1733 passed, 4 skipped (was 1731 + 2 new readiness tests) | VERIFIED |
+| New Django test `test_exam51_readiness.py` | 2/2 (timing fields; closed assignment still 409) | VERIFIED |
+| Browser `cbt2.js` at 1366×768 light, 390×844 dark, 1280×720 dark, 1920×1080 light | every viewport: readiness rows measured (browser/connection/sign-in ok), **0 → 0 in-progress attempts while the readiness screen is open**, 1 after Start; save chip "Saved to server" → offline "Offline — kept on this device, not yet on the server" → "Saved to server" after reconnect; `O` opens the overview, filters All 40 / Unanswered 38 / Answered 2 / Flagged 0 / Not yet saved 0; review jump lands on Q5 below the 56 px header; Settings: dark (`html.dark`, body `rgb(11, 15, 13)`) + comfortable spacing applied without losing the typed answer, Restore defaults removes it; timer continues across reload (27:33 → 27:28); no horizontal overflow | VERIFIED |
+| Speaking microphone-check reuse (`cbt2.js`) | first visit asks; new tab of the same browser does **not** ask; fresh browser profile asks again | VERIFIED (fake microphone; no physical device) |
+| Deadline state (`deadline.js`, local DB deadline → +25 s) | "Time is up" chip, locked banner, fieldset disabled, "Answers locked" chip, then hand-in confirmed (`completed`) | VERIFIED |
+| Uzbek browser pass | blocked locally: unprefixed Uzbek URLs 307 to themselves under `next start` on http://127.0.0.1 (next-intl routing; not changed in 5.1). Uzbek strings: `messages-parity.spec.ts` | NOT VERIFIED IN BROWSER |
+| Live Telegram delivery / installed BW-Tauri | unchanged code paths; no test bot or desktop here | NOT VERIFIED |
+
+Before/after: "before" screenshots of the same exam (`ielts-academic-mock-01`) are the 5.1 baseline in `docs/screenshots/bestway51-final/`;
+"after" screenshots are in `docs/screenshots/bestway51-cbt-final/`.
+
+Performance (confirmed, not measured): the runner re-rendered twice a second from two separate 1 s intervals (clock + server time);
+they are now one tick. The submission review data is computed only while the dialog is open. No new dependencies.

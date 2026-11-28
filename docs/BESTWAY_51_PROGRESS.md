@@ -48,6 +48,9 @@ Branch: `feat/bestway-51-exam-monitoring-results` (mirrors the session branch `c
 | C3.6 | Assessment queue on the Result Center: pending Writing/Speaking students on the page and "Assess next" into the existing teacher-only grading view | DONE | same |
 | C3.1 | Builder student preview: existing production renderers reused; a phone-width preview was NOT added (the runner uses viewport breakpoints, so a narrowed box would show a misleading desktop layout) | NOT DONE — limitation | — |
 | C3.8 | Telegram reports, `/exams` menu and outbox untouched | PRESERVED | — |
+| C4.1 | Runner clock: two 1 s intervals → one (one render per second) | DONE | `mock-runner.tsx` |
+| C4.2 | Real-browser CBT 2.0 acceptance at 4 viewports, light/dark, deadline state | VERIFIED (Uzbek browser pass blocked locally, see test report) | `scripts/browser-acceptance-51/cbt2.js`, `deadline.js`, `docs/screenshots/bestway51-cbt-final/` |
+| C4.4 | Live Telegram / installed BW-Tauri | NOT VERIFIED (no test bot / desktop) | release checklist |
 
 ## Last verified tests
 See the test report (final cumulative cycle run on the final head).
@@ -55,4 +58,4 @@ See the test report (final cumulative cycle run on the final head).
 See `BESTWAY_51_TEST_REPORT.md` for the latest verified results.
 
 ## Next action
-Owner: review the PR, run the release checklist smoke test on staging data, then merge manually.
+Owner: review the PR, run the release checklist smoke test (including the CBT 2.0 section) on staging data, verify live Telegram and the installed desktop app, then merge manually.

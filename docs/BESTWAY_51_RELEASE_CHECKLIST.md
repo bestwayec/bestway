@@ -18,3 +18,11 @@
 - [ ] Teacher's private Telegram receives preliminary then final leaderboard; classroom chat receives totals only.
 - [ ] Excel matches the Result Center.
 - [ ] Fallback if Telegram fails: website Result Center + Excel are authoritative; do not mark delivery complete.
+
+## CBT 2.0 additions (smoke test)
+- [ ] Open an assigned exam: the readiness screen shows the assignment's closing time and timing policy; nothing starts until "Start the exam".
+- [ ] Speaking: pass the microphone check, reload — it is not asked again in the same browser; a different browser asks again.
+- [ ] Go offline mid-exam: the header says "kept on this device"; reconnect: "Saved to server".
+- [ ] Finish: the review lists unanswered numbers of the open section only and warns about unsaved answers.
+- [ ] Builder: the Review panel shows the new publication checks on a draft exam; fix or knowingly accept warnings before publishing.
+- No new migration. One additive API change: `/student/assignments/<id>/exam` also returns `assignmentTitle`, `timingPolicy`, `opensAt`, `deadline` (older desktop builds ignore extra fields).
