@@ -51,6 +51,9 @@ Branch: `feat/bestway-51-exam-monitoring-results` (mirrors the session branch `c
 | C4.1 | Runner clock: two 1 s intervals → one (one render per second) | DONE | `mock-runner.tsx` |
 | C4.2 | Real-browser CBT 2.0 acceptance at 4 viewports, light/dark, deadline state | VERIFIED (Uzbek browser pass blocked locally, see test report) | `scripts/browser-acceptance-51/cbt2.js`, `deadline.js`, `docs/screenshots/bestway51-cbt-final/` |
 | C4.4 | Live Telegram / installed BW-Tauri | NOT VERIFIED (no test bot / desktop) | release checklist |
+| S1 | Uzbek routing: loopback-bind loop root-caused (Next 16.4.6 `NextURL` localhost normalisation vs router origin), local launcher fixed, startup files guarded by a test; language switch reverting to English fixed (full navigation + `localeCookie.path=/`) | DONE, browser-verified on the production startup | `language-switcher.tsx`, `i18n/routing.ts`, `routing-regressions.spec.ts`, `uz-routing.js` |
+| S3 | Multilevel Speaking: all eight positions recorded in the browser and confirmed by the server | VERIFIED (fake microphone) | `mlspeak8.js` |
+| S2 | Worker / Redis / telegram-outbox / report scheduler: production-settings healthcheck and one-shot runs; exact commands in the release checklist | VERIFIED locally (no live bot) | release checklist "Final stabilization" |
 
 ## Last verified tests
 See the test report (final cumulative cycle run on the final head).

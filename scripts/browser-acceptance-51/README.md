@@ -25,6 +25,15 @@ Screenshots go to `docs/screenshots/bestway51-final/`.
 | --- | --- |
 | `cbt2.js <theme> <w> <h> <tag>` | Readiness screen (rows measured, **no attempt exists until Start**), Start creates exactly one attempt, save chip online → offline ("kept on this device") → reconnected ("Saved to server"), `O` opens the overview, Unanswered filter, submission review lists unanswered numbers and jumps to Q5 below the sticky header, Settings 2.0 (dark + comfortable spacing applied in place, typed answer kept, Restore defaults), timer kept across reload, Speaking mic check: asked once, **not** asked again in a new tab of the same browser, asked again in a fresh browser profile |
 | `deadline.js <theme>` | Synthetic attempt with its server deadline moved to +25 s in the `*_local` DB: "Time is up" chip, locked banner, answer fieldset disabled, "Answers locked" save chip, then confirmed hand-in |
-| `cbt2-uz.js <theme>` | Uzbek pass — blocked locally: unprefixed Uzbek URLs return a 307 to themselves under `next start` on http://127.0.0.1 (next-intl routing, unrelated to 5.1); Uzbek strings are covered by `messages-parity.spec.ts` |
 
 Run: `OUT=/home/user/bestway/docs/screenshots/bestway51-cbt-final node cbt2.js light 1366 768 1366` (also `dark 390 844 390`, `dark 1280 720 1280`, `light 1920 1080 1920`).
+
+## Final stabilization
+
+| Script | What it proves |
+| --- | --- |
+| `uz-routing.js` (`ASSIGNMENT=` optional) | Production startup (`HOSTNAME=0.0.0.0 npm start`), base `http://localhost:3300`: anonymous `/` and `/login` in Uzbek, open-redirect `next=https://evil…` stays on the site, student / teacher / admin sign-in on Uzbek pages without redirect hops or 5xx, readiness → runner → result page in Uzbek, header language switch to English and back (cookie follows), student blocked from `/teacher`, Result Center in Uzbek, logout → protected page sends to login |
+| `mlspeak8.js` | Multilevel Speaking (MOCK-RECORD-01): all eight positions recorded with native MediaRecorder (fake microphone) and confirmed by the server |
+
+Start Next without a loopback IP literal (`-H 127.0.0.1` breaks every unprefixed Uzbek page on Next 16.4.6).
+`cbt2-uz.js` was removed; `uz-routing.js` replaces it.

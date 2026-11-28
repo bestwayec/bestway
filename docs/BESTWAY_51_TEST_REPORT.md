@@ -62,7 +62,7 @@ Same local stack (PostgreSQL 16, Prisma 5.22 `migrate deploy` + Django `migrate`
 | Browser `cbt2.js` at 1366×768 light, 390×844 dark, 1280×720 dark, 1920×1080 light | every viewport: readiness rows measured (browser/connection/sign-in ok), **0 → 0 in-progress attempts while the readiness screen is open**, 1 after Start; save chip "Saved to server" → offline "Offline — kept on this device, not yet on the server" → "Saved to server" after reconnect; `O` opens the overview, filters All 40 / Unanswered 38 / Answered 2 / Flagged 0 / Not yet saved 0; review jump lands on Q5 below the 56 px header; Settings: dark (`html.dark`, body `rgb(11, 15, 13)`) + comfortable spacing applied without losing the typed answer, Restore defaults removes it; timer continues across reload (27:33 → 27:28); no horizontal overflow | VERIFIED |
 | Speaking microphone-check reuse (`cbt2.js`) | first visit asks; new tab of the same browser does **not** ask; fresh browser profile asks again | VERIFIED (fake microphone; no physical device) |
 | Deadline state (`deadline.js`, local DB deadline → +25 s) | "Time is up" chip, locked banner, fieldset disabled, "Answers locked" chip, then hand-in confirmed (`completed`) | VERIFIED |
-| Uzbek browser pass | blocked locally: unprefixed Uzbek URLs 307 to themselves under `next start` on http://127.0.0.1 (next-intl routing; not changed in 5.1). Uzbek strings: `messages-parity.spec.ts` | NOT VERIFIED IN BROWSER |
+| Uzbek browser pass | see "Final stabilization" below (root cause: loopback bind; plus a fixed language-switch defect) | VERIFIED in the final stabilization |
 | Live Telegram delivery / installed BW-Tauri | unchanged code paths; no test bot or desktop here | NOT VERIFIED |
 
 Before/after: "before" screenshots of the same exam (`ielts-academic-mock-01`) are the 5.1 baseline in `docs/screenshots/bestway51-final/`;
@@ -70,3 +70,50 @@ Before/after: "before" screenshots of the same exam (`ielts-academic-mock-01`) a
 
 Performance (confirmed, not measured): the runner re-rendered twice a second from two separate 1 s intervals (clock + server time);
 they are now one tick. The submission review data is computed only while the dialog is open. No new dependencies.
+
+## Final stabilization
+
+**Uzbek routing — two confirmed defects, both present on `main` before 5.1 (no routing file had changed in 5.1):**
+
+1. **Loopback bind (environment, guarded).** Next 16.4.6 builds the proxy URL with `NextURL`, which rewrites a loopback host
+   (`127.x`, `::1`) to `localhost`, while the router resolves proxy rewrites against the bound hostname. Started with
+   `-H 127.0.0.1`, next-intl's default-locale rewrite (`/login` → `/uz/login`) gets a different origin, is proxied as an
+   external URL and returns a 307 to itself (or a 500 with `X-Forwarded-Proto: https`). Reproduced on the same build:
+   `-H 127.0.0.1` → 307 / 500; no `-H`, `-H 0.0.0.0`, `-H localhost` and the production `HOSTNAME=0.0.0.0 npm start` → 200.
+   The earlier "HOSTNAME env loops" observation was a stale `-H 127.0.0.1` server still holding the port. Production's image
+   (`npm start`, `next start` binds 0.0.0.0) is not affected. `scripts/local-start.ps1` did bind `127.0.0.1` and was fixed;
+   `routing-regressions.spec.ts` fails if any startup file binds Next to a loopback IP literal.
+2. **Language switch reverted (product bug, fixed).** Choosing O'zbekcha after English was undone by the next click. Traced in a
+   real browser: the client transition kept the English page mounted; its link prefetches (`/en/...?_rsc`) passed through
+   next-intl, which writes `NEXT_LOCALE=en` on every response. Next 16 strips the router headers and `_rsc` before user
+   middleware, so the proxy cannot tell prefetches apart (a proxy-side attempt was reverted). Fix: the switcher now does a
+   real page load of the explicitly prefixed URL, so the server records the choice; `routing.localeCookie` also pins `Path=/`
+   (next-intl otherwise derives `Path=/en` from the URL when leaving `/en/...`).
+
+**Verified on the production startup** (`HOSTNAME=0.0.0.0 PORT=3300 npm start`, plus `next start -H 0.0.0.0`), with nginx headers
+(`Host: bestwayec.uz`, `X-Forwarded-Proto: https`) for the HTTP matrix and Chromium (`uz-routing.js`) for the journeys:
+
+| Check | Result |
+| --- | --- |
+| `/`, `/login`, `/en/login` | 200; `/uz/login` → `/login`; `/dashboard`, `/mock`, `/teacher` unauthenticated → `/login?next=…` |
+| Open redirect `/login?next=https://evil.example/steal` then sign-in | lands on `localhost:3300/dashboard` |
+| `//evil.example/` | 308 to same-origin `/evil.example/` |
+| Student, teacher, admin sign-in on Uzbek pages | `/dashboard`, `lang=uz`, no redirect hops, no 5xx |
+| Readiness screen → runner → result page (student) | all `lang=uz` |
+| Result Center (teacher, synthetic assignment) | `lang=uz`, "Umumiy yopilish vaqti" |
+| Header switch English → O'zbekcha | `/en/dashboard` (cookie en) → `/dashboard` (cookie uz); next link `/mock` stays Uzbek (before: `/en/mock`) |
+| Role guard | student → `/teacher` → `/dashboard` |
+| Logout (all three roles) | protected page → `/login?next=%2Fdashboard` |
+| Container healthcheck `wget -qO- http://localhost:3000/` equivalent | OK |
+| Vitest (i18n, proxy, components) | 656 passed (102 files); new `routing-regressions.spec.ts` 8/8 |
+
+**Workers (production settings, local):** `config.healthcheck` with `config.settings.production` + gunicorn + Redis → exit 0;
+`run_assessment_worker --once` → exit 0 (deadline sweep runs inside it); `finalize_expired_attempts` → `auto-submitted=0`;
+`run_telegram_outbox --once` without a bot token → exit 0, nothing sent or failed (the exam-report scheduler runs in this tick).
+The deadline, report and grading PostgreSQL verifications (35/48/87) run in hosted CI on every push and are not repeated locally.
+
+**Multilevel Speaking, all eight positions (`mlspeak8.js`, MOCK-RECORD-01, Chromium fake microphone):** the app sequenced
+Parts 1.1 → 1.2 → 2 → 3 itself; **8 of 8 recordings confirmed by the server**, durations 30.1 / 30.1 / 30.1 / 45.1 / 30.1 / 30.1 / 120.1 / 119.9 s
+(each matching its response window). Not a physical microphone.
+
+**Full Vitest on the final candidate:** 1044 passed (154 files). `tsc` clean, `next build` succeeded.

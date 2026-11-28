@@ -11,7 +11,9 @@ $script:NextBin    = Join-Path $script:FrontDir 'node_modules\next\dist\bin\next
 $script:ApiPort = 8100
 $script:WebPort = 3300
 $script:ApiUrl  = "http://127.0.0.1:$($script:ApiPort)"
-$script:WebUrl  = "http://127.0.0.1:$($script:WebPort)"
+# localhost, never a loopback IP literal: Next 16.4 normalizes 127.x/::1 to "localhost" in the proxy URL but
+# not in the router, so the Uzbek (default-locale) rewrite becomes cross-origin and loops (307) or fails (500).
+$script:WebUrl  = "http://localhost:$($script:WebPort)"
 
 function Write-Ok($m)   { Write-Host "[ OK ] $m" -ForegroundColor Green }
 function Write-Bad($m)  { Write-Host "[FAIL] $m" -ForegroundColor Red }

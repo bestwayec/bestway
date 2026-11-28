@@ -1,9 +1,7 @@
 "use client";
 
 import { useLocale } from "next-intl";
-import { useParams } from "next/navigation";
 import * as React from "react";
-import { useTransition } from "react";
 import { Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,15 +10,13 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { usePathname, useRouter } from "@/i18n/navigation";
+import { getPathname, usePathname } from "@/i18n/navigation";
 import { locales, localeNames, type Locale } from "@/i18n/routing";
 
 export function LanguageSwitcher() {
   const locale = useLocale() as Locale;
-  const router = useRouter();
   const pathname = usePathname();
-  const params = useParams();
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setPending] = React.useState(false);
   // Controlled + non-modal: a modal menu locks <body> (overflow hidden +
   // padding-right compensation). If locale navigation unmounts the tree while
   // it is open, that cleanup never runs — scrollbar vanishes (~15px right gap,
@@ -28,19 +24,16 @@ export function LanguageSwitcher() {
   const [open, setOpen] = React.useState(false);
 
   function switchTo(next: Locale) {
-    // Same locale — no navigation (avoids a pointless replace + scroll jump).
+    // Same locale — no navigation (avoids a pointless reload).
     if (next === locale) return;
-    // Close first, navigate after: menu state never survives into the
-    // locale transition, and scroll position is preserved.
     setOpen(false);
-    startTransition(() => {
-      // pathname bu yerda tilsiz ko'rinishda ("/dashboard"), params dinamik segmentlarni saqlaydi
-      router.replace(
-        // @ts-expect-error — dinamik marshrutlar uchun params tipini next-intl aniq bilmaydi
-        { pathname, params },
-        { locale: next, scroll: false },
-      );
-    });
+    setPending(true);
+    // A real page load of the explicitly prefixed URL (also /uz for the default language): the server records
+    // the choice in the locale cookie and serves the page in that language. A client transition kept the old
+    // page's links on screen; their prefetches (/en/...) re-wrote the old locale cookie, so the next click
+    // went back to English. Language changes are rare, so a reload is acceptable.
+    const target = getPathname({ href: pathname, locale: next, forcePrefix: true });
+    window.location.assign(`${target}${window.location.search}${window.location.hash}`);
   }
 
   return (
