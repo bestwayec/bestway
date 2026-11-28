@@ -1,15 +1,31 @@
 "use client";
 
 import * as React from "react";
-import { EyeOff, HelpCircle, Settings2, Volume2 } from "lucide-react";
+import { EyeOff, HelpCircle, RotateCcw, Settings2, Volume2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { broadcastVolume, type ExamColours, type ExamSettings, type ExamTextSize } from "@/lib/exam-settings";
+import { broadcastVolume, DEFAULT_EXAM_SETTINGS, type ExamColours, type ExamLineSpacing, type ExamSettings, type ExamTextSize, type ExamTheme } from "@/lib/exam-settings";
+import { useTheme } from "@/components/theme-provider";
+import { resetSplitPreferences } from "./reading-split-divider";
 
 const TEXT_SIZES: ExamTextSize[] = ["regular", "large", "xlarge"];
 const COLOURS: ExamColours[] = ["standard", "yellow_on_black", "black_on_cream"];
+const LINE_SPACINGS: ExamLineSpacing[] = ["normal", "relaxed"];
+const THEMES: ExamTheme[] = ["site", "light", "dark"];
+
+function Toggle({ checked, label, hint, onChange }: { checked: boolean; label: string; hint: string; onChange: (value: boolean) => void }) {
+  return (
+    <label className="flex min-h-[44px] cursor-pointer items-start gap-3 rounded-field border border-border bg-surface px-3 py-2">
+      <input type="checkbox" className="mt-1 size-4 accent-brand" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold text-fg">{label}</span>
+        <span className="block text-sm text-fg-muted">{hint}</span>
+      </span>
+    </label>
+  );
+}
 /** Question types with a help entry, in the order they are listed. */
 export const HELP_TYPES = [
   "multiple_choice", "multi_select", "true_false_notgiven", "yes_no_notgiven", "matching", "matching_headings",
@@ -64,6 +80,17 @@ export const ExamToolbar = React.forwardRef<ExamToolbarHandle, {
   React.useImperativeHandle(ref, () => ({ open: (panel) => setOpen(panel), hide: () => setHidden(true) }), []);
   const resume = React.useRef<HTMLButtonElement>(null);
   React.useEffect(() => { if (hidden) resume.current?.focus(); }, [hidden]);
+  const { setTheme } = useTheme();
+  // Light / dark is the site theme itself, so the whole window (dialogs included) agrees; "site" leaves it alone.
+  const chooseTheme = (theme: ExamTheme) => {
+    onChange({ ...settings, theme });
+    if (theme !== "site") setTheme(theme);
+  };
+  const restoreDefaults = () => {
+    broadcastVolume(DEFAULT_EXAM_SETTINGS.volume);
+    resetSplitPreferences();
+    onChange(DEFAULT_EXAM_SETTINGS);
+  };
   const helpTypes = HELP_TYPES.filter((type) => questionTypes.some((q) => helpTypeOf(q) === type));
 
   const iconButton = "min-h-[40px] min-w-[40px] px-2";
@@ -96,6 +123,18 @@ export const ExamToolbar = React.forwardRef<ExamToolbarHandle, {
               <p id="exam-colours-label" className="text-sm font-semibold text-fg">{t("colours")}</p>
               <Choice name="exam-colours" value={settings.colours} options={COLOURS} label={(v) => t(`colours_${v}`)} onChange={(colours) => onChange({ ...settings, colours })} />
             </div>
+            <div className="space-y-2">
+              <p id="exam-theme-label" className="text-sm font-semibold text-fg">{t("theme")}</p>
+              <Choice name="exam-theme" value={settings.theme} options={THEMES} label={(v) => t(`theme_${v}`)} onChange={chooseTheme} />
+            </div>
+            <div className="space-y-2">
+              <p id="exam-line-spacing-label" className="text-sm font-semibold text-fg">{t("lineSpacing")}</p>
+              <Choice name="exam-line-spacing" value={settings.lineSpacing} options={LINE_SPACINGS} label={(v) => t(`lineSpacing_${v}`)} onChange={(lineSpacing) => onChange({ ...settings, lineSpacing })} />
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Toggle checked={settings.reduceMotion} label={t("reduceMotion")} hint={t("reduceMotionHint")} onChange={(reduceMotion) => onChange({ ...settings, reduceMotion })} />
+              <Toggle checked={settings.strongFocus} label={t("strongFocus")} hint={t("strongFocusHint")} onChange={(strongFocus) => onChange({ ...settings, strongFocus })} />
+            </div>
             <label className="block space-y-2">
               <span className="flex items-center gap-2 text-sm font-semibold text-fg"><Volume2 className="size-4" aria-hidden />{t("volume")}</span>
               <input
@@ -105,6 +144,12 @@ export const ExamToolbar = React.forwardRef<ExamToolbarHandle, {
                 onChange={(event) => { const volume = Number(event.target.value); broadcastVolume(volume); onChange({ ...settings, volume }); }}
               />
             </label>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
+              <p className="text-sm text-fg-muted">{t("restoreHint")}</p>
+              <Button type="button" size="sm" variant="outline" onClick={restoreDefaults}>
+                <RotateCcw className="mr-1.5 size-4" aria-hidden />{t("restoreDefaults")}
+              </Button>
+            </div>
           </DialogBody>
         </DialogContent>
       </Dialog>

@@ -38,6 +38,16 @@ function createSplitStore(storageKey: string, eventName: string, fallback: numbe
 /** The passage column's share (%) of the Reading split, remembered on this device. */
 export const useReadingSplit = createSplitStore(KEY, "bw-reading-split", READING_SPLIT_DEFAULT);
 
+/** Settings → Restore defaults: forget both remembered split shares on this device. */
+export function resetSplitPreferences() {
+  try {
+    window.localStorage.removeItem(KEY);
+    window.localStorage.removeItem("bw_writing_split");
+  } catch { /* storage unavailable */ }
+  window.dispatchEvent(new Event("bw-reading-split"));
+  window.dispatchEvent(new Event("bw-writing-split"));
+}
+
 /** Writing: the task column's share (%). Smaller than Reading's half so the answer keeps most of the width. */
 export const WRITING_SPLIT_DEFAULT = 42;
 export const useWritingSplit = createSplitStore("bw_writing_split", "bw-writing-split", WRITING_SPLIT_DEFAULT);

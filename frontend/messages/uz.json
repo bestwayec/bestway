@@ -1624,7 +1624,9 @@
       "timeUpTitle": "Vaqt tugadi. Javoblaringiz qulflandi.",
       "timeUpFinalizing": "Saqlangan javoblaringiz topshirilmoqda. Tasdiq chiqquncha sahifani yopmang; muddatgacha serverga saqlanmagan javoblar hisobga olinmaydi.",
       "timeUpNextSection": "Bu bo‘lim yopildi. Keyingi bo‘limga o‘tilmoqda…",
-      "timeUpSpeaking": "Yangi yozuv boshlab bo‘lmaydi. Tugagan yozuv ruxsat etilgan vaqt ichida yuklanmoqda; sahifani yopmang."
+      "timeUpSpeaking": "Yangi yozuv boshlab bo‘lmaydi. Tugagan yozuv ruxsat etilgan vaqt ichida yuklanmoqda; sahifani yopmang.",
+      "pictureEnlarge": "Rasmni kattalashtirish: {name}",
+      "pictureEnlargeShort": "Kattalashtirish"
     },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",
@@ -1753,7 +1755,18 @@
       "passageN": "{n}-matn",
       "partN": "{n}-qism",
       "stateSaving": "saqlanmoqda",
-      "legendSaving": "Saqlanmoqda — hali tasdiqlanmagan"
+      "legendSaving": "Saqlanmoqda — hali tasdiqlanmagan",
+      "filterLabel": "Savollarni ko‘rsatish",
+      "filter_all": "Barchasi",
+      "filter_unanswered": "Javobsiz",
+      "filter_answered": "Javob berilgan",
+      "filter_flagged": "Belgilangan",
+      "filter_pending": "Hali saqlanmagan",
+      "filterEmpty_all": "Bu bo‘limda savol yo‘q.",
+      "filterEmpty_unanswered": "Barcha savollarga javob berilgan.",
+      "filterEmpty_answered": "Hali javob yo‘q.",
+      "filterEmpty_flagged": "Belgilangan savol yo‘q.",
+      "filterEmpty_pending": "Barcha javoblar serverga yetgan."
     },
     "advanceConfirm": {
       "title": "Keyingi bo‘limga o‘tasizmi?",
@@ -1877,7 +1890,14 @@
       "answeredCard": "Belgilangan",
       "unansweredCard": "Javobsiz",
       "flaggedCard": "Bayroqcha",
-      "flaggedNotice": "Sizda qayta ko'rib chiqish uchun belgilangan {count} ta savol mavjud."
+      "flaggedNotice": "Sizda qayta ko'rib chiqish uchun belgilangan {count} ta savol mavjud.",
+      "writingDone": "Writing: {total} ta topshiriqdan {done} tasi yozilgan",
+      "speakingDone": "Speaking: {total} ta yozuvdan {done} tasi serverga yetgan",
+      "pendingSaves": "{count} ta javob hali serverga yetmadi. «Serverga saqlandi» chiqishini kuting, aks holda u hisobga olinmaydi.",
+      "pendingOffline": "Internet yo‘q. {count} ta javob faqat shu qurilmada turibdi va aloqa tiklanmaguncha topshirib bo‘lmaydi.",
+      "unansweredList": "Javobsiz — ochish uchun bosing",
+      "flaggedList": "Qayta ko‘rish uchun belgilangan",
+      "jumpHint": "Faqat hali ochiq bo‘limlar ko‘rsatiladi."
     },
     "resumeDialog": {
       "title": "Qaysi bo'limni davom ettirmoqchisiz?",
@@ -2030,7 +2050,20 @@
       "listeningBuffering": "Yuklanmoqda… yozuv imtihon vaqti bo‘yicha davom etadi",
       "listeningLoadingMedia": "Yozuv yuklanmoqda…",
       "listeningMediaFailed": "Yozuv bu qurilmada yuklanmadi. Qayta urinib ko‘ring: u imtihon vaqtidagi joyidan davom etadi, boshidan boshlanmaydi. Muammo davom etsa, o‘qituvchingizga ayting.",
-      "listeningRetry": "Qayta urinish"
+      "listeningRetry": "Qayta urinish",
+      "theme": "Mavzu",
+      "theme_site": "Sayt kabi",
+      "theme_light": "Yorug‘",
+      "theme_dark": "Qorong‘i",
+      "lineSpacing": "Qatorlar oralig‘i",
+      "lineSpacing_normal": "Oddiy",
+      "lineSpacing_relaxed": "Keng",
+      "reduceMotion": "Harakatni kamaytirish",
+      "reduceMotionHint": "Imtihon oynasida animatsiya va silliq aylantirish bo‘lmaydi.",
+      "strongFocus": "Aniq fokus chegarasi",
+      "strongFocusHint": "Klaviatura qayerdaligini qalin chegara ko‘rsatadi.",
+      "restoreHint": "Matn o‘lchami, ranglar, mavzu, oraliq, ovoz va panel kengliklari. Javoblar va vaqtga ta’sir qilmaydi.",
+      "restoreDefaults": "Standart holatga qaytarish"
     },
     "textTools": {
       "toolbar": "Matn vositalari",
@@ -2185,7 +2218,8 @@
       "flag": "Savolni belgilash yoki belgini olish",
       "highlight": "Tanlangan matnni bo'yash",
       "help": "Shu ro'yxatni ko'rsatish",
-      "close": "Oyna yoki panelni yopish"
+      "close": "Oyna yoki panelni yopish",
+      "overview": "Savollar ro‘yxatini ochish"
     },
     "ocr": {
       "zoomTitle": "Qo'lyozma rasm (kattalashtirilgan)",

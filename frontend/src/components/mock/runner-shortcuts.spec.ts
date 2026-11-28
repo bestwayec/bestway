@@ -75,7 +75,7 @@ describe("useRunnerShortcuts and the help dialog", () => {
     const list = document.body.querySelector('[data-testid="shortcuts-list"]')!;
     expect(list.querySelectorAll("dt")).toHaveLength(RUNNER_SHORTCUTS.length);
     expect(list.textContent).toContain("Next question");
-    expect([...list.querySelectorAll("kbd")].map((k) => k.textContent)).toEqual(["N", "P", "F", "H", "?", "Esc"]);
+    expect([...list.querySelectorAll("kbd")].map((k) => k.textContent)).toEqual(["N", "P", "F", "O", "H", "?", "Esc"]);
     expect(document.body.textContent).toContain("Keyboard shortcuts");
   });
 });

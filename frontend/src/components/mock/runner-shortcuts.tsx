@@ -10,6 +10,7 @@ export const RUNNER_SHORTCUTS = [
   { keys: ["N"], action: "next" },
   { keys: ["P"], action: "previous" },
   { keys: ["F"], action: "flag" },
+  { keys: ["O"], action: "overview" },
   { keys: ["H"], action: "highlight" },
   { keys: ["?"], action: "help" },
   { keys: ["Esc"], action: "close" },
@@ -37,6 +38,7 @@ export function shortcutFor(event: Pick<KeyboardEvent, "key" | "ctrlKey" | "meta
     case "n": case "N": return "next";
     case "p": case "P": return "previous";
     case "f": case "F": return "flag";
+    case "o": case "O": return "overview";
     case "h": case "H": return "highlight";
     case "?": return "help";
     default: return null;

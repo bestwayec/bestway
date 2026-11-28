@@ -1,15 +1,25 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from "vitest";
-import { DEFAULT_EXAM_SETTINGS, loadExamSettings, saveExamSettings, timerAlert, timerTone } from "./exam-settings";
+import { DEFAULT_EXAM_SETTINGS, examSettingsClasses, loadExamSettings, saveExamSettings, timerAlert, timerTone } from "./exam-settings";
 
 describe("exam settings", () => {
   beforeEach(() => localStorage.clear());
   it("defaults, saves and ignores invalid stored values", () => {
     expect(loadExamSettings()).toEqual(DEFAULT_EXAM_SETTINGS);
-    saveExamSettings({ textSize: "xlarge", colours: "yellow_on_black", volume: 0.4 });
-    expect(loadExamSettings()).toEqual({ textSize: "xlarge", colours: "yellow_on_black", volume: 0.4 });
+    saveExamSettings({ ...DEFAULT_EXAM_SETTINGS, textSize: "xlarge", colours: "yellow_on_black", volume: 0.4 });
+    expect(loadExamSettings()).toEqual({ ...DEFAULT_EXAM_SETTINGS, textSize: "xlarge", colours: "yellow_on_black", volume: 0.4 });
+    // Settings saved by 5.0 (three fields) keep working and gain the new defaults.
+    localStorage.setItem("bw_exam_settings", JSON.stringify({ textSize: "large", colours: "standard", volume: 1 }));
+    expect(loadExamSettings()).toEqual({ ...DEFAULT_EXAM_SETTINGS, textSize: "large" });
     localStorage.setItem("bw_exam_settings", JSON.stringify({ textSize: "huge", colours: "pink", volume: 7 }));
     expect(loadExamSettings()).toEqual(DEFAULT_EXAM_SETTINGS);
+    localStorage.setItem("bw_exam_settings", JSON.stringify({ theme: "neon", lineSpacing: "huge", reduceMotion: "yes" }));
+    expect(loadExamSettings()).toEqual(DEFAULT_EXAM_SETTINGS);
+  });
+  it("maps comfort settings to exam-area classes", () => {
+    expect(examSettingsClasses(DEFAULT_EXAM_SETTINGS)).toEqual(["exam-theme-standard"]);
+    expect(examSettingsClasses({ ...DEFAULT_EXAM_SETTINGS, lineSpacing: "relaxed", reduceMotion: true, strongFocus: true }))
+      .toEqual(["exam-theme-standard", "exam-line-relaxed", "exam-reduce-motion", "exam-strong-focus"]);
   });
 });
 
