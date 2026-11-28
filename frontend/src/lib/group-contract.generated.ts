@@ -77,6 +77,8 @@ export type ClassroomAssignment = {
   exam_id: string | null;
   exam_title: string | null;
   vocabulary_set_id: string | null;
+  timing_policy?: "individual" | "fixed_close";
+  opens_at?: string | null;
 };
 
 export type ClassroomAssignmentInput = {
@@ -86,6 +88,8 @@ export type ClassroomAssignmentInput = {
   lesson_id?: string;
   exam_id?: string;
   vocabulary_set_id?: string;
+  timing_policy?: "individual" | "fixed_close";
+  opens_at?: string;
 };
 
 export type VocabularyMode = "mixed" | "spelling" | "eng_uzb" | "uzb_eng";

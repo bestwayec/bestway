@@ -193,7 +193,17 @@
     "failed": "So‘rov bajarilmadi.",
     "loading": "Vazifalar yuklanmoqda…",
     "retry": "Qayta urinish",
-    "empty": "Hozircha vazifalar yo‘q."
+    "empty": "Hozircha vazifalar yo‘q.",
+    "opensAt": "Ochilish vaqti (ixtiyoriy)",
+    "timingPolicy": "Imtihon vaqti",
+    "timingIndividual": "Shaxsiy davomiylik",
+    "timingFixed": "Umumiy yopilish vaqti (nazoratli)",
+    "timingIndividualHelp": "Har bir o‘quvchi boshlagandan keyin imtihonning to‘liq vaqtini oladi. Muddat faqat yangi boshlashni yopadi.",
+    "timingFixedHelp": "Hamma o‘quvchi muddatgacha tugatishi shart. Muddat tugaganda server tugallanmagan urinishlarni avtomatik topshiradi, brauzer yopilgan bo‘lsa ham.",
+    "fixedNeedsDeadline": "Umumiy yopilish vaqti uchun muddat kiriting.",
+    "fixedBadge": "Umumiy yopilish",
+    "opensBadge": "Ochiladi: {when}",
+    "tashkent": "Vaqtlar Asia/Tashkent bo‘yicha ko‘rsatiladi."
   },
   "assessment": {
     "title": "Writing va Speaking tahlili",
@@ -267,7 +277,11 @@
     "audioDuration": "Tekshirilgan davomiylik {seconds} soniya",
     "finalizeGrade": "Bahoni tasdiqlash",
     "useLatestReviewVersion": "Tahrirlarni saqlab, so‘nggi versiyadan foydalanish",
-    "transcriptionStates": {"STARTED": "Transkript tayyorlanmoqda", "SUCCEEDED": "Transkript tayyor", "FAILED": "Transkript tayyorlanmadi"},
+    "transcriptionStates": {
+      "STARTED": "Transkript tayyorlanmoqda",
+      "SUCCEEDED": "Transkript tayyor",
+      "FAILED": "Transkript tayyorlanmadi"
+    },
     "transcriptPending": "Transkript hozircha mavjud emas. Tekshiruvda asl audiodan foydalaning.",
     "transcriptConfidence": "Transkripsiya ishonchliligi",
     "segments": "Transkript vaqtlari",

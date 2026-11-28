@@ -532,6 +532,11 @@ class HomeworkAssignment(models.Model):
     vocabulary_mode = models.CharField(max_length=20, choices=QuizMode.choices, null=True, blank=True)
     participant_ids = models.JSONField(null=True, blank=True)
     deadline = models.DateTimeField()
+    # Exam timing policy (BESTWAY 5.1). "individual": each student receives the exam's own
+    # duration after starting; the deadline only closes new starts (pre-5.1 behaviour).
+    # "fixed_close": every attempt also ends at the common deadline (supervised classroom exam).
+    timing_policy = models.CharField(max_length=20, default="individual")
+    opens_at = models.DateTimeField(null=True, blank=True)
     min_pass_percent = models.IntegerField(default=80)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -1302,3 +1307,23 @@ class TelegramClassroomBinding(models.Model):
                 name="telegram_unique_verified_chat",
             ),
         ]
+
+
+class ExamReportState(models.Model):
+    """Durable lifecycle of the automatic exam reports of one assignment (BESTWAY 5.1).
+
+    The sweep compares the authoritative report revision with the last revision queued for
+    each stage, so a report is produced once per content change, after downtime as well, and
+    never depends on the worker running inside one narrow window after the deadline."""
+
+    assignment = models.OneToOneField(HomeworkAssignment, on_delete=models.CASCADE, primary_key=True,
+                                      related_name="report_state")
+    preliminary_revision = models.CharField(max_length=64, blank=True, default="")
+    preliminary_at = models.DateTimeField(null=True, blank=True)
+    final_revision = models.CharField(max_length=64, blank=True, default="")
+    final_at = models.DateTimeField(null=True, blank=True)
+    final_version = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "ExamReportState"

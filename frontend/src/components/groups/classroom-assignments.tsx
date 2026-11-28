@@ -9,6 +9,15 @@ import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api-client";
 import type { ClassroomAssignment, ClassroomAssignmentInput, ClassroomVocabularyCollection, VocabularyAssignmentReports } from "@/lib/group-contract.generated";
 
+// Classroom times are entered and shown in Asia/Tashkent (UTC+05:00, no daylight saving) and stored in UTC.
+const TASHKENT_OFFSET = "+05:00";
+export function tashkentInputToIso(value: string): string {
+  return new Date(`${value.length === 16 ? `${value}:00` : value}${TASHKENT_OFFSET}`).toISOString();
+}
+export function formatTashkent(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, { timeZone: "Asia/Tashkent", dateStyle: "medium", timeStyle: "short" });
+}
+
 export function ClassroomAssignments({ groupId, userId }: { groupId: string; userId: string }) {
   const t = useTranslations("classroomAssignments");
   const tv = useTranslations("vocabularyAssignment");
@@ -38,12 +47,16 @@ export function ClassroomAssignments({ groupId, userId }: { groupId: string; use
   });
   const [title, setTitle] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [opensAt, setOpensAt] = useState("");
+  const [timing, setTiming] = useState<"individual" | "fixed_close">("individual");
 
   const create = useMutation({
     mutationFn: (input: ClassroomAssignmentInput) => api.post<ClassroomAssignment>(path, input),
     onSuccess: async () => {
       setTitle("");
       setDeadline("");
+      setOpensAt("");
+      setTiming("individual");
       setSetId("");
       setExamId("");
       await queryClient.invalidateQueries({ queryKey });
@@ -53,11 +66,13 @@ export function ClassroomAssignments({ groupId, userId }: { groupId: string; use
   function submit(event: FormEvent) {
     event.preventDefault();
     if (!title.trim() || create.isPending) return;
+    if (examId && timing === "fixed_close" && !deadline) return;
     create.mutate({
       title: title.trim(),
-      ...(deadline ? { deadline: new Date(deadline).toISOString() } : {}),
+      ...(deadline ? { deadline: tashkentInputToIso(deadline) } : {}),
       ...(setId ? { vocabulary_set_id: setId, min_pass_percent: Number(minimum) } : {}),
-      ...(examId ? { exam_id: examId, min_pass_percent: Number(minimum) } : {}),
+      ...(examId ? { exam_id: examId, min_pass_percent: Number(minimum), timing_policy: timing,
+        ...(opensAt ? { opens_at: tashkentInputToIso(opensAt) } : {}) } : {}),
     });
   }
 
@@ -88,14 +103,31 @@ export function ClassroomAssignments({ groupId, userId }: { groupId: string; use
               {exams.data?.map(exam => <option key={exam.id} value={exam.id}>{exam.title}</option>)}
             </select>
           </label>
+          {examId && <label className="grid gap-1 text-sm">
+            {t("opensAt")}
+            <Input type="datetime-local" value={opensAt} onChange={event => setOpensAt(event.target.value)} />
+          </label>}
+          {examId && <fieldset className="grid gap-1 text-sm">
+            <legend>{t("timingPolicy")}</legend>
+            {(["individual", "fixed_close"] as const).map(option => (
+              <label className="flex items-center gap-2" key={option}>
+                <input type="radio" name="timing_policy" value={option} checked={timing === option} onChange={() => setTiming(option)} />
+                {t(option === "individual" ? "timingIndividual" : "timingFixed")}
+              </label>
+            ))}
+          </fieldset>}
           {(setId || examId) && <label className="grid gap-1 text-sm">
             {tv("minimum")}
             <Input type="number" min={0} max={100} required value={minimum} onChange={event => setMinimum(event.target.value)} />
           </label>}
-          <Button type="submit" disabled={!title.trim() || create.isPending}>
+          <Button type="submit" disabled={!title.trim() || create.isPending || (Boolean(examId) && timing === "fixed_close" && !deadline)}>
             {create.isPending ? t("saving") : t("assign")}
           </Button>
         </form>
+        {examId && <p className="text-sm text-fg-muted" data-testid="timing-help">
+          {t(timing === "individual" ? "timingIndividualHelp" : "timingFixedHelp")} {t("tashkent")}
+          {timing === "fixed_close" && !deadline && <> <strong role="alert">{t("fixedNeedsDeadline")}</strong></>}
+        </p>}
         {exams.isError && <p role="alert">{t("failed")} <Button size="sm" onClick={() => void exams.refetch()}>{t("retry")}</Button></p>}
         {collections.isError && <p role="alert">{tv("failed")} <Button size="sm" onClick={() => void collections.refetch()}>{tv("retry")}</Button></p>}
         {create.isError && <p role="alert">{create.error instanceof Error ? create.error.message : t("failed")}</p>}
@@ -107,7 +139,9 @@ export function ClassroomAssignments({ groupId, userId }: { groupId: string; use
               <li className="flex flex-wrap justify-between gap-2 py-2" key={task.id}>
                 <span>{task.title}</span>
                 {task.vocabulary_set_id && <Button variant="outline" size="sm" aria-expanded={report === task.id} onClick={() => { setReport(report === task.id ? "" : task.id); setPage(1); setReportSearch(""); }}>{tv("results")}</Button>}
-                <time className="text-fg-muted" dateTime={task.deadline}>{new Date(task.deadline).toLocaleString()}</time>
+                {task.timing_policy === "fixed_close" && <span className="rounded bg-surface-muted px-2 text-xs">{t("fixedBadge")}</span>}
+                {task.opens_at && <span className="text-xs text-fg-muted">{t("opensBadge", { when: formatTashkent(task.opens_at) })}</span>}
+                <time className="text-fg-muted" dateTime={task.deadline}>{formatTashkent(task.deadline)}</time>
               </li>
             ))}
           </ul>

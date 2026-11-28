@@ -193,7 +193,17 @@
     "failed": "Could not complete the request.",
     "loading": "Loading assignments…",
     "retry": "Retry",
-    "empty": "No assignments yet."
+    "empty": "No assignments yet.",
+    "opensAt": "Opens at (optional)",
+    "timingPolicy": "Exam timing",
+    "timingIndividual": "Individual duration",
+    "timingFixed": "Fixed closing time (supervised)",
+    "timingIndividualHelp": "Each student gets the exam's full duration after starting. The deadline only closes new starts.",
+    "timingFixedHelp": "Every student must finish by the deadline. The server hands in unfinished attempts automatically when it passes, even if the browser is closed.",
+    "fixedNeedsDeadline": "A fixed closing time needs a deadline.",
+    "fixedBadge": "Fixed close",
+    "opensBadge": "Opens {when}",
+    "tashkent": "Times are shown in Asia/Tashkent."
   },
   "assessment": {
     "title": "Writing & Speaking feedback",
@@ -267,7 +277,11 @@
     "audioDuration": "Verified duration {seconds}s",
     "finalizeGrade": "Finalize grade",
     "useLatestReviewVersion": "Use latest version and keep my edits",
-    "transcriptionStates": {"STARTED": "Transcribing", "SUCCEEDED": "Transcribed", "FAILED": "Transcription failed"},
+    "transcriptionStates": {
+      "STARTED": "Transcribing",
+      "SUCCEEDED": "Transcribed",
+      "FAILED": "Transcription failed"
+    },
     "transcriptPending": "No transcript is available yet. Use the original recording for review.",
     "transcriptConfidence": "Transcription confidence",
     "segments": "Transcript timing",

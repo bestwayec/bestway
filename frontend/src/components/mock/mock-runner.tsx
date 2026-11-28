@@ -1558,12 +1558,31 @@ function GroupBlock({
     return () => element.removeEventListener("bw-exam-show-question", show);
   }, [tabbed, readingMobileTab]);
 
+  // Jump targets must clear the real sticky stack (exam header + this part's audio panel),
+  // whose height varies with wrapping, zoom and viewport: measure it instead of guessing.
+  const stickyHost = React.useRef<HTMLDivElement>(null);
+  const stickyAudio = React.useRef<HTMLDivElement>(null);
+  const [stickyOffset, setStickyOffset] = React.useState(112);
+  React.useEffect(() => {
+    const panel = stickyAudio.current;
+    if (!panel || typeof ResizeObserver === "undefined") return;
+    const measure = () => {
+      const sticky = getComputedStyle(panel).position === "sticky";
+      const header = document.querySelector<HTMLElement>("[data-runner-header]")?.offsetHeight ?? 56;
+      setStickyOffset(Math.ceil(header + (sticky ? panel.offsetHeight : 0) + 12));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(panel);
+    window.addEventListener("resize", measure);
+    return () => { observer.disconnect(); window.removeEventListener("resize", measure); };
+  }, []);
   return (
-    <Card className="p-3 sm:p-4">
+    <Card className="p-3 sm:p-4" ref={stickyHost} style={{ "--bw-sticky-offset": `${stickyOffset}px` } as React.CSSProperties}>
       {group.title && !taskContent && <h3 className="font-semibold text-fg">{group.title}</h3>}
       {hasListeningAudio && skill === "listening" ? (
         // The recording is content (not chrome): it stays in view under the header while the questions scroll.
-        <div data-layout-content className={cn("z-10 -mx-3 mb-3 border-b border-border bg-surface/95 px-3 py-2 backdrop-blur-xl sm:-mx-4 sm:px-4 [@media(min-height:720px)]:sticky [@media(min-height:720px)]:top-14", group.title ? "mt-2" : "-mt-3 rounded-t-card sm:-mt-4")}>
+        <div data-layout-content data-testid="listening-sticky-audio" ref={stickyAudio} className={cn("z-10 -mx-3 mb-3 border-b border-border bg-surface/95 px-3 py-2 backdrop-blur-xl sm:-mx-4 sm:px-4 [@media(min-height:720px)]:sticky [@media(min-height:720px)]:top-14", group.title ? "mt-2" : "-mt-3 rounded-t-card sm:-mt-4")}>
           {group.questions[0]?.guidance && strict ? <MultilevelListening
             prepare={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/listening/${group.id}/prepare`)}
             play={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/listening/${group.id}/play`)}
@@ -1603,7 +1622,7 @@ function GroupBlock({
         </div>
       )}
       {group.instructions && !isWritingSplit && (
-        <div className="mt-3 text-sm font-medium text-fg-muted">
+        <div data-testid="group-instructions" className="mt-3 scroll-mt-[var(--bw-sticky-offset,7rem)] text-sm font-medium text-fg-muted">
           <CbtAnnotatedText
             text={group.instructions}
             storageKey={`${attemptId}.${group.id}.instructions`}
@@ -1825,7 +1844,7 @@ function GroupBlock({
             )}
             <MatchingOptionBank options={matchingBank} />
             {group.questions.filter((q) => !gapNumbers.has(q.number)).map((q) => (
-              <div key={q.id} id={`q-${q.id}`} className="scroll-mt-28" {...(isWritingSplit ? { "data-testid": "writing-answer-panel" } : {})}>
+              <div key={q.id} id={`q-${q.id}`} className="scroll-mt-[var(--bw-sticky-offset,7rem)]" {...(isWritingSplit ? { "data-testid": "writing-answer-panel" } : {})}>
                 <QuestionInput
                   key={q.id}
                   question={q}
