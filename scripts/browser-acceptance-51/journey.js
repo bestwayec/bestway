@@ -1,5 +1,5 @@
 // Continue the IELTS attempt from ielts.js: Reading -> Writing -> Speaking -> Finish, real UI events.
-const { browser, session, theme, api, dismiss, shot, BASE } = require('./lib');
+const { browser, session, api, dismiss, shot, BASE } = require('./lib');
 const log = (...a) => console.log(...a);
 async function next(p) {
   await p.locator('[data-runner-header] button:has-text("Next section")').click();
