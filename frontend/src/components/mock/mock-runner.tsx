@@ -1582,7 +1582,7 @@ function GroupBlock({
       {group.title && !taskContent && <h3 className="font-semibold text-fg">{group.title}</h3>}
       {hasListeningAudio && skill === "listening" ? (
         // The recording is content (not chrome): it stays in view under the header while the questions scroll.
-        <div data-layout-content data-testid="listening-sticky-audio" ref={stickyAudio} className={cn("z-10 -mx-3 mb-3 border-b border-border bg-surface/95 px-3 py-2 backdrop-blur-xl sm:-mx-4 sm:px-4 [@media(min-height:720px)]:sticky [@media(min-height:720px)]:top-14", group.title ? "mt-2" : "-mt-3 rounded-t-card sm:-mt-4")}>
+        <div data-layout-content data-testid="listening-sticky-audio" ref={stickyAudio} className={cn("z-10 -mx-3 mb-3 border-b border-border bg-surface/95 px-3 py-2 backdrop-blur-xl sm:-mx-4 sm:px-4 [@media(min-height:720px)_and_(min-width:640px)]:sticky [@media(min-height:720px)_and_(min-width:640px)]:top-14", group.title ? "mt-2" : "-mt-3 rounded-t-card sm:-mt-4")}>
           {group.questions[0]?.guidance && strict ? <MultilevelListening
             prepare={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/listening/${group.id}/prepare`)}
             play={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/listening/${group.id}/play`)}

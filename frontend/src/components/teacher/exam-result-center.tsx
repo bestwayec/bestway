@@ -38,6 +38,12 @@ export function scoreCell(row: ExamReportRow, skill: Skill, pendingLabel: string
   return row.pendingSkills.includes(skill) ? pendingLabel : "—";
 }
 
+/** Overall is shown only when final; "pending" only while a subjective grade is awaited. */
+export function overallCell(row: ExamReportRow, pendingLabel: string): string {
+  if (row.overall !== null) return String(row.overall);
+  return ["awaiting_assessment", "awaiting_teacher_review", "partially_graded"].includes(row.grading) ? pendingLabel : "—";
+}
+
 export function ExamResultCenter({ assignmentId }: { assignmentId: string }) {
   const t = useTranslations("examResultCenter");
   const [page, setPage] = useState(1);
@@ -112,7 +118,7 @@ export function ExamResultCenter({ assignmentId }: { assignmentId: string }) {
                   <TableCell>{row.rank ?? "—"}</TableCell>
                   <TableCell><button type="button" className="text-left underline-offset-2 hover:underline" aria-expanded={student === row.studentId} onClick={() => setStudent(student === row.studentId ? "" : row.studentId)}>{row.name}</button></TableCell>
                   {SKILLS.map(s => <TableCell key={s} numeric>{scoreCell(row, s, t("pending"))}</TableCell>)}
-                  <TableCell numeric>{row.overall ?? (row.grading === "finalized" ? "—" : t("pending"))}{row.cefr ? ` (${row.cefr})` : ""}</TableCell>
+                  <TableCell numeric>{overallCell(row, t("pending"))}{row.cefr ? ` (${row.cefr})` : ""}</TableCell>
                   <TableCell numeric>{row.growth === null ? "—" : row.growth > 0 ? `+${row.growth}` : row.growth}</TableCell>
                   <TableCell>{t(`participation.${row.participation}`)}{row.participation !== "not_started" && row.participation !== "not_submitted" && row.participation !== "in_progress" ? ` · ${t(`grading.${row.grading}`)}` : ""}</TableCell>
                   <TableCell>{row.submittedAt ? tashkent(row.submittedAt) : "—"}</TableCell>
