@@ -67,7 +67,7 @@ if (-not $SkipFrontend) {
                 API_URL                = "$($script:ApiUrl)/v1"
                 NODE_OPTIONS           = '--max-old-space-size=1536'   # cap the dev server heap on a 4 GB machine
                 NEXT_TELEMETRY_DISABLED = '1'
-            }) $node "`"$($script:NextBin)`" dev -p $($script:WebPort) -H 127.0.0.1" $script:FrontDir `
+            }) $node "`"$($script:NextBin)`" dev -p $($script:WebPort) -H localhost" $script:FrontDir `
             (Join-Path $script:StateDir 'next.out.log') (Join-Path $script:StateDir 'next.err.log')
         $newPid | Set-Content (Get-PidFile 'next') -Encoding ascii
         Write-Info "Next.js starting (PID $newPid); first page compile can take 30-60 s on 4 GB RAM..."

@@ -9,17 +9,66 @@ import { cn } from "@/lib/utils";
 import { answerRuleHint, isObjectiveChoice, MATCHING_TYPES, objectiveNumberLabel, objectiveOptions, selectedObjectiveOptions, toggleObjectiveOption, type ObjectiveQuestion } from "@/lib/objective-question";
 
 /** Shared objective controls for active attempts and author student previews. */
-export function ObjectiveQuestionInput({ question: q, value, onChange, unavailableOptions = [], disabled = false, renderPrompt, headerAction, sharedBank = false }: {
+/** The first run of 3+ underscores or an ellipsis gap in a prompt: where the answer field belongs. */
+const BLANK = /_{3,}|…{1,}|\.{4,}/;
+
+export function splitAtBlank(prompt: string): [string, string] | null {
+  const match = BLANK.exec(prompt);
+  if (!match) return null;
+  return [prompt.slice(0, match.index), prompt.slice(match.index + match[0].length)];
+}
+
+/**
+ * Compact CBT row for a typed answer (completion / short answer): the number, the original
+ * prompt with the field inline at its blank, and Flag on one line. Many questions stay visible.
+ */
+function CompactTextEntry({ q, value, onChange, disabled, renderPrompt, headerAction, numberLabel, hint: rawHint, groupInstructions }: {
+  q: ObjectiveQuestion; value: string; onChange: (value: string) => void; disabled: boolean;
+  renderPrompt?: (text: string, part?: string) => React.ReactNode; headerAction?: React.ReactNode; numberLabel: string; hint: string | null;
+  groupInstructions?: string | null;
+}) {
+  const t = useTranslations("mock.runnerUx");
+  // The word limit is already stated in the group instruction: repeating it on every row is noise.
+  const hint = rawHint && groupInstructions?.toLowerCase().includes(rawHint.toLowerCase()) ? null : rawHint;
+  const answered = !!value.trim();
+  const prompt = (q.prompt ?? "").trim();
+  const parts = splitAtBlank(prompt);
+  const text = (chunk: string, part: string) => (renderPrompt ? renderPrompt(chunk, part) : chunk);
+  const field = (
+    <Input value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled}
+      aria-label={t("answerFor", { number: numberLabel })} aria-describedby={hint ? `hint-${q.id}` : undefined}
+      autoComplete="off" spellCheck={false} data-compact-answer
+      className={cn("mx-1 inline-flex h-8 min-h-8 w-40 max-w-full px-2 py-0 align-baseline text-base sm:w-48", answered && "border-brand/60")} />
+  );
+  return (
+    <div className="flex items-start gap-2.5 py-2" data-compact-question data-answered={answered || undefined}>
+      <span className={cn("mt-0.5 grid h-7 min-w-7 shrink-0 place-items-center rounded-field px-1 text-sm font-bold tabular-nums",
+        answered ? "bg-brand text-brand-fg" : "border border-border-strong bg-bg-subtle text-fg")}>
+        {numberLabel}<span className="sr-only">{answered ? ` — ${t("answerEntered")}` : ""}</span>
+      </span>
+      <div className="min-w-0 flex-1 whitespace-pre-line text-base leading-8 text-fg sm:leading-9">
+        {parts ? <>{text(parts[0], "a")}{field}{text(parts[1], "b")}</> : <>{prompt && <>{text(prompt, "a")} </>}{field}</>}
+        {hint && <span id={`hint-${q.id}`} className="ml-2 whitespace-nowrap align-baseline text-xs leading-none text-fg-muted">{hint}</span>}
+      </div>
+      {headerAction}
+    </div>
+  );
+}
+
+export function ObjectiveQuestionInput({ question: q, value, onChange, unavailableOptions = [], disabled = false, renderPrompt, headerAction, sharedBank = false, compact = false, groupInstructions }: {
   question: ObjectiveQuestion;
   value: string;
   onChange: (value: string) => void;
   unavailableOptions?: string[];
   disabled?: boolean;
   /** Lets the exam window make the question text highlightable (Listening). */
-  renderPrompt?: (text: string) => React.ReactNode;
+  renderPrompt?: (text: string, part?: string) => React.ReactNode;
   /** Beside the question number, at the end of the first row (the exam window's Flag). */
   headerAction?: React.ReactNode;
   sharedBank?: boolean;
+  /** Exam window: typed answers render as compact inline rows instead of cards. */
+  compact?: boolean;
+  groupInstructions?: string | null;
 }) {
   const t = useTranslations("mock.runnerUx");
   const numberLabel = objectiveNumberLabel(q);
@@ -29,9 +78,13 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
   const hint = answerRuleHint(q);
   const hasResponse = multiple ? selected.length > 0 : !!value.trim();
   const isShortOptions = options.length >= 4 && options.every((o) => o.trim().length <= 3);
+  if (compact && !sharedBank && !isObjectiveChoice(q)) {
+    return <CompactTextEntry q={q} value={value} onChange={onChange} disabled={disabled} renderPrompt={renderPrompt}
+      headerAction={headerAction} numberLabel={numberLabel} hint={hint} groupInstructions={groupInstructions} />;
+  }
 
   return (
-    <div className={cn("space-y-2 rounded-card border p-3 transition-colors duration-fast sm:p-4", hasResponse ? "border-brand/35 bg-brand-subtle/30" : "border-border bg-surface")}>
+    <div className={cn("space-y-2 rounded-card border p-3 transition-colors duration-fast", compact ? "md:space-y-1.5 md:px-3 md:py-2.5" : "sm:p-4", hasResponse ? "border-brand/35 bg-brand-subtle/30" : "border-border bg-surface")}>
       <div className="flex items-start gap-3">
         <span aria-hidden className={cn("grid size-7 shrink-0 place-items-center rounded-field text-sm font-bold tabular-nums", hasResponse ? "bg-brand text-brand-fg" : "border border-border-strong bg-bg-subtle text-fg")}>{numberLabel}</span>
         {q.prompt && q.prompt.trim() ? (
@@ -96,7 +149,7 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
                   const checked = selected.includes(option);
                   const unavailable = MATCHING_TYPES.has(q.type) && unavailableOptions.includes(option) && !checked;
                   return (
-                    <label key={option} className={cn("flex min-h-11 items-center gap-3 rounded-field border px-3 py-2 text-sm leading-snug transition-colors focus-within:ring-2 focus-within:ring-brand/30", checked ? "border-brand bg-brand-subtle font-medium text-brand-subtle-fg" : "border-border text-fg", unavailable || disabled ? "opacity-50" : "cursor-pointer hover:border-brand/50 hover:bg-bg-subtle")}>
+                    <label key={option} className={cn("flex min-h-11 items-center gap-3 rounded-field border px-3 py-2 text-sm leading-snug", compact && "md:min-h-9 md:py-1.5", " transition-colors focus-within:ring-2 focus-within:ring-brand/30", checked ? "border-brand bg-brand-subtle font-medium text-brand-subtle-fg" : "border-border text-fg", unavailable || disabled ? "opacity-50" : "cursor-pointer hover:border-brand/50 hover:bg-bg-subtle")}>
                       <input type={multiple ? "checkbox" : "radio"} name={`objective-answer-${q.id}`} value={option} checked={checked} disabled={disabled || unavailable}
                         onChange={() => onChange(multiple ? toggleObjectiveOption(value, option, options) : option)} className="size-4 shrink-0 accent-brand" />
                       <span className="min-w-0 flex-1 break-words">{option}</span>

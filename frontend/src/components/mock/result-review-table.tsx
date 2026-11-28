@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import type { MockAttemptGroup, MockAttemptQuestion, MockSkill } from "@/lib/types";
 import { ReviewExplain } from "./review-explain";
 
-export type ReviewFilter = "all" | "wrong" | "unanswered" | "correct" | "pending" | "flagged";
+export type ReviewFilter = "all" | "mistakes" | "wrong" | "unanswered" | "correct" | "pending" | "flagged";
 
 const answeredOf = (q: MockAttemptQuestion) =>
   Boolean((q.response ?? "").trim()) || Boolean(q.hasAudio);
@@ -39,6 +39,8 @@ export function filterReviewRows(
 ): MockAttemptQuestion[] {
   if (filter === "all") return questions;
   if (filter === "flagged") return questions.filter((q) => flaggedIds?.has(q.id));
+  // Personal mistake review: what was marked wrong plus what was left unanswered (never pending marks).
+  if (filter === "mistakes") return questions.filter((q) => ["wrong", "unanswered"].includes(reviewState(q)));
   return questions.filter((q) => reviewState(q) === filter);
 }
 
@@ -53,15 +55,17 @@ export function ResultReviewTable({
   groups,
   flaggedIds,
   canonicalListening = true,
+  initialFilter = "all",
 }: {
   title: string;
   skill: MockSkill;
   groups: MockAttemptGroup[];
   flaggedIds?: Set<string>;
   canonicalListening?: boolean;
+  initialFilter?: ReviewFilter;
 }) {
   const t = useTranslations("mock.resultTable");
-  const [filter, setFilter] = React.useState<ReviewFilter>("all");
+  const [filter, setFilter] = React.useState<ReviewFilter>(initialFilter);
   const [unitKey, setUnitKey] = React.useState("");
   const [questionType, setQuestionType] = React.useState("");
   const units = React.useMemo(() => examContentUnits(groups, skill, canonicalListening), [groups, skill, canonicalListening]);
@@ -72,7 +76,7 @@ export function ResultReviewTable({
     .filter((q) => !questionType || q.type === questionType);
   const [open, setOpen] = React.useState<string | null>(null);
   const tableId = React.useId();
-  const filterKeys: ReviewFilter[] = ["all", "correct", "wrong", "unanswered", "pending",
+  const filterKeys: ReviewFilter[] = ["all", "mistakes", "correct", "wrong", "unanswered", "pending",
     ...(flaggedIds?.size ? (["flagged"] as const) : [])];
   const count = (key: ReviewFilter) => filterReviewRows(questions, key, flaggedIds)
     .reduce((total, question) => total + positions(question), 0);

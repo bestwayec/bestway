@@ -47,7 +47,7 @@ describe("ExamToolbar", () => {
     });
     expect(heard).toEqual([0.3]);
     expect(onChange).toHaveBeenLastCalledWith({ ...DEFAULT_EXAM_SETTINGS, volume: 0.3 });
-    expect([...document.body.querySelectorAll('[role="radio"]')].filter((r) => r.getAttribute("aria-checked") === "true").length).toBe(2);
+    expect([...document.body.querySelectorAll('[role="radio"]')].filter((r) => r.getAttribute("aria-checked") === "true").length).toBe(4); // text size, colours, theme, line spacing
   });
 
   it("Help explains only the question types of this section", async () => {

@@ -276,6 +276,8 @@ def homework_group_report(assignment_id: str, *, reason: str = 'closed', now=Non
             a=f'{avg:g}',
             provisional=prov,
         )
+        if row.exam_id:
+            text += exam_group_counts(row, lang, now)
         queued_group = bool(
             outbox.enqueue(
                 f'group:{group_id}',
@@ -321,6 +323,24 @@ def homework_group_report(assignment_id: str, *, reason: str = 'closed', now=Non
     }
 
 
+EXAM_COUNTS = {
+    'uz': "\nTopshirmaganlar: {missing}\nBaholash kutilmoqda: {waiting}\nTo‘liq baholanganlar: {final}\n<i>Yakuniy Writing va Speaking baholari ustoz tomonidan tasdiqlanadi.</i>",
+    'en': "\nNot handed in: {missing}\nAwaiting grading: {waiting}\nFully graded: {final}\n<i>Final Writing and Speaking grades are confirmed by the teacher.</i>",
+}
+
+
+def exam_group_counts(row, lang, now):
+    """Aggregate counts only (no names, no individual scores) from the authoritative exam report."""
+    from . import exam_report
+    try:
+        counts = exam_report.build(row, now=now)['counts']
+    except Exception:  # noqa: BLE001 - the aggregate line is optional, the report must still go out
+        logger.exception('exam report counts unavailable for %s', row.id)
+        return ''
+    return EXAM_COUNTS.get(lang, EXAM_COUNTS['uz']).format(
+        missing=counts['notSubmitted'] + counts['notStarted'], waiting=counts['awaitingGrading'], final=counts['finalized'])
+
+
 def homework_report_sweep(now=None):
     now = now or timezone.now()
     rows = HomeworkAssignment.objects.filter(
@@ -332,6 +352,12 @@ def homework_report_sweep(now=None):
         report = homework_group_report(assignment_id, reason="automatic", now=now)
         queued += int(report.get("queuedGroup", False)) + int(report.get("queuedTeacher", False))
     return queued
+
+
+def exam_reports_sweep(now=None):
+    """BESTWAY 5.1: durable preliminary/final exam reports (no 48-hour window)."""
+    from . import exam_report_delivery
+    return exam_report_delivery.sweep(now)
 
 
 def deadline_sweep(now=None):
@@ -470,7 +496,7 @@ def tick(now=None, *, deliver=True):
     for name, sweep in (
         ('deadlines', deadline_sweep),
         ('homework_deadlines', homework_deadline_sweep),
-        ('homework_reports', homework_report_sweep),
+        ('homework_reports', exam_reports_sweep),
         ('vocab', vocab_due_sweep),
         ('closed', assignment_closed_sweep),
     ):

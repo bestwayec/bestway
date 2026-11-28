@@ -16,6 +16,7 @@ from . import game_points_views as game_points
 from . import group_views as groups
 from . import classroom_invitation_views, classroom_result_views
 from . import group_report_views as group_reports
+from . import exam_report_views as exam_reports
 from . import study_plan_views as study_plans
 from . import group_report_views as group_reports
 from . import study_plan_views as study_plans
@@ -573,6 +574,13 @@ urlpatterns = [
 
     path('v1/groups/<str:group_id>/analytics', group_reports.group_analytics_view),
     path('v1/groups/<str:group_id>/analytics/', group_reports.group_analytics_view),
+
+    path('teacher/exam-assignments/<str:assignment_id>/results', exam_reports.exam_results_view),
+    path('teacher/exam-assignments/<str:assignment_id>/results/excel', exam_reports.exam_results_excel_view),
+    path('teacher/exam-assignments/<str:assignment_id>/results/resend', exam_reports.exam_results_resend_view),
+    path('teacher/exam-assignments/<str:assignment_id>/results/pdf', exam_reports.exam_results_pdf_view),
+    path('groups/<str:group_id>/exam-progress', exam_reports.group_exam_progress_view),
+    path('groups/<str:group_id>/students/<str:student_id>/exam-progress', exam_reports.student_exam_progress_view),
 
     path('groups/<str:group_id>/report/pdf', group_reports.group_report_pdf_view),
     path('groups/<str:group_id>/report/pdf/', group_reports.group_report_pdf_view),

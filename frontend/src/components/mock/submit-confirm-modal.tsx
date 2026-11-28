@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { AlertTriangle, CheckCircle2, Flag, Send } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CloudOff, Flag, Mic, PenLine, Send } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +23,40 @@ interface SubmitConfirmModalProps {
   flaggedCount?: number;
   skillName?: string;
   isSingleSection?: boolean;
+  /** Questions the student may still open (already closed sections are never listed). */
+  unansweredItems?: ReviewItem[];
+  flaggedItems?: ReviewItem[];
+  /** Edits kept on this device that the server has not confirmed yet. */
+  pendingSaves?: number;
+  offline?: boolean;
+  writing?: { required: number; done: number } | null;
+  speaking?: { required: number; done: number } | null;
+  onJump?: (item: ReviewItem) => void;
+}
+
+export type ReviewItem = { id: string; label: string; section?: string; skill?: string };
+
+function ReviewList({ title, items, onJump, tone }: { title: string; items: ReviewItem[]; onJump?: (item: ReviewItem) => void; tone: "danger" | "warning" }) {
+  if (!items.length) return null;
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs font-semibold text-fg-muted">{title}</p>
+      <div className="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto">
+        {items.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            disabled={!onJump}
+            onClick={() => onJump?.(item)}
+            title={item.section}
+            className={`min-h-9 min-w-9 rounded-field border px-2 text-sm font-bold tabular-nums disabled:cursor-default ${tone === "danger" ? "border-danger-border bg-danger-bg text-danger" : "border-warning-border bg-warning-bg text-warning"}`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function SubmitConfirmModal({
@@ -35,6 +69,13 @@ export function SubmitConfirmModal({
   flaggedCount = 0,
   skillName,
   isSingleSection,
+  unansweredItems = [],
+  flaggedItems = [],
+  pendingSaves = 0,
+  offline = false,
+  writing = null,
+  speaking = null,
+  onJump,
 }: SubmitConfirmModalProps) {
   const t = useTranslations("mock.submitDialog");
   const tSkills = useTranslations("mock.skills");
@@ -119,6 +160,32 @@ export function SubmitConfirmModal({
               <span>{t("flaggedNotice", { count: flaggedCount })}</span>
             </div>
           )}
+
+          {(writing?.required || speaking?.required) ? (
+            <div className="grid grid-cols-2 gap-2 text-xs" data-testid="review-responses">
+              {writing?.required ? (
+                <p className="flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-2 text-fg">
+                  <PenLine className="size-3.5 text-brand" aria-hidden />{t("writingDone", { done: writing.done, total: writing.required })}
+                </p>
+              ) : null}
+              {speaking?.required ? (
+                <p className="flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-2 text-fg">
+                  <Mic className="size-3.5 text-brand" aria-hidden />{t("speakingDone", { done: speaking.done, total: speaking.required })}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {pendingSaves > 0 && (
+            <div role="alert" className="flex items-start gap-2 rounded-xl border border-danger-border bg-danger-bg px-3 py-2 text-xs text-danger" data-testid="review-pending">
+              <CloudOff className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+              <span>{t(offline ? "pendingOffline" : "pendingSaves", { count: pendingSaves })}</span>
+            </div>
+          )}
+
+          <ReviewList title={t("unansweredList")} items={unansweredItems} onJump={onJump} tone="danger" />
+          <ReviewList title={t("flaggedList")} items={flaggedItems} onJump={onJump} tone="warning" />
+          {onJump && (unansweredItems.length > 0 || flaggedItems.length > 0) && <p className="text-xs text-fg-muted">{t("jumpHint")}</p>}
         </div>
 
         <DialogFooter className="flex flex-col sm:flex-row gap-2">

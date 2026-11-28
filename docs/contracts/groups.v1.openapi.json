@@ -2600,7 +2600,9 @@
           "lesson_title",
           "exam_id",
           "exam_title",
-          "vocabulary_set_id"
+          "vocabulary_set_id",
+          "timing_policy",
+          "opens_at"
         ],
         "properties": {
           "id": {
@@ -2673,6 +2675,22 @@
                 "type": "null"
               }
             ]
+          },
+          "timing_policy": {
+            "enum": [
+              "individual",
+              "fixed_close"
+            ]
+          },
+          "opens_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },
@@ -2698,6 +2716,15 @@
             "type": "string"
           },
           "vocabulary_set_id": {
+            "type": "string"
+          },
+          "timing_policy": {
+            "enum": [
+              "individual",
+              "fixed_close"
+            ]
+          },
+          "opens_at": {
             "type": "string"
           }
         }

@@ -121,8 +121,10 @@ def propagate_attempt_finalization(attempt, actor=None, *, now=None) -> list:
             sub = sync_from_exam(assignment, attempt.student_id, attempt=attempt, graded_by_id=actor_id)
             if sub is not None:
                 synced.append(sub)
+        from . import exam_report_delivery
         for assignment_id in {sub.assignment_id for sub in synced}:
             tg_notify.homework_group_report(assignment_id, reason="automatic", now=now)
+            exam_report_delivery.deliver(assignment_id, now=now)
 
     if attempt.status == "completed":
         exam = getattr(attempt, "exam", None) or MockExam.objects.filter(pk=attempt.exam_id).first()

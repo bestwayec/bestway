@@ -193,7 +193,18 @@
     "failed": "So‘rov bajarilmadi.",
     "loading": "Vazifalar yuklanmoqda…",
     "retry": "Qayta urinish",
-    "empty": "Hozircha vazifalar yo‘q."
+    "empty": "Hozircha vazifalar yo‘q.",
+    "opensAt": "Ochilish vaqti (ixtiyoriy)",
+    "timingPolicy": "Imtihon vaqti",
+    "timingIndividual": "Shaxsiy davomiylik",
+    "timingFixed": "Umumiy yopilish vaqti (nazoratli)",
+    "timingIndividualHelp": "Har bir o‘quvchi boshlagandan keyin imtihonning to‘liq vaqtini oladi. Muddat faqat yangi boshlashni yopadi.",
+    "timingFixedHelp": "Hamma o‘quvchi muddatgacha tugatishi shart. Muddat tugaganda server tugallanmagan urinishlarni avtomatik topshiradi, brauzer yopilgan bo‘lsa ham.",
+    "fixedNeedsDeadline": "Umumiy yopilish vaqti uchun muddat kiriting.",
+    "fixedBadge": "Umumiy yopilish",
+    "opensBadge": "Ochiladi: {when}",
+    "tashkent": "Vaqtlar Asia/Tashkent bo‘yicha ko‘rsatiladi.",
+    "results": "Natijalar"
   },
   "assessment": {
     "title": "Writing va Speaking tahlili",
@@ -267,7 +278,11 @@
     "audioDuration": "Tekshirilgan davomiylik {seconds} soniya",
     "finalizeGrade": "Bahoni tasdiqlash",
     "useLatestReviewVersion": "Tahrirlarni saqlab, so‘nggi versiyadan foydalanish",
-    "transcriptionStates": {"STARTED": "Transkript tayyorlanmoqda", "SUCCEEDED": "Transkript tayyor", "FAILED": "Transkript tayyorlanmadi"},
+    "transcriptionStates": {
+      "STARTED": "Transkript tayyorlanmoqda",
+      "SUCCEEDED": "Transkript tayyor",
+      "FAILED": "Transkript tayyorlanmadi"
+    },
     "transcriptPending": "Transkript hozircha mavjud emas. Tekshiruvda asl audiodan foydalaning.",
     "transcriptConfidence": "Transkripsiya ishonchliligi",
     "segments": "Transkript vaqtlari",
@@ -1600,7 +1615,18 @@
       "mapFor": "{title} — xarita",
       "mapForPart": "Bu qism uchun xarita",
       "passageOrQuestions": "Matn yoki savollarni ko'rsatish",
-      "writingModeLabel": "Javob berish usuli"
+      "writingModeLabel": "Javob berish usuli",
+      "saveOfflineKept": "Internet yo‘q — qurilmada saqlandi, serverga hali yetmadi",
+      "saveSubmitting": "Topshirilmoqda…",
+      "saveSubmitted": "Topshirildi",
+      "saveLocked": "Javoblar qulflandi",
+      "timeUpChip": "Vaqt tugadi",
+      "timeUpTitle": "Vaqt tugadi. Javoblaringiz qulflandi.",
+      "timeUpFinalizing": "Saqlangan javoblaringiz topshirilmoqda. Tasdiq chiqquncha sahifani yopmang; muddatgacha serverga saqlanmagan javoblar hisobga olinmaydi.",
+      "timeUpNextSection": "Bu bo‘lim yopildi. Keyingi bo‘limga o‘tilmoqda…",
+      "timeUpSpeaking": "Yangi yozuv boshlab bo‘lmaydi. Tugagan yozuv ruxsat etilgan vaqt ichida yuklanmoqda; sahifani yopmang.",
+      "pictureEnlarge": "Rasmni kattalashtirish: {name}",
+      "pictureEnlargeShort": "Kattalashtirish"
     },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",
@@ -1727,7 +1753,20 @@
       "partQuestions": "{part} savollari",
       "closePalette": "Yopish",
       "passageN": "{n}-matn",
-      "partN": "{n}-qism"
+      "partN": "{n}-qism",
+      "stateSaving": "saqlanmoqda",
+      "legendSaving": "Saqlanmoqda — hali tasdiqlanmagan",
+      "filterLabel": "Savollarni ko‘rsatish",
+      "filter_all": "Barchasi",
+      "filter_unanswered": "Javobsiz",
+      "filter_answered": "Javob berilgan",
+      "filter_flagged": "Belgilangan",
+      "filter_pending": "Hali saqlanmagan",
+      "filterEmpty_all": "Bu bo‘limda savol yo‘q.",
+      "filterEmpty_unanswered": "Barcha savollarga javob berilgan.",
+      "filterEmpty_answered": "Hali javob yo‘q.",
+      "filterEmpty_flagged": "Belgilangan savol yo‘q.",
+      "filterEmpty_pending": "Barcha javoblar serverga yetgan."
     },
     "advanceConfirm": {
       "title": "Keyingi bo‘limga o‘tasizmi?",
@@ -1834,7 +1873,10 @@
       "internalCertificate": "BestWay ichki natija (PDF)",
       "disclosureLockedTitle": "To'g'ri javoblar va skriptlar vaqtincha yopiq",
       "disclosureLockedDeadline": "To'g'ri javoblar, audio skriptlar va tahlillar {date} dan keyin yoki barcha guruh o'quvchilari topshirgach ochiladi.",
-      "disclosureLockedGroup": "To'g'ri javoblar, audio skriptlar va tahlillar guruh muddati tugagach yoki barcha o'quvchilar topshirgach ochiladi."
+      "disclosureLockedGroup": "To'g'ri javoblar, audio skriptlar va tahlillar guruh muddati tugagach yoki barcha o'quvchilar topshirgach ochiladi.",
+      "mistakesSummary": "Listening va Reading’da {count} ta savol xato yoki javobsiz qoldi.",
+      "reviewMistakes": "Xatolarimni ko‘rib chiqish",
+      "showAllAnswers": "Barcha javoblarni ko‘rsatish"
     },
     "submitDialog": {
       "title": "Imtihonni topshirish",
@@ -1851,7 +1893,14 @@
       "answeredCard": "Belgilangan",
       "unansweredCard": "Javobsiz",
       "flaggedCard": "Bayroqcha",
-      "flaggedNotice": "Sizda qayta ko'rib chiqish uchun belgilangan {count} ta savol mavjud."
+      "flaggedNotice": "Sizda qayta ko'rib chiqish uchun belgilangan {count} ta savol mavjud.",
+      "writingDone": "Writing: {total} ta topshiriqdan {done} tasi yozilgan",
+      "speakingDone": "Speaking: {total} ta yozuvdan {done} tasi serverga yetgan",
+      "pendingSaves": "{count} ta javob hali serverga yetmadi. «Serverga saqlandi» chiqishini kuting, aks holda u hisobga olinmaydi.",
+      "pendingOffline": "Internet yo‘q. {count} ta javob faqat shu qurilmada turibdi va aloqa tiklanmaguncha topshirib bo‘lmaydi.",
+      "unansweredList": "Javobsiz — ochish uchun bosing",
+      "flaggedList": "Qayta ko‘rish uchun belgilangan",
+      "jumpHint": "Faqat hali ochiq bo‘limlar ko‘rsatiladi."
     },
     "resumeDialog": {
       "title": "Qaysi bo'limni davom ettirmoqchisiz?",
@@ -1893,7 +1942,7 @@
       "viewLastResult": "Oxirgi natijani ko'rish"
     },
     "deviceCheck": {
-      "intro": "Ixtiyoriy: boshlashdan oldin shu qurilmada internet, ovoz va mikrofonni tekshiring.",
+      "intro": "Boshlashdan oldin ushbu qurilmada tizimga kirish, internet, ovoz va (Speaking uchun) mikrofonni tekshiring. Tekshiruv imtihonni boshlamaydi va imtihon audiosini ijro etmaydi.",
       "run": "Qurilmani tekshirish",
       "net": "Internet",
       "netOk": "Ulangan · server {ms} ms da javob berdi",
@@ -1915,7 +1964,28 @@
       "micSpeak": "Hozir bir necha so'z ayting…",
       "micOk": "Ovozingiz eshitildi.",
       "micSilent": "Mikrofon ishlayapti, lekin deyarli hech narsa eshitilmadi. Balandroq gapiring yoki boshqa mikrofonni tanlang va qayta tekshiring.",
-      "micUnsupported": "Bu brauzer ovoz yozolmaydi. Chrome, Edge yoki Safari'ning yangi versiyasidan foydalaning."
+      "micUnsupported": "Bu brauzer ovoz yozolmaydi. Chrome, Edge yoki Safari'ning yangi versiyasidan foydalaning.",
+      "netUnstable": "Beqaror · server {total} ta so'rovdan {replied} tasiga javob berdi. Javoblar saqlanguncha shu qurilmada turadi.",
+      "netCaveat": "Muvaffaqiyatli tekshiruv faqat hozirgi holatni ko'rsatadi: imtihon davomida internet barqaror bo'lishiga kafolat bermaydi.",
+      "session": "Tizimga kirish",
+      "sessionOk": "Siz tizimga kirgansiz.",
+      "sessionFail": "Tizimga kirish tasdiqlanmadi. Boshlashdan oldin qayta kiring.",
+      "retry": "Qayta tekshirish",
+      "browser": "Brauzer",
+      "browserOk": "Ushbu brauzer imtihon uchun kerakli barcha imkoniyatlarni qo'llaydi.",
+      "browserMissing": "Bu brauzerda mavjud emas: {list}. Yangi Chrome, Edge yoki Safari'dan, maxfiy rejimdan tashqarida foydalaning.",
+      "feature": {
+        "storage": "javoblarni qurilmada saqlash",
+        "audio": "audio ijrosi",
+        "network": "tarmoq so'rovlari",
+        "recording": "audio yozish"
+      },
+      "volume": "Ovoz balandligi",
+      "micLevel": "Kirish darajasi",
+      "required": "Majburiy",
+      "recommended": "Tavsiya etiladi",
+      "summaryOk": "Barcha majburiy tekshiruvlar ushbu qurilmada o'tdi.",
+      "summaryProblems": "Boshlashdan oldin {count} ta majburiy tekshiruvga e'tibor bering."
     },
     "scoreSummary": {
       "singleSection": "Bitta bo'lim: {skill}",
@@ -1979,7 +2049,24 @@
       "listeningResume": "Tinglashni davom ettirish",
       "listeningStartFailed": "Yozuvni boshlab bo‘lmadi. Internetni tekshiring va Play tugmasini qayta bosing.",
       "listeningRulesScheduled": "Imtihon rejimi: Play bosilgach avval savollarni o‘qish vaqti beriladi, keyin yozuv bir marta, to‘xtatmasdan va orqaga qaytarmasdan eshittiriladi. Sahifa qayta yuklansa, yozuv imtihon turgan joydan davom etadi.",
-      "timeWarningOne": "1 daqiqa qoldi. Javoblaringizni tekshiring."
+      "timeWarningOne": "1 daqiqa qoldi. Javoblaringizni tekshiring.",
+      "listeningBuffering": "Yuklanmoqda… yozuv imtihon vaqti bo‘yicha davom etadi",
+      "listeningLoadingMedia": "Yozuv yuklanmoqda…",
+      "listeningMediaFailed": "Yozuv bu qurilmada yuklanmadi. Qayta urinib ko‘ring: u imtihon vaqtidagi joyidan davom etadi, boshidan boshlanmaydi. Muammo davom etsa, o‘qituvchingizga ayting.",
+      "listeningRetry": "Qayta urinish",
+      "theme": "Mavzu",
+      "theme_site": "Sayt kabi",
+      "theme_light": "Yorug‘",
+      "theme_dark": "Qorong‘i",
+      "lineSpacing": "Qatorlar oralig‘i",
+      "lineSpacing_normal": "Oddiy",
+      "lineSpacing_relaxed": "Keng",
+      "reduceMotion": "Harakatni kamaytirish",
+      "reduceMotionHint": "Imtihon oynasida animatsiya va silliq aylantirish bo‘lmaydi.",
+      "strongFocus": "Aniq fokus chegarasi",
+      "strongFocusHint": "Klaviatura qayerdaligini qalin chegara ko‘rsatadi.",
+      "restoreHint": "Matn o‘lchami, ranglar, mavzu, oraliq, ovoz va panel kengliklari. Javoblar va vaqtga ta’sir qilmaydi.",
+      "restoreDefaults": "Standart holatga qaytarish"
     },
     "textTools": {
       "toolbar": "Matn vositalari",
@@ -2072,7 +2159,9 @@
       "state_pending": "Hali tekshirilmagan",
       "where": "Javob qayerda?",
       "whereFor": "{number}-savol javobi qayerda?",
-      "revealed": "javob ko'rsatilgan"
+      "revealed": "javob ko'rsatilgan",
+      "filter_mistakes": "Xatolarim ({count})",
+      "empty_mistakes": "Bu yerda xato yo‘q — barcha javoblar to‘g‘ri."
     },
     "reviewExplain": {
       "passageLabel": "Javobi ajratilgan matn",
@@ -2134,7 +2223,8 @@
       "flag": "Savolni belgilash yoki belgini olish",
       "highlight": "Tanlangan matnni bo'yash",
       "help": "Shu ro'yxatni ko'rsatish",
-      "close": "Oyna yoki panelni yopish"
+      "close": "Oyna yoki panelni yopish",
+      "overview": "Savollar ro‘yxatini ochish"
     },
     "ocr": {
       "zoomTitle": "Qo'lyozma rasm (kattalashtirilgan)",
@@ -2198,6 +2288,37 @@
       "trendLatest": "Oxirgi {shown} ta natija ko'rsatilmoqda (jami {count} ta to'liq natija).",
       "trendPartial": "Faqat eng so'nggi urinishlar yuklandi, shuning uchun trend oxirgi {shown} ta to'liq natijani ko'rsatadi va to'liq bo'lmasligi mumkin.",
       "trendAria": "Sana bo'yicha umumiy band: {points}"
+    },
+    "readiness": {
+      "intro": "Imtihon ma'lumotlari va qurilmangizni tekshiring. Vaqt faqat «Boshlash» tugmasini bosganingizda boshlanadi.",
+      "minutes": "{count} daqiqa",
+      "minutesShort": "{count} daq",
+      "positions": "{count} ta savol",
+      "skills": "Bo'limlar",
+      "assignment": "Topshiriq",
+      "checking": "Topshiriq server bilan tasdiqlanmoqda…",
+      "opens": "Ochiladi",
+      "closes": "Yopiladi",
+      "timing": "Vaqt tartibi",
+      "timingFixed": "Qat'iy yopilish vaqti — kech boshlasangiz ham imtihon hamma uchun belgilangan vaqtda yopiladi.",
+      "timingIndividual": "Shaxsiy davomiylik — vaqtingiz «Boshlash» bosilganda boshlanadi.",
+      "eligibility": {
+        "ASSIGNMENT_EXPIRED": "Bu topshiriq yopilgan.",
+        "ASSIGNMENT_ALREADY_SUBMITTED": "Siz bu topshiriqni allaqachon topshirgansiz.",
+        "NOT_FOUND": "Bu topshiriq siz uchun mavjud emas.",
+        "UNKNOWN": "Topshiriq tasdiqlanmadi. Internetni tekshirib, qayta urinib ko'ring."
+      },
+      "retry": "Qayta urinish",
+      "rulesTitle": "Imtihon qoidalari",
+      "ruleTimer": "Vaqt serverda hisoblanadi: sahifani yangilasangiz, internet uzilsa yoki brauzerni yopsangiz ham to'xtamaydi.",
+      "ruleListening": "Listening yozuvlari imtihon jadvali bo'yicha, to'xtatish va orqaga qaytarishsiz ijro etiladi.",
+      "ruleSaving": "Javoblar avtomatik saqlanadi. Internet bo'lmasa, ular shu qurilmada saqlanib, aloqa tiklanganda yuboriladi.",
+      "ruleOneSession": "Bitta oyna va bitta qurilmadan foydalaning; imtihonni boshqa joyda ochish bu yerda saqlashni to'xtatadi.",
+      "ruleSpeaking": "Speaking javoblari mikrofon orqali yoziladi; har bir javob bir marta yoziladi.",
+      "ruleFullscreen": "Imtihon to'liq ekranda o'tadi; undan chiqish o'qituvchingiz uchun qayd etiladi.",
+      "cancel": "Hozir emas",
+      "start": "Imtihonni boshlash",
+      "startAnyway": "Baribir boshlash"
     }
   },
   "wizard": {
@@ -4304,5 +4425,151 @@
     "cancel": "Orqaga",
     "draw": "Durang!",
     "winner": "{name} g‘alaba qozondi!"
+  },
+  "examResultCenter": {
+    "loading": "Natijalar yuklanmoqda…",
+    "failed": "Natijalarni yuklab bo‘lmadi.",
+    "retry": "Qayta urinish",
+    "stage": {
+      "open": "Imtihon ochiq",
+      "preliminary": "Dastlabki",
+      "final": "Yakuniy"
+    },
+    "closes": "Yopiladi: {when}",
+    "fixedClose": "Umumiy yopilish vaqti",
+    "individual": "Shaxsiy davomiylik",
+    "updated": "Yangilandi: {when} (Asia/Tashkent)",
+    "counts": {
+      "eligible": "Jami",
+      "notStarted": "Boshlamagan",
+      "inProgress": "Yozmoqda",
+      "submitted": "Topshirgan",
+      "autoSubmitted": "Avtomatik topshirilgan",
+      "awaitingGrading": "Baholash kutilmoqda",
+      "finalized": "To‘liq baholangan",
+      "notSubmitted": "Topshirmagan"
+    },
+    "average": "Yakuniy natijalar o‘rtachasi",
+    "unavailable": "mavjud emas",
+    "tieNote": "Teng ballar bir xil o‘rinni oladi.",
+    "search": "O‘quvchini qidirish",
+    "filter": "Baholash holati",
+    "all": "Hammasi",
+    "resend": "Telegram hisobotini qayta yuborish",
+    "resendConfirm": "Joriy hisobot Telegramga qayta yuborilsinmi?",
+    "resendQueued": "{count} ta xabar navbatga qo‘yildi.",
+    "rank": "O‘rin",
+    "student": "O‘quvchi",
+    "skill": {
+      "listening": "L",
+      "reading": "R",
+      "writing": "W",
+      "speaking": "S"
+    },
+    "overall": "Umumiy",
+    "growth": "O‘sish",
+    "status": "Holat",
+    "submittedAt": "Topshirilgan",
+    "pending": "Ustoz baholashi kutilmoqda",
+    "previous": "Oldingi",
+    "next": "Keyingi",
+    "participation": {
+      "not_started": "Boshlamagan",
+      "in_progress": "Yozmoqda",
+      "submitted": "Topshirgan",
+      "auto_submitted": "Avtomatik topshirilgan",
+      "not_submitted": "Topshirmagan"
+    },
+    "grading": {
+      "none": "—",
+      "awaiting_assessment": "AI tahlili kutilmoqda",
+      "awaiting_teacher_review": "Ustoz tekshiruvi kutilmoqda",
+      "partially_graded": "Qisman baholangan",
+      "finalized": "Yakunlangan"
+    },
+    "delivery": "Telegram: dastlabki {preliminary}, yakuniy {final}",
+    "monitor": "Jonli kuzatuv",
+    "currentSkill": "Joriy bo‘lim",
+    "confirmed": "Tasdiqlangan javoblar",
+    "lastConfirmed": "Oxirgi tasdiqlangan javob",
+    "incidents": "Nazorat hodisalari",
+    "stale": "5+ daqiqa tasdiqlangan faollik yo‘q",
+    "progressOf": "Rivojlanishni ko‘rish",
+    "hide": "Yopish",
+    "opens": "Ochiladi: {when}",
+    "timeLeft": "{left} qoldi",
+    "overview": "Umumiy ko‘rinish",
+    "startedHint": "{n} nafar boshlagan",
+    "autoHint": "{n} tasi avtomatik",
+    "notYet": "imtihon hali ochiq",
+    "sample": "n = {n} yakunlangan",
+    "completion": "Topshirish darajasi",
+    "gradebook": "Baholar jurnali",
+    "sort": "Saralash",
+    "sorts": {
+      "rank": "O‘rin",
+      "overall": "Umumiy",
+      "name": "Ism",
+      "growth": "O‘sish",
+      "submitted": "Topshirilgan"
+    },
+    "skillFull": {
+      "listening": "Listening",
+      "reading": "Reading",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "details": "Batafsil",
+    "open": "Ochish",
+    "pendingShort": "Kutilmoqda",
+    "autoShort": "Avto",
+    "telegram": "Telegram",
+    "prelimDelivery": "Dastlabki: {when}",
+    "finalDelivery": "Yakuniy: {when}",
+    "deliveryState": {
+      "pending": "navbatda",
+      "sending": "yuborilmoqda",
+      "sent": "yuborildi",
+      "failed": "xato",
+      "skipped": "o‘tkazildi",
+      "dead": "yuborilmadi"
+    },
+    "monitorNote": "Server tasdiqlagan ma'lumot · har 20 soniyada yangilanadi",
+    "monitorEmpty": "Hozir hech kim yozmayapti.",
+    "connection": "Faollik",
+    "active": "Faol",
+    "pendingTitle": "Ushbu sahifada {count} ta o‘quvchi Writing/Speaking baholashingizni kutmoqda",
+    "gradeNext": "Keyingisini baholash: {name}",
+    "monitorInProgress": "{n} ta jarayonda",
+    "monitorQuiet": "{n} tasida yaqinda tasdiqlangan javob yo‘q",
+    "monitorIncidents": "{n} tasida qayd etilgan holatlar bor",
+    "monitorAttentionOnly": "Faqat e’tibor talab qilganlar",
+    "monitorHonesty": "Server tasdiqlagan javoblarga asoslanadi. Jim o‘quvchi o‘qiyotgan yoki yozayotgan bo‘lishi mumkin — bu aloqa uzilganining isboti emas; holatlar jazo emas, kuzatuvdir.",
+    "minutesAgo": "{n} daqiqa oldin"
+  },
+  "examProgress": {
+    "loading": "Rivojlanish yuklanmoqda…",
+    "failed": "Rivojlanishni yuklab bo‘lmadi.",
+    "groupTitle": "Guruh rivojlanishi",
+    "studentTitle": "Rivojlanish — {name}",
+    "insufficient": "Taqqoslanadigan yakuniy natijalar yetarli emas (kamida ikkita kerak).",
+    "groupLine": "o‘rtacha {avg}, mediana {median} (n={n} / {eligible}), topshirganlar {rate}%, baholash kutilmoqda {pending}",
+    "movement": "Oxirgi imtihon oldingisiga nisbatan: {improved} nafar o‘sdi, {declined} nafar pasaydi.",
+    "support": "Qo‘shimcha yordam foydali bo‘lishi mumkin",
+    "caveat": "O‘zgarishlar taqqoslanadigan imtihonlardagi natijani ko‘rsatadi, til darajasining kafolatli o‘zgarishini emas. Guruh tarkibi imtihonlar orasida farq qilishi mumkin.",
+    "studentLine": "Topshirgan {completed}, yakunlangan {finalized}, ishtirok {rate}%",
+    "summary": "Birinchi {first} · oldingi {previous} · oxirgi {latest} · eng yaxshi {best} · o‘zgarish {change} (boshidan {total})",
+    "showSkills": "Ko‘nikmalarni ko‘rsatish",
+    "track": "Yo‘nalish",
+    "series": {
+      "overall": "Umumiy",
+      "listening": "Listening",
+      "reading": "Reading",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "averageChart": "Imtihonlar bo‘yicha taqqoslanadigan o‘rtacha",
+    "participationChart": "Topshirganlar (jami foizida)",
+    "completionSeries": "Topshirgan %"
   }
 }

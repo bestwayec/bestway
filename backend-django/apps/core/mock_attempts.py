@@ -291,6 +291,8 @@ def start(actor, exam_id, data):
             fail('ASSIGNMENT_NOT_FOUND', 'Exam assignment not found', 404)
         if assignment.deadline < timezone.now():
             fail('ASSIGNMENT_EXPIRED', 'The assignment deadline has passed', 409)
+        if assignment.opens_at and timezone.now() < aware(assignment.opens_at):
+            fail('ASSIGNMENT_NOT_OPEN', 'The exam has not opened yet', 409)
     if not exam.is_published and not exam.is_demo:
         fail('MOCK_EXAM_NOT_PUBLISHED', 'Bu imtihon hali ochilmagan')
     with connection.cursor() as cursor:
@@ -421,6 +423,9 @@ def start(actor, exam_id, data):
                                                   len(practice['questionIds']), section_questions)
             last = at + timedelta(seconds=seconds)
             deadlines, overall = {skill: iso(last)}, last
+        if assignment and assignment.timing_policy == 'fixed_close':
+            # Supervised classroom exam: every attempt ends at the common closing time.
+            deadlines, overall, last = cap_to_close(deadlines, overall, last, assignment.deadline)
         first_skill = shaped.get('sections', [{}])[0].get('skill', 'listening') if shaped.get('sections') else 'listening'
         if any(s.get('skill') == 'listening' for s in shaped.get('sections', [])):
             first_skill = 'listening'
@@ -665,6 +670,24 @@ def switch_section(actor, attempt_id, target_skill):
         return {'saved': True, 'currentSkill': attempt.current_skill, 'sessionSignature': attempt_signature.sign(attempt), 'attemptId': attempt.id}
 
 
+def cap_to_close(deadlines, overall, last, close):
+    """Clamp an attempt's timers to the assignment's common closing time."""
+    close = aware(close)
+    capped = {skill: iso(min(aware(parse_datetime(value)), close)) for skill, value in (deadlines or {}).items()}
+    return capped, min(aware(overall), close) if overall else close, min(aware(last), close) if last else close
+
+
+def fixed_close_of(attempt):
+    """The common closing time of the fixed-close assignment this attempt belongs to, or None."""
+    from .homework_scoring import ASSIGNMENT_KEY
+    from .models import HomeworkAssignment
+    assignment_id = (attempt.media_state or {}).get(ASSIGNMENT_KEY)
+    if not assignment_id:
+        return None
+    row = HomeworkAssignment.objects.filter(pk=assignment_id, timing_policy='fixed_close').values_list('deadline', flat=True).first()
+    return aware(row) if row else None
+
+
 def advance(actor, attempt_id, expected_skill=None, *, require_expired=False):
     with transaction.atomic():
         attempt = own(actor, attempt_id, lock=True)
@@ -704,7 +727,10 @@ def advance(actor, attempt_id, expected_skill=None, *, require_expired=False):
             attempt.overall_deadline_at = attempt.deadline_at = cursor
             fields += ['section_deadlines', 'overall_deadline_at', 'deadline_at']
         elif attempt.current_skill == 'speaking':
-            attempt.overall_deadline_at = attempt.deadline_at = None
+            # Legacy full tests run Speaking on its own task timers; a fixed-close
+            # classroom exam still ends at the common closing time.
+            close = fixed_close_of(attempt)
+            attempt.overall_deadline_at = attempt.deadline_at = close
             fields += ['overall_deadline_at', 'deadline_at']
         attempt.save(update_fields=fields)
         return advance_receipt(attempt, submitted)
@@ -823,6 +849,16 @@ def assert_view(actor, student_id, *, started_at=None):
     fail('FORBIDDEN', "Bu ma'lumotni ko'rish huquqingiz yo'q", 403)
 
 
+AUTO_SUBMIT_KEY = '__auto_submitted'
+
+
+def submission_kind(attempt):
+    """manual | auto | None (not handed in). The server deadline sweep records 'auto'."""
+    if attempt.status == 'in_progress' or attempt.submitted_at is None:
+        return None
+    return 'auto' if AUTO_SUBMIT_KEY in (attempt.media_state or {}) else 'manual'
+
+
 def summary(attempt, *, detail=False):
     from .mock_catalog import student_title
     result = dict(id=attempt.id, examId=attempt.exam_id, studentId=attempt.student_id,
@@ -832,7 +868,8 @@ def summary(attempt, *, detail=False):
         sectionDeadlines=attempt.section_deadlines, overallDeadlineAt=attempt.overall_deadline_at,
         rawScores=attempt.raw_scores, sectionBands=attempt.section_bands, overallBand=attempt.overall_band,
         cefrLevel=attempt.cefr_level, antiCheatCount=attempt.anti_cheat_count,
-        startedAt=attempt.started_at, submittedAt=attempt.submitted_at, finishedAt=attempt.finished_at)
+        startedAt=attempt.started_at, submittedAt=attempt.submitted_at, finishedAt=attempt.finished_at,
+        submissionKind=submission_kind(attempt))
     if detail:
         result['studentName'] = attempt.student.user.name
         if attempt.status == 'in_progress':

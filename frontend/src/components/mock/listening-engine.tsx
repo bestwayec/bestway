@@ -107,6 +107,9 @@ function ScheduledListeningAudio({
   const [busy, setBusy] = React.useState(false);
   const [failed, setFailed] = React.useState(false);
   const [needsGesture, setNeedsGesture] = React.useState(false);
+  // Technical states of the media itself; none of them moves or resets the server schedule.
+  const [buffering, setBuffering] = React.useState(false);
+  const [mediaError, setMediaError] = React.useState(false);
   const [position, setPosition] = React.useState<ListeningPosition | null>(null);
   const [reviewLeft, setReviewLeft] = React.useState<number | null>(null);
   const [objectUrl, setObjectUrl] = React.useState<string | null>(null);
@@ -121,6 +124,7 @@ function ScheduledListeningAudio({
     let alive = true;
     const ctrl = new AbortController();
     fetchAudioBlobUrl(src, ctrl.signal).then((url) => { if (alive) setObjectUrl(url); }).catch(() => { if (alive) setObjectUrl(src); });
+    // objectUrl is reset to null by "Retry" after a media error; this effect then loads it again.
     return () => { alive = false; ctrl.abort(); };
   }, [schedule, objectUrl, src]);
 
@@ -163,6 +167,14 @@ function ScheduledListeningAudio({
     return () => clearTimeout(id);
   }, [reviewLeft, onReviewComplete]);
 
+  /** Loads the recording again after a failure; playback rejoins the server clock, never earlier. */
+  function reloadMedia() {
+    setMediaError(false);
+    setBuffering(false);
+    if (objectUrl && objectUrl.startsWith("blob:")) URL.revokeObjectURL(objectUrl);
+    setObjectUrl(null);
+  }
+
   function resume() {
     if (!schedule) return;
     const now = listeningPosition(schedule, Date.now() + offsetRef.current, partLength);
@@ -182,12 +194,12 @@ function ScheduledListeningAudio({
 
   const status = !schedule ? null
     : position?.phase === "reading" ? t("listeningReading", { time: fmt(position.readingLeft) })
-    : position?.phase === "playing" ? (needsGesture ? t("listeningInterrupted") : t("listeningPlaying"))
+    : position?.phase === "playing" ? (mediaError ? null : needsGesture ? t("listeningInterrupted") : buffering ? t("listeningBuffering") : !objectUrl ? t("listeningLoadingMedia") : t("listeningPlaying"))
     : position?.phase === "ended" ? (reviewAtEnd ? null : t("listeningNextPart"))
     : null;
 
   return (
-    <div className="mt-3 space-y-2 rounded-field border border-border bg-bg-subtle p-3" data-testid="listening-scheduled">
+    <div className="mt-2 rounded-field border border-border bg-bg-subtle px-3 py-2" data-testid="listening-scheduled">
       {objectUrl && (
         <audio
           ref={audioRef}
@@ -195,11 +207,15 @@ function ScheduledListeningAudio({
           preload="auto"
           controlsList="nodownload noplaybackrate"
           onContextMenu={(e) => e.preventDefault()}
+          onWaiting={() => setBuffering(true)}
+          onStalled={() => setBuffering(true)}
+          onPlaying={() => { setBuffering(false); setMediaError(false); }}
+          onError={() => setMediaError(true)}
         >
           <track kind="captions" />
         </audio>
       )}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         {!schedule ? (
           <Button size="sm" onClick={begin} disabled={busy}>
             <Play />
@@ -234,8 +250,16 @@ function ScheduledListeningAudio({
           <span className="ml-auto text-sm font-semibold tabular-nums" aria-live="polite">{t("listeningReview", { time: fmt(reviewLeft) })}</span>
         )}
         {reviewLeft === 0 && <span className="ml-auto text-sm font-semibold text-warning">{t("listeningReviewOver")}</span>}
+        {schedule && mediaError && position?.phase !== "ended" && (
+          <div role="alert" className="flex min-w-0 basis-full flex-wrap items-center gap-2 text-xs font-medium text-danger" data-listening-error>
+            <span className="min-w-0 flex-1">{t("listeningMediaFailed")}</span>
+            <Button size="sm" variant="outline" onClick={reloadMedia}>{t("listeningRetry")}</Button>
+          </div>
+        )}
+        {!schedule && (failed
+          ? <p role="alert" className="min-w-0 basis-full text-xs font-medium text-danger">{t("listeningStartFailed")}</p>
+          : <p className="min-w-0 flex-1 basis-72 text-xs leading-snug text-fg-muted">{t("listeningRulesScheduled")}</p>)}
       </div>
-      {!schedule && <p className="text-xs text-fg-muted">{failed ? t("listeningStartFailed") : t("listeningRulesScheduled")}</p>}
     </div>
   );
 }
@@ -422,7 +446,7 @@ function PlainListeningAudio({
   }
 
   return (
-    <div className="mt-3 space-y-2 rounded-field border border-border bg-bg-subtle p-3">
+    <div className="mt-2 space-y-1.5 rounded-field border border-border bg-bg-subtle px-3 py-2">
       {/* Hidden audio: no native controls → no pause/seek UI. Volume via control below. */}
       <audio
         ref={audioRef}

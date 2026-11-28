@@ -22,6 +22,8 @@ export interface CbtSectionStepperProps {
   audioDurations?: Record<string, number>;
   simulatorMode?: ExamSimulatorMode;
   flaggedQuestions?: Set<string>;
+  /** Answered locally but not yet confirmed by the server (queued or saving). */
+  unconfirmedQuestions?: Set<string>;
   onToggleFlag?: (qid: string) => void;
   onActiveQuestionChange?: (questionNumber: number) => void;
   renderGroupBlock: (
@@ -50,6 +52,25 @@ function filledPositions(question: MockQuestion, answers: Record<string, string>
   return multilevelQuestionAnswered(question, answers, recordings) ? 1 : 0;
 }
 
+/** Another part of the exam window (e.g. the submission review) asks the navigator to open a question. */
+export const EXAM_JUMP_EVENT = "bw-exam-jump-question";
+export function requestQuestionJump(questionId: string) {
+  window.dispatchEvent(new CustomEvent(EXAM_JUMP_EVENT, { detail: { questionId } }));
+}
+
+export type NavigatorFilter = "all" | "unanswered" | "answered" | "flagged" | "pending";
+export const NAVIGATOR_FILTERS: NavigatorFilter[] = ["all", "unanswered", "answered", "flagged", "pending"];
+/** Answer, save and flag states are independent: an answered question can also be flagged or pending. */
+export function matchesNavigatorFilter(filter: NavigatorFilter, state: { answered: boolean; flagged: boolean; pending: boolean }): boolean {
+  switch (filter) {
+    case "unanswered": return !state.answered;
+    case "answered": return state.answered;
+    case "flagged": return state.flagged;
+    case "pending": return state.pending;
+    default: return true;
+  }
+}
+
 export function CbtSectionStepper({
   skill,
   groups,
@@ -59,6 +80,7 @@ export function CbtSectionStepper({
   audioSet,
   simulatorMode = "cdi",
   flaggedQuestions: externalFlags,
+  unconfirmedQuestions,
   onToggleFlag: externalToggleFlag,
   onActiveQuestionChange,
   renderGroupBlock,
@@ -228,6 +250,22 @@ export function CbtSectionStepper({
     return () => window.removeEventListener("keydown", onKey);
   }, [sheetOpen]);
 
+  const [filter, setFilter] = React.useState<NavigatorFilter>("all");
+  const questionState = (q: (typeof flattenedQuestions)[number]) => {
+    const answered = filledPositions(q, answers, audioSet) === objectivePositionCount(q);
+    return { answered, flagged: flaggedQuestions.has(q.id), pending: answered && !!unconfirmedQuestions?.has(q.id) };
+  };
+  const filterCounts = Object.fromEntries(NAVIGATOR_FILTERS.map((name) => [name, flattenedQuestions.filter((q) => matchesNavigatorFilter(name, questionState(q))).length])) as Record<NavigatorFilter, number>;
+  const shownInSheet = (q: (typeof flattenedQuestions)[number]) => matchesNavigatorFilter(filter, questionState(q));
+
+  // The submission review (and other panels) can open a question of this section.
+  const jumpRef = React.useRef<(id: string) => void>(() => undefined);
+  React.useEffect(() => {
+    const onJump = (event: Event) => jumpRef.current((event as CustomEvent<{ questionId: string }>).detail?.questionId);
+    window.addEventListener(EXAM_JUMP_EVENT, onJump);
+    return () => window.removeEventListener(EXAM_JUMP_EVENT, onJump);
+  }, []);
+
   const answeredTotal = partStats.reduce((total, part) => total + part.answeredCount, 0);
   const totalPositions = partStats.reduce((total, part) => total + part.totalCount, 0);
   const goTo = (index: number) => {
@@ -238,6 +276,7 @@ export function CbtSectionStepper({
   const paletteButton = (q: (typeof flattenedQuestions)[number], tabStop: string | undefined, onOpen?: () => void) => {
     const isAns = filledPositions(q, answers, audioSet) === objectivePositionCount(q);
     const isFlag = flaggedQuestions.has(q.id);
+    const isPending = isAns && !!unconfirmedQuestions?.has(q.id);
     const isCurrent = q.id === activeQuestionId;
     const isCurrentPart = q.groupIndex === activePartIndex;
     return (
@@ -251,7 +290,7 @@ export function CbtSectionStepper({
         aria-current={isCurrent ? "true" : undefined}
         aria-label={`${t("questionLabel", { label: q.displayLabel, part: q.groupTitle })}, ${
           isAns ? t("stateAnswered") : t("stateNotAnswered")
-        }${isFlag ? `, ${t("stateFlagged")}` : ""}`}
+        }${isPending ? `, ${t("stateSaving")}` : ""}${isFlag ? `, ${t("stateFlagged")}` : ""}`}
         title={`${t("questionLabel", { label: q.displayLabel, part: q.groupTitle })}${
           isAns ? ` - ${t("stateAnswered")}` : ""
         }${isFlag ? ` - ${t("stateFlagged")}` : ""}`}
@@ -271,9 +310,13 @@ export function CbtSectionStepper({
             : "border border-border bg-bg-subtle text-fg-muted hover:text-fg",
           // Flagged keeps its answered / unanswered fill and adds a warning outline and corner mark.
           isFlag && !isDtm && "outline outline-2 -outline-offset-2 outline-warning",
+          // Not yet confirmed by the server: dashed edge and a dot (not colour alone).
+          isPending && "border-2 border-dashed border-brand-fg/80",
         )}
+        data-pending={isPending || undefined}
       >
         {q.displayLabel}
+        {isPending && <span className="absolute bottom-0.5 left-1/2 size-1 -translate-x-1/2 rounded-full bg-current" aria-hidden />}
         {isFlag && <span className="absolute right-0 top-0 size-0 border-l-[10px] border-t-[10px] border-l-transparent border-t-warning" aria-hidden />}
       </button>
     );
@@ -284,7 +327,14 @@ export function CbtSectionStepper({
   const sheetTabStop = tabStopIn(flattenedQuestions.map((q) => q.id));
   const onLastQuestion = currentIndex >= flattenedQuestions.length - 1;
   // Keyboard: N / P move like the arrows below, F flags the open question (never while typing).
+  React.useEffect(() => {
+    jumpRef.current = (id: string) => {
+      const q = flattenedQuestions.find((item) => item.id === id);
+      if (q) { setSheetOpen(false); jumpToQuestion(q); }
+    };
+  });
   useRunnerShortcuts({
+    overview: () => setSheetOpen(true),
     next: () => { if (!onLastQuestion) goTo(currentIndex + 1); },
     previous: () => { if (currentIndex > 0) goTo(currentIndex - 1); },
     flag: () => { if (activeQuestionId) toggleFlag(activeQuestionId); },
@@ -295,6 +345,7 @@ export function CbtSectionStepper({
       <span className="flex items-center gap-1.5"><span className="size-3 rounded-[3px] bg-brand" />{t("legendAnswered")}</span>
       <span className="flex items-center gap-1.5"><span className="size-3 rounded-[3px] border border-border-strong bg-surface outline outline-2 -outline-offset-2 outline-warning" />{t("legendFlagged")}</span>
       <span className="flex items-center gap-1.5"><span className="size-3 rounded-[3px] border border-border-strong bg-surface" />{t("legendUnanswered")}</span>
+      <span className="flex items-center gap-1.5"><span className="size-3 rounded-[3px] border-2 border-dashed border-brand bg-brand/40" />{t("legendSaving")}</span>
     </div>
   );
   const iconButton = "min-h-11 min-w-11 px-2 touch-manipulation md:min-h-10 md:min-w-10";
@@ -450,6 +501,25 @@ export function CbtSectionStepper({
               </Button>
             </div>
             {legend}
+            <div className="mt-3 flex flex-wrap gap-1.5" role="radiogroup" aria-label={t("filterLabel")} data-testid="navigator-filters">
+              {NAVIGATOR_FILTERS.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  role="radio"
+                  aria-checked={filter === name}
+                  data-filter={name}
+                  onClick={() => setFilter(name)}
+                  className={cn(
+                    "inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-medium touch-manipulation",
+                    filter === name ? "border-brand bg-brand-subtle text-brand-subtle-fg" : "border-border bg-surface text-fg-muted hover:text-fg",
+                  )}
+                >
+                  {t(`filter_${name}`)}
+                  <span className="tabular-nums text-xs font-bold">{filterCounts[name]}</span>
+                </button>
+              ))}
+            </div>
             <div
               data-testid="question-palette"
               id="question-palette-grid"
@@ -459,14 +529,19 @@ export function CbtSectionStepper({
               onKeyDown={onPaletteKeyDown}
               onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setRovingId(null); }}
             >
-              {partStats.map((part, idx) => (
-                <section key={idx} aria-label={part.label}>
-                  <p className="mb-2 text-sm font-semibold text-fg-muted">{part.label} · {part.answeredCount}/{part.totalCount}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {flattenedQuestions.filter((q) => q.groupIndex === idx).map((q) => paletteButton(q, sheetTabStop, () => setSheetOpen(false)))}
-                  </div>
-                </section>
-              ))}
+              {partStats.map((part, idx) => {
+                const shown = flattenedQuestions.filter((q) => q.groupIndex === idx && shownInSheet(q));
+                if (!shown.length) return null;
+                return (
+                  <section key={idx} aria-label={part.label}>
+                    <p className="mb-2 text-sm font-semibold text-fg-muted">{part.label} · {part.answeredCount}/{part.totalCount}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {shown.map((q) => paletteButton(q, sheetTabStop, () => setSheetOpen(false)))}
+                    </div>
+                  </section>
+                );
+              })}
+              {filterCounts[filter] === 0 && <p className="text-sm text-fg-muted" data-testid="navigator-filter-empty">{t(`filterEmpty_${filter}`)}</p>}
             </div>
           </div>
         </div>

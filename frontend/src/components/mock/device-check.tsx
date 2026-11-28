@@ -2,10 +2,10 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { CheckCircle2, CircleAlert, Loader2, Mic, Volume2, Wifi, XCircle } from "lucide-react";
+import { CheckCircle2, CircleAlert, Globe, KeyRound, Loader2, Mic, Volume2, Wifi, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api-client";
-import { canRecordAudio, classifyLatency, MIN_VOICE_LEVEL, peakLevel, type CheckState } from "@/lib/device-check";
+import { browserSupport, canRecordAudio, classifyLatency, MIN_VOICE_LEVEL, peakLevel, summarizeNetwork, type CheckState } from "@/lib/device-check";
 import { assertMicrophoneAvailable, microphoneProblem, requestMicrophoneStream } from "@/lib/microphone";
 import { cn } from "@/lib/utils";
 
@@ -19,8 +19,8 @@ const ICON: Record<CheckState, React.ReactNode> = {
   fail: <XCircle className="size-4 text-danger" aria-hidden="true" />,
 };
 
-/** Plays a short synthetic tone (not exam audio) so the student can confirm the speakers work. */
-async function playTestTone(): Promise<void> {
+/** Plays a short synthetic tone (never exam audio, so no playback allowance is used) at the chosen volume. */
+async function playTestTone(volume: number): Promise<void> {
   const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!Ctx) throw new Error("no-audio");
   const ctx = new Ctx();
@@ -28,7 +28,7 @@ async function playTestTone(): Promise<void> {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.frequency.value = 660;
-    gain.gain.value = 0.15;
+    gain.gain.value = 0.3 * Math.max(0, Math.min(1, volume));
     osc.connect(gain).connect(ctx.destination);
     osc.start();
     await new Promise((resolve) => setTimeout(resolve, 700));
@@ -38,8 +38,11 @@ async function playTestTone(): Promise<void> {
   }
 }
 
-/** Opens the microphone for ~2 s and reports the loudest input it heard, then releases it. */
-async function measureMicrophone(): Promise<number> {
+/**
+ * Opens the microphone for ~2 s, reports the live level while it listens and the loudest input it
+ * heard, then releases the stream. Nothing is recorded or kept.
+ */
+async function measureMicrophone(onLevel: (level: number) => void): Promise<number> {
   assertMicrophoneAvailable();
   const stream = await requestMicrophoneStream({ audio: true });
   const ctx = new AudioContext();
@@ -52,26 +55,45 @@ async function measureMicrophone(): Promise<number> {
     const until = performance.now() + 2000;
     while (performance.now() < until) {
       analyser.getByteTimeDomainData(buf);
-      peak = Math.max(peak, peakLevel(buf));
+      const level = peakLevel(buf);
+      peak = Math.max(peak, level);
+      onLevel(level);
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
     return peak;
   } finally {
     stream.getTracks().forEach((track) => track.stop());
+    onLevel(0);
     await ctx.close().catch(() => undefined);
   }
 }
 
+export type ReadinessSummary = { done: boolean; requiredProblems: number };
+
 /**
- * Optional pre-exam device check. Every result is measured on this device right now, or confirmed by the
- * student (the sound test); nothing is assumed. It never blocks starting the exam.
+ * Pre-exam readiness check. Every result is measured on this device right now, or confirmed by the
+ * student (the sound test); nothing is assumed. Required checks are marked as such; the check itself
+ * never starts the timed attempt and never touches exam media.
  */
-export function DeviceCheck({ needsMicrophone }: { needsMicrophone: boolean }) {
+export function DeviceCheck({
+  needsMicrophone,
+  checkSession = false,
+  onSummary,
+}: {
+  needsMicrophone: boolean;
+  /** Also confirm the sign-in is still valid (an authenticated request). */
+  checkSession?: boolean;
+  onSummary?: (summary: ReadinessSummary) => void;
+}) {
   const t = useTranslations("mock.deviceCheck");
   const tMic = useTranslations("mock.mic");
   const [net, setNet] = React.useState<Row>({ state: "idle" });
+  const [session, setSession] = React.useState<Row>({ state: "idle" });
+  const [browser, setBrowser] = React.useState<Row>({ state: "idle" });
   const [sound, setSound] = React.useState<Row>({ state: "idle" });
   const [mic, setMic] = React.useState<Row>({ state: "idle" });
+  const [micLevel, setMicLevel] = React.useState(0);
+  const [volume, setVolume] = React.useState(0.8);
   const [heardPending, setHeardPending] = React.useState(false);
   const started = net.state !== "idle";
 
@@ -81,21 +103,47 @@ export function DeviceCheck({ needsMicrophone }: { needsMicrophone: boolean }) {
       setNet({ state: "fail", detail: t("netOffline") });
       return;
     }
-    const t0 = performance.now();
-    try {
-      await api.get("/health");
-      const ms = Math.round(performance.now() - t0);
-      const state = classifyLatency(ms);
-      setNet({ state, detail: state === "ok" ? t("netOk", { ms }) : t("netSlow", { ms }) });
-    } catch {
-      setNet({ state: "fail", detail: t("netFail") });
+    // Three requests, one after another: one reply alone says little about a connection.
+    const samples: Array<number | null> = [];
+    for (let i = 0; i < 3; i += 1) {
+      const t0 = performance.now();
+      try {
+        await api.get("/health");
+        samples.push(Math.round(performance.now() - t0));
+      } catch {
+        samples.push(null);
+      }
     }
+    const result = summarizeNetwork(samples);
+    if (result.replied === 0) setNet({ state: "fail", detail: t("netFail") });
+    else if (result.replied < samples.length) setNet({ state: "warn", detail: t("netUnstable", { replied: result.replied, total: samples.length }) });
+    else {
+      const state = classifyLatency(result.medianMs);
+      setNet({ state, detail: state === "ok" ? t("netOk", { ms: result.medianMs }) : t("netSlow", { ms: result.medianMs }) });
+    }
+  }
+
+  async function checkSignIn() {
+    if (!checkSession) return;
+    setSession({ state: "running" });
+    try {
+      await api.get("/auth/me");
+      setSession({ state: "ok", detail: t("sessionOk") });
+    } catch {
+      setSession({ state: "fail", detail: t("sessionFail") });
+    }
+  }
+
+  function checkBrowser() {
+    const support = browserSupport(needsMicrophone);
+    const missing = Object.entries(support).filter(([, ok]) => !ok).map(([name]) => t(`feature.${name}`));
+    setBrowser(missing.length ? { state: "fail", detail: t("browserMissing", { list: missing.join(", ") }) } : { state: "ok", detail: t("browserOk") });
   }
 
   async function checkSound() {
     setSound({ state: "running" });
     try {
-      await playTestTone();
+      await playTestTone(volume);
       setHeardPending(true);
       setSound({ state: "running", detail: t("soundAsk") });
     } catch {
@@ -110,7 +158,7 @@ export function DeviceCheck({ needsMicrophone }: { needsMicrophone: boolean }) {
     }
     setMic({ state: "running", detail: t("micSpeak") });
     try {
-      const level = await measureMicrophone();
+      const level = await measureMicrophone(setMicLevel);
       setMic(level >= MIN_VOICE_LEVEL ? { state: "ok", detail: t("micOk") } : { state: "warn", detail: t("micSilent") });
     } catch (error) {
       setMic({ state: "fail", detail: tMic(`help.${microphoneProblem(error)}`) });
@@ -118,43 +166,86 @@ export function DeviceCheck({ needsMicrophone }: { needsMicrophone: boolean }) {
   }
 
   async function runAll() {
-    // The tone starts inside the click (browsers allow audio only from a user gesture); the request runs alongside.
-    await Promise.all([checkSound(), checkNetwork()]);
+    checkBrowser();
+    // The tone starts inside the click (browsers allow audio only from a user gesture); the requests run alongside.
+    await Promise.all([checkSound(), checkNetwork(), checkSignIn()]);
   }
 
-  const rows: Array<{ id: string; icon: React.ReactNode; label: string; row: Row; action?: React.ReactNode }> = [
-    { id: "net", icon: <Wifi className="size-4" aria-hidden="true" />, label: t("net"), row: net },
+  type Item = { id: string; icon: React.ReactNode; label: string; row: Row; required: boolean; action?: React.ReactNode };
+  const rows: Item[] = [
+    { id: "browser", icon: <Globe className="size-4" aria-hidden="true" />, label: t("browser"), row: browser, required: true },
     {
-      id: "sound",
-      icon: <Volume2 className="size-4" aria-hidden="true" />,
-      label: t("sound"),
-      row: sound,
-      action: heardPending ? (
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" onClick={() => { setHeardPending(false); setSound({ state: "ok", detail: t("soundHeard") }); }}>
-            {t("heardYes")}
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => { setHeardPending(false); setSound({ state: "warn", detail: t("soundNotHeard") }); }}>
-            {t("heardNo")}
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => void checkSound()}>{t("playAgain")}</Button>
-        </div>
+      id: "net", icon: <Wifi className="size-4" aria-hidden="true" />, label: t("net"), row: net, required: true,
+      action: started && net.state !== "running" && net.state !== "ok" ? (
+        <Button size="sm" variant="ghost" onClick={() => void checkNetwork()}>{t("netRetest")}</Button>
       ) : null,
     },
   ];
+  if (checkSession) {
+    rows.push({
+      id: "session", icon: <KeyRound className="size-4" aria-hidden="true" />, label: t("session"), row: session, required: true,
+      action: session.state === "fail" ? <Button size="sm" variant="ghost" onClick={() => void checkSignIn()}>{t("retry")}</Button> : null,
+    });
+  }
+  rows.push({
+    id: "sound",
+    icon: <Volume2 className="size-4" aria-hidden="true" />,
+    label: t("sound"),
+    row: sound,
+    required: false,
+    action: (
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-2 text-sm text-fg-muted">
+          <span>{t("volume")}</span>
+          <input type="range" min={0} max={1} step={0.05} value={volume} onChange={(event) => setVolume(Number(event.target.value))} aria-label={t("volume")} className="w-28 accent-[var(--color-brand,currentColor)]" />
+        </label>
+        {heardPending ? (
+          <>
+            <Button size="sm" variant="outline" onClick={() => { setHeardPending(false); setSound({ state: "ok", detail: t("soundHeard") }); }}>
+              {t("heardYes")}
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => { setHeardPending(false); setSound({ state: "warn", detail: t("soundNotHeard") }); }}>
+              {t("heardNo")}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => void checkSound()}>{t("playAgain")}</Button>
+          </>
+        ) : started && sound.state !== "running" ? (
+          <Button size="sm" variant="ghost" onClick={() => void checkSound()}>{t("playAgain")}</Button>
+        ) : null}
+      </div>
+    ),
+  });
   if (needsMicrophone) {
     rows.push({
       id: "mic",
       icon: <Mic className="size-4" aria-hidden="true" />,
       label: t("mic"),
       row: mic,
-      action: started && mic.state !== "running" ? (
-        <Button size="sm" variant="outline" onClick={() => void checkMic()}>
-          {mic.state === "idle" ? t("micTest") : t("micRetest")}
-        </Button>
+      required: true,
+      action: started ? (
+        <div className="flex flex-wrap items-center gap-3">
+          {mic.state !== "running" && (
+            <Button size="sm" variant="outline" onClick={() => void checkMic()}>
+              {mic.state === "idle" ? t("micTest") : t("micRetest")}
+            </Button>
+          )}
+          {mic.state === "running" && (
+            <span className="flex items-center gap-2 text-sm text-fg-muted">
+              {t("micLevel")}
+              <span className="relative h-2 w-32 overflow-hidden rounded-full bg-bg-subtle" role="meter" aria-label={t("micLevel")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(micLevel * 100)}>
+                <span className="absolute inset-y-0 left-0 rounded-full bg-brand" style={{ width: `${Math.min(100, Math.round(micLevel * 250))}%` }} />
+              </span>
+            </span>
+          )}
+        </div>
       ) : null,
     });
   }
+
+  const requiredRows = rows.filter((item) => item.required);
+  const done = started && rows.every((item) => item.row.state !== "running" && item.row.state !== "idle");
+  const requiredProblems = requiredRows.filter((item) => item.row.state === "fail" || item.row.state === "idle" || (item.id === "mic" && item.row.state === "warn")).length;
+  React.useEffect(() => { onSummary?.({ done, requiredProblems }); }, [done, requiredProblems, onSummary]);
 
   return (
     <div className="mt-3 border-t border-border pt-3">
@@ -164,32 +255,38 @@ export function DeviceCheck({ needsMicrophone }: { needsMicrophone: boolean }) {
           <Button size="sm" variant="outline" onClick={() => void runAll()}>{t("run")}</Button>
         </div>
       ) : (
-        <ul className="space-y-3" aria-live="polite">
-          {rows.map(({ id, icon, label, row, action }) => (
-            <li key={id} className="space-y-1.5">
-              <div className="flex items-start gap-2">
-                <span className="mt-0.5 text-fg-muted">{icon}</span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 font-medium text-fg">
-                    <span>{label}</span>
-                    {ICON[row.state]}
+        <>
+          <ul className="space-y-3" aria-live="polite">
+            {rows.map(({ id, icon, label, row, action, required }) => (
+              <li key={id} className="space-y-1.5" data-check={id} data-check-state={row.state}>
+                <div className="flex items-start gap-2">
+                  <span className="mt-0.5 text-fg-muted">{icon}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 font-medium text-fg">
+                      <span>{label}</span>
+                      <span className={cn("rounded-full border px-1.5 text-xs font-medium", required ? "border-border-strong text-fg-muted" : "border-border text-fg-subtle")}>
+                        {required ? t("required") : t("recommended")}
+                      </span>
+                      {ICON[row.state]}
+                    </div>
+                    {row.detail && (
+                      <p className={cn("text-sm", row.state === "fail" ? "text-danger" : row.state === "warn" ? "text-warning" : "text-fg-muted")}>
+                        {row.detail}
+                      </p>
+                    )}
                   </div>
-                  {row.detail && (
-                    <p className={cn("text-sm", row.state === "fail" ? "text-danger" : row.state === "warn" ? "text-warning" : "text-fg-muted")}>
-                      {row.detail}
-                    </p>
-                  )}
                 </div>
-              </div>
-              {action && <div className="pl-6">{action}</div>}
-            </li>
-          ))}
-          <li className="pl-6">
-            <Button size="sm" variant="ghost" onClick={() => void checkNetwork()} disabled={net.state === "running"}>
-              {t("netRetest")}
-            </Button>
-          </li>
-        </ul>
+                {action && <div className="pl-6">{action}</div>}
+              </li>
+            ))}
+          </ul>
+          {done && (
+            <p className={cn("mt-3 rounded-control border px-3 py-2 text-sm", requiredProblems ? "border-warning-border bg-warning-bg text-warning" : "border-success-border bg-success-bg text-success")} data-readiness-summary>
+              {requiredProblems ? t("summaryProblems", { count: requiredProblems }) : t("summaryOk")}
+            </p>
+          )}
+          <p className="mt-2 text-xs text-fg-muted">{t("netCaveat")}</p>
+        </>
       )}
     </div>
   );

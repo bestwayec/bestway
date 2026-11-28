@@ -4,7 +4,7 @@ import { builderSteps, neighbourStep, stepForSelection, STEP_ORDER } from "./bui
 import { examClientChecks } from "./checks";
 
 const q = (over: Record<string, unknown> = {}) => ({ id: "q", number: 1, type: "short_answer", prompt: "Where?", options: [], correctAnswers: ["Paris"], points: 1, ...over });
-const group = (id: string, over: Record<string, unknown> = {}) => ({ id, sortOrder: 0, title: id, hasAudio: true, passageText: "text", questions: [q()], ...over });
+const group = (id: string, over: Record<string, unknown> = {}) => ({ id, sortOrder: 0, title: id, hasAudio: true, passageText: "text", questions: [q({ id: `${id}-q` })], ...over });
 const exam = (sections: unknown[], over: Record<string, unknown> = {}) =>
   ({ id: "e", title: "Mock", type: "ielts_academic", profile: "practice", isPublished: false, questionCount: 1, sections, ...over }) as unknown as MockExamDetail;
 const section = (id: string, skill: string, groups: unknown[]) => ({ id, skill, groups });

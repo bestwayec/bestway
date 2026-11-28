@@ -281,6 +281,7 @@ def create_assignment(cohort, data, title, *, vocabulary_set=None, vocabulary_mo
         min_pass = int(min_pass)
     except (ValueError, TypeError):
         min_pass = 80
+    timing_policy, opens_at = exam_timing(data, deadline, exam)
 
     assignment = HomeworkAssignment.objects.create(
         cohort=cohort,
@@ -292,12 +293,42 @@ def create_assignment(cohort, data, title, *, vocabulary_set=None, vocabulary_mo
         vocabulary_mode=vocabulary_mode if vocabulary_set else None,
         participant_ids=classrooms.participant_ids(cohort) if exam else None,
         deadline=deadline,
+        timing_policy=timing_policy,
+        opens_at=opens_at,
         min_pass_percent=min_pass,
     )
     if classrooms.is_linked(cohort):
         transaction.on_commit(lambda: homework_assigned(assignment.id), robust=True)
 
     return assignment_payload(assignment)
+
+
+TIMING_POLICIES = ("individual", "fixed_close")
+
+
+def exam_timing(data, deadline, exam):
+    """Validate the exam timing policy. Existing assignments are never changed by this."""
+    policy = data.get("timing_policy", "individual")
+    if policy not in TIMING_POLICIES:
+        raise ContractAPIException("VALIDATION_ERROR", "timing_policy: individual yoki fixed_close", 400)
+    if policy == "fixed_close" and exam is None:
+        raise ContractAPIException("VALIDATION_ERROR", "Umumiy yopilish vaqti faqat imtihon vazifasi uchun", 400)
+    opens_at = None
+    raw = data.get("opens_at")
+    if raw not in (None, ""):
+        try:
+            opens_at = parse_datetime(raw) if isinstance(raw, str) else None
+        except ValueError:
+            opens_at = None
+        if opens_at is None or timezone.is_naive(opens_at):
+            raise ContractAPIException("VALIDATION_ERROR", "Boshlanish vaqti vaqt mintaqasi bilan ISO 8601 bo‘lishi kerak", 400)
+        if exam is None:
+            raise ContractAPIException("VALIDATION_ERROR", "Boshlanish vaqti faqat imtihon vazifasi uchun", 400)
+        if deadline is not None and opens_at >= deadline:
+            raise ContractAPIException("VALIDATION_ERROR", "Boshlanish vaqti yopilish vaqtidan oldin bo‘lishi kerak", 400)
+    if policy == "fixed_close" and deadline is not None and deadline <= timezone.now():
+        raise ContractAPIException("VALIDATION_ERROR", "Yopilish vaqti kelajakda bo‘lishi kerak", 400)
+    return policy, opens_at
 
 
 def assignment_payload(assignment):
@@ -313,6 +344,8 @@ def assignment_payload(assignment):
         "exam_title": assignment.exam.title if assignment.exam else None,
         "vocabulary_set_id": assignment.vocabulary_set_id,
         "deadline": assignment.deadline.isoformat(),
+        "timing_policy": assignment.timing_policy,
+        "opens_at": assignment.opens_at.isoformat() if assignment.opens_at else None,
         "min_pass_percent": assignment.min_pass_percent,
         "created_at": assignment.created_at.isoformat(),
     }
@@ -330,7 +363,8 @@ def classroom_assignments_view(request, group_id):
 
     cohort = classrooms.homework_cohort(actor, group_id, create=True)
     from .domain_contracts import invalid, payload
-    data = payload(request, {"title", "deadline", "min_pass_percent", "lesson_id", "exam_id", "vocabulary_set_id"})
+    data = payload(request, {"title", "deadline", "min_pass_percent", "lesson_id", "exam_id", "vocabulary_set_id",
+                             "timing_policy", "opens_at"})
     title = data.get("title")
     if not isinstance(title, str) or not 1 <= len(title.strip()) <= 255:
         invalid("Vazifa nomi 1–255 belgi bo‘lishi kerak")
@@ -366,7 +400,7 @@ def classroom_assignments_view(request, group_id):
     if "exam_id" in data:
         # homework_cohort holds the classroom lock for this request.
         matching = HomeworkAssignment.objects.filter(cohort=cohort, exam_id=data["exam_id"],
-            title=title.strip(), min_pass_percent=score)
+            title=title.strip(), min_pass_percent=score, timing_policy=data.get("timing_policy", "individual"))
         matching = matching.filter(deadline=parsed) if parsed else matching.filter(deadline__gt=timezone.now())
         existing = matching.select_related("exam").first()
         if existing:
@@ -509,7 +543,10 @@ def student_assignment_rows(user):
             "lesson_order": a.lesson.order_index if a.lesson else None,
             "exam_id": a.exam_id,
             "exam_title": a.exam.title if a.exam else None,
-            "can_launch_exam": bool(a.exam and a.exam.is_published and a.deadline >= now and not is_submitted),
+            "can_launch_exam": bool(a.exam and a.exam.is_published and a.deadline >= now and not is_submitted
+                                    and not (a.opens_at and a.opens_at > now)),
+            "opens_at": a.opens_at.isoformat() if a.opens_at else None,
+            "timing_policy": a.timing_policy,
             "exam_attempt_id": sub.attempt_id if a.exam_id and sub and sub.source == "exam_attempt" else None,
             "vocabulary_set_id": getattr(a, "vocabulary_set_id", None),
             "deadline": a.deadline.isoformat(),
@@ -540,7 +577,13 @@ def student_assignment_exam_view(request, assignment_id: str):
         raise ContractAPIException("ASSIGNMENT_EXPIRED", "Topshiriq muddati o‘tgan", 409)
     if HomeworkSubmission.objects.filter(assignment=assignment, student_id=actor.id).exists():
         raise ContractAPIException("ASSIGNMENT_ALREADY_SUBMITTED", "Topshiriq topshirilgan", 409)
-    return success({"id": assignment.exam_id, "type": assignment.exam.type})
+    # Readiness screen (5.1 CBT 2.0): the assignment's own timing, so the student sees the real window.
+    return success({
+        "id": assignment.exam_id, "type": assignment.exam.type,
+        "assignmentTitle": assignment.title, "timingPolicy": assignment.timing_policy,
+        "opensAt": assignment.opens_at.isoformat() if assignment.opens_at else None,
+        "deadline": assignment.deadline.isoformat(),
+    })
 
 
 @api_view(["POST"])

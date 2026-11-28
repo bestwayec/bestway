@@ -547,3 +547,21 @@ html:not(.dark) .exam-theme-standard {
   background: var(--bg);
   color: var(--fg);
 }
+
+/* Exam Settings 2.0 (CBT 2.0): comfort options, applied to the exam area only and in place. */
+.exam-line-relaxed :where(p, li, td, th, dd, label, span, .prose, [data-gapped]) {
+  line-height: 1.85;
+}
+.exam-reduce-motion *,
+.exam-reduce-motion *::before,
+.exam-reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+.exam-strong-focus :focus-visible {
+  outline: 3px solid var(--fg) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 5px var(--brand) !important;
+}

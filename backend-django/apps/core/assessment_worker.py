@@ -324,12 +324,31 @@ def recover_handoffs():
     except Exception:
         logger.exception('Finish hand-off recovery failed')
 
+_last_close_sweep = [0.0]
+
+def close_expired_exams(force=False):
+    """Hand in attempts whose server deadline passed (browser closed, student gone)."""
+    import time
+    if os.environ.get('EXAM_AUTO_SUBMIT_ENABLED', 'true').lower() == 'false':
+        return 0
+    interval = float(os.environ.get('EXAM_AUTO_SUBMIT_INTERVAL', '15'))
+    if not force and time.monotonic() - _last_close_sweep[0] < interval:
+        return 0
+    _last_close_sweep[0] = time.monotonic()
+    try:
+        from .mock_deadline import sweep
+        return sweep()
+    except Exception:
+        logger.exception('Expired exam sweep failed')
+        return -1
+
 def run(stop,once=False):
     try:
-        if once:recover_handoffs();tick();return
+        if once:close_expired_exams(force=True);recover_handoffs();tick();return
         poll_interval=float(os.environ.get('ASSESSMENT_WORKER_POLL_INTERVAL','2'))
         while not stop.wait(poll_interval):
             close_old_connections()
+            close_expired_exams()
             recover_handoffs()
             tick()
             close_old_connections()

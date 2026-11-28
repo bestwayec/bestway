@@ -193,7 +193,18 @@
     "failed": "Could not complete the request.",
     "loading": "Loading assignments…",
     "retry": "Retry",
-    "empty": "No assignments yet."
+    "empty": "No assignments yet.",
+    "opensAt": "Opens at (optional)",
+    "timingPolicy": "Exam timing",
+    "timingIndividual": "Individual duration",
+    "timingFixed": "Fixed closing time (supervised)",
+    "timingIndividualHelp": "Each student gets the exam's full duration after starting. The deadline only closes new starts.",
+    "timingFixedHelp": "Every student must finish by the deadline. The server hands in unfinished attempts automatically when it passes, even if the browser is closed.",
+    "fixedNeedsDeadline": "A fixed closing time needs a deadline.",
+    "fixedBadge": "Fixed close",
+    "opensBadge": "Opens {when}",
+    "tashkent": "Times are shown in Asia/Tashkent.",
+    "results": "Results"
   },
   "assessment": {
     "title": "Writing & Speaking feedback",
@@ -267,7 +278,11 @@
     "audioDuration": "Verified duration {seconds}s",
     "finalizeGrade": "Finalize grade",
     "useLatestReviewVersion": "Use latest version and keep my edits",
-    "transcriptionStates": {"STARTED": "Transcribing", "SUCCEEDED": "Transcribed", "FAILED": "Transcription failed"},
+    "transcriptionStates": {
+      "STARTED": "Transcribing",
+      "SUCCEEDED": "Transcribed",
+      "FAILED": "Transcription failed"
+    },
     "transcriptPending": "No transcript is available yet. Use the original recording for review.",
     "transcriptConfidence": "Transcription confidence",
     "segments": "Transcript timing",
@@ -1600,7 +1615,18 @@
       "mapFor": "{title} — map",
       "mapForPart": "Map for this part",
       "passageOrQuestions": "Show the passage or the questions",
-      "writingModeLabel": "How you answer"
+      "writingModeLabel": "How you answer",
+      "saveOfflineKept": "Offline — kept on this device, not yet on the server",
+      "saveSubmitting": "Handing in…",
+      "saveSubmitted": "Handed in",
+      "saveLocked": "Answers locked",
+      "timeUpChip": "Time is up",
+      "timeUpTitle": "Time is up. Your answers are locked.",
+      "timeUpFinalizing": "Your saved responses are being handed in. Keep this page open until the confirmation appears; answers that were not saved to the server before the deadline are not counted.",
+      "timeUpNextSection": "This section has closed. Moving to the next section…",
+      "timeUpSpeaking": "No new recordings can start. A recording that already finished is still being uploaded within the permitted time; keep this page open.",
+      "pictureEnlarge": "Enlarge picture: {name}",
+      "pictureEnlargeShort": "Enlarge"
     },
     "title": "Mock exams",
     "partialPracticeResult": "Selected task practice result",
@@ -1727,7 +1753,20 @@
       "partQuestions": "Questions in {part}",
       "closePalette": "Close",
       "passageN": "Passage {n}",
-      "partN": "Part {n}"
+      "partN": "Part {n}",
+      "stateSaving": "saving",
+      "legendSaving": "Saving — not yet confirmed",
+      "filterLabel": "Show questions",
+      "filter_all": "All",
+      "filter_unanswered": "Unanswered",
+      "filter_answered": "Answered",
+      "filter_flagged": "Flagged",
+      "filter_pending": "Not yet saved",
+      "filterEmpty_all": "This section has no questions.",
+      "filterEmpty_unanswered": "Every question has an answer.",
+      "filterEmpty_answered": "No answers yet.",
+      "filterEmpty_flagged": "No flagged questions.",
+      "filterEmpty_pending": "Every answer has reached the server."
     },
     "advanceConfirm": {
       "title": "Move to the next section?",
@@ -1834,7 +1873,10 @@
       "internalCertificate": "BestWay internal result (PDF)",
       "disclosureLockedTitle": "Answer key & scripts temporarily withheld",
       "disclosureLockedDeadline": "Correct answers, audio scripts, and model explanations unlock on {date} or once all group students submit.",
-      "disclosureLockedGroup": "Correct answers, audio scripts, and model explanations unlock after the group deadline or once all classmates submit."
+      "disclosureLockedGroup": "Correct answers, audio scripts, and model explanations unlock after the group deadline or once all classmates submit.",
+      "mistakesSummary": "{count, plural, one {# question was} other {# questions were}} wrong or left unanswered in Listening and Reading.",
+      "reviewMistakes": "Review my mistakes",
+      "showAllAnswers": "Show all answers"
     },
     "submitDialog": {
       "title": "Finish the exam",
@@ -1851,7 +1893,14 @@
       "answeredCard": "Answered",
       "unansweredCard": "Unanswered",
       "flaggedCard": "Flagged",
-      "flaggedNotice": "You have {count} flagged questions for review."
+      "flaggedNotice": "You have {count} flagged questions for review.",
+      "writingDone": "Writing: {done} of {total} tasks answered",
+      "speakingDone": "Speaking: {done} of {total} recordings received by the server",
+      "pendingSaves": "{count, plural, one {# answer has} other {# answers have}} not reached the server yet. Wait for “Saved to server”, or it will not be counted.",
+      "pendingOffline": "You are offline. {count, plural, one {# answer is} other {# answers are}} kept only on this device and cannot be handed in until the connection returns.",
+      "unansweredList": "Unanswered — tap to open",
+      "flaggedList": "Flagged for review",
+      "jumpHint": "Only sections that are still open are listed."
     },
     "resumeDialog": {
       "title": "Which section do you want to continue?",
@@ -1893,7 +1942,7 @@
       "viewLastResult": "View last result"
     },
     "deviceCheck": {
-      "intro": "Optional: check your connection, sound and microphone on this device before you start.",
+      "intro": "Check your sign-in, connection, sound and (for Speaking) microphone on this device before you start. The check never starts the exam or plays exam audio.",
       "run": "Check my device",
       "net": "Connection",
       "netOk": "Connected · server replied in {ms} ms",
@@ -1915,7 +1964,28 @@
       "micSpeak": "Say a few words now…",
       "micOk": "Your voice was picked up.",
       "micSilent": "The microphone works but heard almost nothing. Speak louder or choose another microphone, then test again.",
-      "micUnsupported": "This browser cannot record audio. Use a current Chrome, Edge or Safari."
+      "micUnsupported": "This browser cannot record audio. Use a current Chrome, Edge or Safari.",
+      "netUnstable": "Unstable · the server replied to {replied} of {total} requests. Answers are kept on this device until they are saved.",
+      "netCaveat": "A passing check is a snapshot: it cannot guarantee the connection will stay stable during the exam.",
+      "session": "Sign-in",
+      "sessionOk": "You are signed in.",
+      "sessionFail": "Your sign-in could not be confirmed. Sign in again before you start.",
+      "retry": "Check again",
+      "browser": "Browser",
+      "browserOk": "This browser supports everything the exam needs.",
+      "browserMissing": "Not available in this browser: {list}. Use a current Chrome, Edge or Safari, outside private mode.",
+      "feature": {
+        "storage": "answer storage on this device",
+        "audio": "audio playback",
+        "network": "network requests",
+        "recording": "audio recording"
+      },
+      "volume": "Volume",
+      "micLevel": "Input level",
+      "required": "Required",
+      "recommended": "Recommended",
+      "summaryOk": "All required checks passed on this device.",
+      "summaryProblems": "{count, plural, one {# required check needs attention} other {# required checks need attention}} before you start."
     },
     "scoreSummary": {
       "singleSection": "Single section: {skill}",
@@ -1979,7 +2049,24 @@
       "listeningResume": "Continue listening",
       "listeningStartFailed": "The recording could not be started. Check the connection and press Play again.",
       "listeningRulesScheduled": "Exam mode: after Play you first have time to read the questions, then the recording plays once, with no pause or rewind. If the page reloads, it continues from where the exam is.",
-      "timeWarningOne": "1 minute left. Check your answers."
+      "timeWarningOne": "1 minute left. Check your answers.",
+      "listeningBuffering": "Buffering… the recording continues on the exam clock",
+      "listeningLoadingMedia": "Loading the recording…",
+      "listeningMediaFailed": "The recording could not be loaded on this device. Retry; it rejoins at the exam clock and does not start again. If it keeps failing, tell your teacher.",
+      "listeningRetry": "Retry",
+      "theme": "Theme",
+      "theme_site": "As the site",
+      "theme_light": "Light",
+      "theme_dark": "Dark",
+      "lineSpacing": "Line spacing",
+      "lineSpacing_normal": "Standard",
+      "lineSpacing_relaxed": "Comfortable",
+      "reduceMotion": "Reduce motion",
+      "reduceMotionHint": "No animations or smooth scrolling in the exam window.",
+      "strongFocus": "Strong focus outline",
+      "strongFocusHint": "A thick outline shows where the keyboard is.",
+      "restoreHint": "Text size, colours, theme, spacing, volume and panel widths. Your answers and the time are not affected.",
+      "restoreDefaults": "Restore defaults"
     },
     "textTools": {
       "toolbar": "Text tools",
@@ -2072,7 +2159,9 @@
       "state_pending": "Not marked yet",
       "where": "Where is the answer?",
       "whereFor": "Where is the answer to question {number}?",
-      "revealed": "answer shown"
+      "revealed": "answer shown",
+      "filter_mistakes": "My mistakes ({count})",
+      "empty_mistakes": "No mistakes here — every answer was correct."
     },
     "reviewExplain": {
       "passageLabel": "Passage with the answer highlighted",
@@ -2134,7 +2223,8 @@
       "flag": "Flag or unflag the question",
       "highlight": "Highlight the selected text",
       "help": "Show this list",
-      "close": "Close a dialog or panel"
+      "close": "Close a dialog or panel",
+      "overview": "Open the question overview"
     },
     "ocr": {
       "zoomTitle": "Handwritten page (enlarged)",
@@ -2198,6 +2288,37 @@
       "trendLatest": "Showing the latest {shown} of your {count} full results.",
       "trendPartial": "Only your most recent attempts could be loaded, so this trend shows the latest {shown} full results and may be incomplete.",
       "trendAria": "Overall band by date: {points}"
+    },
+    "readiness": {
+      "intro": "Check the exam details and your device. The timer starts only when you press Start.",
+      "minutes": "{count} min",
+      "minutesShort": "{count} min",
+      "positions": "{count} questions",
+      "skills": "Sections",
+      "assignment": "Assignment",
+      "checking": "Confirming the assignment with the server…",
+      "opens": "Opens",
+      "closes": "Closes",
+      "timing": "Timing",
+      "timingFixed": "Fixed closing time — the exam closes for everyone at the closing time, even if you start late.",
+      "timingIndividual": "Individual duration — your time starts when you press Start.",
+      "eligibility": {
+        "ASSIGNMENT_EXPIRED": "This assignment has closed.",
+        "ASSIGNMENT_ALREADY_SUBMITTED": "You have already handed in this assignment.",
+        "NOT_FOUND": "This assignment is not available to you.",
+        "UNKNOWN": "The assignment could not be confirmed. Check your connection and try again."
+      },
+      "retry": "Try again",
+      "rulesTitle": "Exam rules",
+      "ruleTimer": "The time is kept by the server and does not stop if you reload, lose the connection or close the browser.",
+      "ruleListening": "Listening recordings play by the exam schedule, with no pause or rewind.",
+      "ruleSaving": "Answers save automatically. Without internet they are kept on this device and sent when the connection returns.",
+      "ruleOneSession": "Use one tab and one device; opening the exam elsewhere pauses saving here.",
+      "ruleSpeaking": "Speaking answers are recorded with your microphone; each answer is recorded once.",
+      "ruleFullscreen": "The exam runs in full screen; leaving it is recorded for your teacher.",
+      "cancel": "Not now",
+      "start": "Start the exam",
+      "startAnyway": "Start anyway"
     }
   },
   "wizard": {
@@ -4304,5 +4425,151 @@
     "cancel": "Back",
     "draw": "Draw!",
     "winner": "{name} wins!"
+  },
+  "examResultCenter": {
+    "loading": "Loading results…",
+    "failed": "Results could not be loaded.",
+    "retry": "Retry",
+    "stage": {
+      "open": "Exam open",
+      "preliminary": "Preliminary",
+      "final": "Final"
+    },
+    "closes": "Closes {when}",
+    "fixedClose": "Fixed closing time",
+    "individual": "Individual duration",
+    "updated": "Updated {when} (Asia/Tashkent)",
+    "counts": {
+      "eligible": "Eligible",
+      "notStarted": "Not started",
+      "inProgress": "In progress",
+      "submitted": "Submitted",
+      "autoSubmitted": "Auto-submitted",
+      "awaitingGrading": "Awaiting grading",
+      "finalized": "Fully graded",
+      "notSubmitted": "Not submitted"
+    },
+    "average": "Average of finalized results",
+    "unavailable": "not available",
+    "tieNote": "Equal scores share a rank.",
+    "search": "Search student",
+    "filter": "Grading status",
+    "all": "All",
+    "resend": "Resend Telegram report",
+    "resendConfirm": "Send the current report to your Telegram again?",
+    "resendQueued": "{count} message(s) queued.",
+    "rank": "Rank",
+    "student": "Student",
+    "skill": {
+      "listening": "L",
+      "reading": "R",
+      "writing": "W",
+      "speaking": "S"
+    },
+    "overall": "Overall",
+    "growth": "Growth",
+    "status": "Status",
+    "submittedAt": "Submitted",
+    "pending": "Awaiting teacher assessment",
+    "previous": "Previous",
+    "next": "Next",
+    "participation": {
+      "not_started": "Not started",
+      "in_progress": "In progress",
+      "submitted": "Submitted",
+      "auto_submitted": "Auto-submitted",
+      "not_submitted": "Not submitted"
+    },
+    "grading": {
+      "none": "—",
+      "awaiting_assessment": "AI analysis pending",
+      "awaiting_teacher_review": "Awaiting teacher review",
+      "partially_graded": "Partially graded",
+      "finalized": "Finalized"
+    },
+    "delivery": "Telegram: preliminary {preliminary}, final {final}",
+    "monitor": "Live monitor",
+    "currentSkill": "Current skill",
+    "confirmed": "Confirmed answers",
+    "lastConfirmed": "Last confirmed answer",
+    "incidents": "Guard events",
+    "stale": "no confirmed activity for 5+ min",
+    "progressOf": "Show progress",
+    "hide": "Hide",
+    "opens": "Opens {when}",
+    "timeLeft": "{left} left",
+    "overview": "Overview",
+    "startedHint": "{n} started",
+    "autoHint": "{n} auto-submitted",
+    "notYet": "exam still open",
+    "sample": "n = {n} finalized",
+    "completion": "Completion rate",
+    "gradebook": "Gradebook",
+    "sort": "Sort",
+    "sorts": {
+      "rank": "Rank",
+      "overall": "Overall",
+      "name": "Name",
+      "growth": "Growth",
+      "submitted": "Submitted"
+    },
+    "skillFull": {
+      "listening": "Listening",
+      "reading": "Reading",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "details": "Details",
+    "open": "Open",
+    "pendingShort": "Pending",
+    "autoShort": "Auto",
+    "telegram": "Telegram",
+    "prelimDelivery": "Preliminary: {when}",
+    "finalDelivery": "Final: {when}",
+    "deliveryState": {
+      "pending": "queued",
+      "sending": "sending",
+      "sent": "sent",
+      "failed": "failed",
+      "skipped": "skipped",
+      "dead": "failed permanently"
+    },
+    "monitorNote": "Confirmed server data · refreshes every 20 s",
+    "monitorEmpty": "No student is writing right now.",
+    "connection": "Activity",
+    "active": "Active",
+    "pendingTitle": "{count, plural, one {# student on this page awaits} other {# students on this page await}} your Writing/Speaking assessment",
+    "gradeNext": "Assess next: {name}",
+    "monitorInProgress": "{n} in progress",
+    "monitorQuiet": "{n} without a recent confirmed answer",
+    "monitorIncidents": "{n} with recorded incidents",
+    "monitorAttentionOnly": "Only those needing a look",
+    "monitorHonesty": "Based on answers the server confirmed. A quiet student may be reading or writing — it is not evidence of a disconnection, and incidents are observations, not penalties.",
+    "minutesAgo": "{n} min ago"
+  },
+  "examProgress": {
+    "loading": "Loading progress…",
+    "failed": "Progress could not be loaded.",
+    "groupTitle": "Group progress",
+    "studentTitle": "Progress — {name}",
+    "insufficient": "Not enough comparable finalized results yet (at least two are needed).",
+    "groupLine": "average {avg}, median {median} (n={n} of {eligible}), handed in {rate}%, awaiting grading {pending}",
+    "movement": "Latest exam vs previous: {improved} improved, {declined} declined.",
+    "support": "May benefit from extra support",
+    "caveat": "Changes show observed test performance on comparable exams, not a guaranteed change in proficiency. Group populations can differ between exams.",
+    "studentLine": "Completed {completed}, finalized {finalized}, participation {rate}%",
+    "summary": "First {first} · previous {previous} · latest {latest} · best {best} · change {change} (since first {total})",
+    "showSkills": "Show skills",
+    "track": "Track",
+    "series": {
+      "overall": "Overall",
+      "listening": "Listening",
+      "reading": "Reading",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "averageChart": "Comparable average by exam",
+    "participationChart": "Handed in (% of eligible)",
+    "completionSeries": "Handed in %"
   }
 }

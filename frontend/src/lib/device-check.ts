@@ -27,3 +27,31 @@ export function canRecordAudio(): boolean {
     && !!navigator.mediaDevices?.getUserMedia
     && typeof MediaRecorder !== "undefined";
 }
+
+/** Median latency and reply count of several sequential health requests (null = no reply). */
+export function summarizeNetwork(samples: Array<number | null>): { replied: number; medianMs: number } {
+  const ok = samples.filter((value): value is number => typeof value === "number" && Number.isFinite(value)).sort((a, b) => a - b);
+  if (!ok.length) return { replied: 0, medianMs: NaN };
+  const mid = Math.floor(ok.length / 2);
+  return { replied: ok.length, medianMs: ok.length % 2 ? ok[mid] : Math.round((ok[mid - 1] + ok[mid]) / 2) };
+}
+
+/** Browser features the exam window needs on this device. */
+export function browserSupport(needsRecording: boolean): Record<string, boolean> {
+  const result: Record<string, boolean> = {};
+  result.storage = (() => {
+    try {
+      const probe = "bw_readiness_probe";
+      window.localStorage.setItem(probe, "1");
+      const ok = window.localStorage.getItem(probe) === "1";
+      window.localStorage.removeItem(probe);
+      return ok;
+    } catch {
+      return false;
+    }
+  })();
+  result.audio = typeof window !== "undefined" && (typeof window.AudioContext !== "undefined" || typeof window.Audio !== "undefined");
+  result.network = typeof fetch === "function";
+  if (needsRecording) result.recording = canRecordAudio();
+  return result;
+}
