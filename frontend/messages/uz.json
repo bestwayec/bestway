@@ -1615,7 +1615,16 @@
       "mapFor": "{title} — xarita",
       "mapForPart": "Bu qism uchun xarita",
       "passageOrQuestions": "Matn yoki savollarni ko'rsatish",
-      "writingModeLabel": "Javob berish usuli"
+      "writingModeLabel": "Javob berish usuli",
+      "saveOfflineKept": "Internet yo‘q — qurilmada saqlandi, serverga hali yetmadi",
+      "saveSubmitting": "Topshirilmoqda…",
+      "saveSubmitted": "Topshirildi",
+      "saveLocked": "Javoblar qulflandi",
+      "timeUpChip": "Vaqt tugadi",
+      "timeUpTitle": "Vaqt tugadi. Javoblaringiz qulflandi.",
+      "timeUpFinalizing": "Saqlangan javoblaringiz topshirilmoqda. Tasdiq chiqquncha sahifani yopmang; muddatgacha serverga saqlanmagan javoblar hisobga olinmaydi.",
+      "timeUpNextSection": "Bu bo‘lim yopildi. Keyingi bo‘limga o‘tilmoqda…",
+      "timeUpSpeaking": "Yangi yozuv boshlab bo‘lmaydi. Tugagan yozuv ruxsat etilgan vaqt ichida yuklanmoqda; sahifani yopmang."
     },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",
@@ -1910,7 +1919,7 @@
       "viewLastResult": "Oxirgi natijani ko'rish"
     },
     "deviceCheck": {
-      "intro": "Ixtiyoriy: boshlashdan oldin shu qurilmada internet, ovoz va mikrofonni tekshiring.",
+      "intro": "Boshlashdan oldin ushbu qurilmada tizimga kirish, internet, ovoz va (Speaking uchun) mikrofonni tekshiring. Tekshiruv imtihonni boshlamaydi va imtihon audiosini ijro etmaydi.",
       "run": "Qurilmani tekshirish",
       "net": "Internet",
       "netOk": "Ulangan · server {ms} ms da javob berdi",
@@ -1932,7 +1941,28 @@
       "micSpeak": "Hozir bir necha so'z ayting…",
       "micOk": "Ovozingiz eshitildi.",
       "micSilent": "Mikrofon ishlayapti, lekin deyarli hech narsa eshitilmadi. Balandroq gapiring yoki boshqa mikrofonni tanlang va qayta tekshiring.",
-      "micUnsupported": "Bu brauzer ovoz yozolmaydi. Chrome, Edge yoki Safari'ning yangi versiyasidan foydalaning."
+      "micUnsupported": "Bu brauzer ovoz yozolmaydi. Chrome, Edge yoki Safari'ning yangi versiyasidan foydalaning.",
+      "netUnstable": "Beqaror · server {total} ta so'rovdan {replied} tasiga javob berdi. Javoblar saqlanguncha shu qurilmada turadi.",
+      "netCaveat": "Muvaffaqiyatli tekshiruv faqat hozirgi holatni ko'rsatadi: imtihon davomida internet barqaror bo'lishiga kafolat bermaydi.",
+      "session": "Tizimga kirish",
+      "sessionOk": "Siz tizimga kirgansiz.",
+      "sessionFail": "Tizimga kirish tasdiqlanmadi. Boshlashdan oldin qayta kiring.",
+      "retry": "Qayta tekshirish",
+      "browser": "Brauzer",
+      "browserOk": "Ushbu brauzer imtihon uchun kerakli barcha imkoniyatlarni qo'llaydi.",
+      "browserMissing": "Bu brauzerda mavjud emas: {list}. Yangi Chrome, Edge yoki Safari'dan, maxfiy rejimdan tashqarida foydalaning.",
+      "feature": {
+        "storage": "javoblarni qurilmada saqlash",
+        "audio": "audio ijrosi",
+        "network": "tarmoq so'rovlari",
+        "recording": "audio yozish"
+      },
+      "volume": "Ovoz balandligi",
+      "micLevel": "Kirish darajasi",
+      "required": "Majburiy",
+      "recommended": "Tavsiya etiladi",
+      "summaryOk": "Barcha majburiy tekshiruvlar ushbu qurilmada o'tdi.",
+      "summaryProblems": "Boshlashdan oldin {count} ta majburiy tekshiruvga e'tibor bering."
     },
     "scoreSummary": {
       "singleSection": "Bitta bo'lim: {skill}",
@@ -1996,7 +2026,11 @@
       "listeningResume": "Tinglashni davom ettirish",
       "listeningStartFailed": "Yozuvni boshlab bo‘lmadi. Internetni tekshiring va Play tugmasini qayta bosing.",
       "listeningRulesScheduled": "Imtihon rejimi: Play bosilgach avval savollarni o‘qish vaqti beriladi, keyin yozuv bir marta, to‘xtatmasdan va orqaga qaytarmasdan eshittiriladi. Sahifa qayta yuklansa, yozuv imtihon turgan joydan davom etadi.",
-      "timeWarningOne": "1 daqiqa qoldi. Javoblaringizni tekshiring."
+      "timeWarningOne": "1 daqiqa qoldi. Javoblaringizni tekshiring.",
+      "listeningBuffering": "Yuklanmoqda… yozuv imtihon vaqti bo‘yicha davom etadi",
+      "listeningLoadingMedia": "Yozuv yuklanmoqda…",
+      "listeningMediaFailed": "Yozuv bu qurilmada yuklanmadi. Qayta urinib ko‘ring: u imtihon vaqtidagi joyidan davom etadi, boshidan boshlanmaydi. Muammo davom etsa, o‘qituvchingizga ayting.",
+      "listeningRetry": "Qayta urinish"
     },
     "textTools": {
       "toolbar": "Matn vositalari",
@@ -2215,6 +2249,37 @@
       "trendLatest": "Oxirgi {shown} ta natija ko'rsatilmoqda (jami {count} ta to'liq natija).",
       "trendPartial": "Faqat eng so'nggi urinishlar yuklandi, shuning uchun trend oxirgi {shown} ta to'liq natijani ko'rsatadi va to'liq bo'lmasligi mumkin.",
       "trendAria": "Sana bo'yicha umumiy band: {points}"
+    },
+    "readiness": {
+      "intro": "Imtihon ma'lumotlari va qurilmangizni tekshiring. Vaqt faqat «Boshlash» tugmasini bosganingizda boshlanadi.",
+      "minutes": "{count} daqiqa",
+      "minutesShort": "{count} daq",
+      "positions": "{count} ta savol",
+      "skills": "Bo'limlar",
+      "assignment": "Topshiriq",
+      "checking": "Topshiriq server bilan tasdiqlanmoqda…",
+      "opens": "Ochiladi",
+      "closes": "Yopiladi",
+      "timing": "Vaqt tartibi",
+      "timingFixed": "Qat'iy yopilish vaqti — kech boshlasangiz ham imtihon hamma uchun belgilangan vaqtda yopiladi.",
+      "timingIndividual": "Shaxsiy davomiylik — vaqtingiz «Boshlash» bosilganda boshlanadi.",
+      "eligibility": {
+        "ASSIGNMENT_EXPIRED": "Bu topshiriq yopilgan.",
+        "ASSIGNMENT_ALREADY_SUBMITTED": "Siz bu topshiriqni allaqachon topshirgansiz.",
+        "NOT_FOUND": "Bu topshiriq siz uchun mavjud emas.",
+        "UNKNOWN": "Topshiriq tasdiqlanmadi. Internetni tekshirib, qayta urinib ko'ring."
+      },
+      "retry": "Qayta urinish",
+      "rulesTitle": "Imtihon qoidalari",
+      "ruleTimer": "Vaqt serverda hisoblanadi: sahifani yangilasangiz, internet uzilsa yoki brauzerni yopsangiz ham to'xtamaydi.",
+      "ruleListening": "Listening yozuvlari imtihon jadvali bo'yicha, to'xtatish va orqaga qaytarishsiz ijro etiladi.",
+      "ruleSaving": "Javoblar avtomatik saqlanadi. Internet bo'lmasa, ular shu qurilmada saqlanib, aloqa tiklanganda yuboriladi.",
+      "ruleOneSession": "Bitta oyna va bitta qurilmadan foydalaning; imtihonni boshqa joyda ochish bu yerda saqlashni to'xtatadi.",
+      "ruleSpeaking": "Speaking javoblari mikrofon orqali yoziladi; har bir javob bir marta yoziladi.",
+      "ruleFullscreen": "Imtihon to'liq ekranda o'tadi; undan chiqish o'qituvchingiz uchun qayd etiladi.",
+      "cancel": "Hozir emas",
+      "start": "Imtihonni boshlash",
+      "startAnyway": "Baribir boshlash"
     }
   },
   "wizard": {

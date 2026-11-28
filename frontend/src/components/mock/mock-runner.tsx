@@ -46,7 +46,8 @@ import { ListeningAudio } from "@/components/mock/listening-engine";
 import { GappedContent, hasGappedDocument, sanitizeGappedContent } from "@/components/mock/gapped-content";
 import { MultilevelListening, MultilevelRecorder, type MediaPhase } from './multilevel-media';
 import { SpeakingRecorder } from './speaking-recorder';
-import { recordingFileName } from '@/lib/microphone';
+import { microphonePermission, recordingFileName } from '@/lib/microphone';
+import { canReuseMicReady, rememberMicReady } from '@/lib/mic-readiness';
 import { api } from '@/lib/api-client';
 import { hasPendingRecordings, hasActiveRecording } from '@/lib/durable-recordings';
 import { MatchingOptionBank, ObjectiveQuestionInput } from './objective-question-input';
@@ -98,6 +99,36 @@ import { LoadErrorPanel } from "@/components/common/load-error-panel";
 const ESSAY = new Set<MockQuestionType>(["essay_task1", "essay_task2"]);
 
 type SaveState = "idle" | "queued" | "saving" | "saved" | "retrying" | "error" | "offline" | "conflict";
+/** The header also reports the hand-in and the locked state after the deadline. */
+export type DisplaySaveState = SaveState | "submitting" | "submitted" | "locked";
+
+const SAVE_LABEL: Record<DisplaySaveState, string> = {
+  idle: "saveIdle", queued: "saveQueued", saving: "saveSaving", saved: "saveSaved", retrying: "saveRetrying",
+  error: "saveError", offline: "saveOffline", conflict: "saveConflict", submitting: "saveSubmitting", submitted: "saveSubmitted", locked: "saveLocked",
+};
+export function saveLabelKey(state: DisplaySaveState, memoryOnly: boolean): string {
+  // Offline edits are kept in this browser's storage unless storage is unavailable.
+  if (state === "offline" && !memoryOnly) return "saveOfflineKept";
+  return SAVE_LABEL[state];
+}
+
+/**
+ * Shows "saving" only when a save takes longer than a moment, so the chip does not flash on every
+ * keystroke. Every other state (including "waiting to save" and failures) is shown at once, so the
+ * header never says "saved" before a receipt.
+ */
+export function useCalmSaveState(state: SaveState, delayMs = 700): SaveState {
+  const [shown, setShown] = React.useState(state);
+  React.useEffect(() => {
+    if (state !== "saving" && state !== "retrying") {
+      setShown(state);
+      return;
+    }
+    const id = window.setTimeout(() => setShown(state), delayMs);
+    return () => window.clearTimeout(id);
+  }, [state, delayMs]);
+  return shown;
+}
 
 function isExamTimeUp(error: unknown) {
   return error instanceof ApiError && ["MOCK_TIME_UP", "MOCK_SECTION_TIME_UP"].includes(error.code);
@@ -363,18 +394,27 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
   const [micChecked, setMicCheckedState] = React.useState(false);
   const [micCheckLoaded, setMicCheckLoaded] = React.useState(false);
   const micCheckKey = `bw_mic_checked_${attempt.id}`;
+  // A passed check is reused after a reload or a browser restart only while this browser still reports
+  // the microphone permission as granted (lib/mic-readiness); a denied permission always asks again.
   React.useEffect(() => {
-    try {
-      setMicCheckedState(sessionStorage.getItem(micCheckKey) === "1");
-    } catch {}
-    setMicCheckLoaded(true);
-  }, [micCheckKey]);
-  const setMicChecked = React.useCallback((value: boolean) => {
+    let alive = true;
+    let sameTab = false;
+    try { sameTab = sessionStorage.getItem(micCheckKey) === "1"; } catch {}
+    void Promise.all([canReuseMicReady(attempt.id), sameTab ? microphonePermission() : Promise.resolve("unknown" as const)])
+      .then(([reuse, permission]) => {
+        if (!alive) return;
+        setMicCheckedState(reuse || (sameTab && permission !== "denied"));
+        setMicCheckLoaded(true);
+      })
+      .catch(() => { if (alive) setMicCheckLoaded(true); });
+    return () => { alive = false; };
+  }, [attempt.id, micCheckKey]);
+  const setMicChecked = React.useCallback((value: boolean, passed = true) => {
     setMicCheckedState(value);
-    try {
-      if (value) sessionStorage.setItem(micCheckKey, "1");
-    } catch {}
-  }, [micCheckKey]);
+    if (!value) return;
+    if (passed) rememberMicReady(attempt.id);
+    else try { sessionStorage.setItem(micCheckKey, "1"); } catch {}
+  }, [attempt.id, micCheckKey]);
   // Pre-submit completeness surface (STEP 19): 'submit' = final hand-in,
   // 'advance' = warning before the one-way "Next section" move.
   const [review, setReview] = React.useState<null | "submit" | "advance">(null);
@@ -420,6 +460,7 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
   const sessionElsewhereRef = React.useRef(false);
   React.useEffect(() => { sessionElsewhereRef.current = examSession.elsewhere; }, [examSession.elsewhere]);
   const [saveState, setSaveState] = React.useState<SaveState>(edits.current.size ? "queued" : "idle");
+  const calmSaveState = useCalmSaveState(saveState);
   React.useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
@@ -533,6 +574,8 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
 
   function setAnswer(qid: string, val: string) {
     if (submittingRef.current || submitUnconfirmed || !canSaveQuestion(qid) || !Object.hasOwn(initial.ans, qid)) return;
+    // After the server deadline the answer is locked; the server would refuse it anyway.
+    if (deadline != null && Date.now() + serverOffsetRef.current >= deadline) return;
     const previous = edits.current.get(qid);
     const stamp = Math.max(Date.now() + serverOffsetRef.current, lastLocalEdit.current + 1);
     lastLocalEdit.current = stamp;
@@ -798,6 +841,12 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
   }, [exam, flush]);
 
   const answered = exam ? countAnswered(exam, answers, audioSet) : 0;
+  const timeUp = remaining != null && remaining <= 0;
+  // What the header says about saving: never "saved" without a receipt; unsynchronised edits stay visible after time is up.
+  const shownSaveState: DisplaySaveState = submit.isPending ? "submitting"
+    : isSubmitted(attempt.status) ? "submitted"
+    : timeUp && (calmSaveState === "saved" || calmSaveState === "idle") ? "locked"
+    : calmSaveState;
   const confirmedCount = exam ? countAnswered(exam, confirmedAnswers, audioSet) : 0;
   const section: MockSection | undefined = exam?.sections[activeSection];
   const firstShownNumber = section?.groups?.[0]?.questions?.[0]?.displayNumber ?? section?.groups?.[0]?.questions?.[0]?.number ?? 1;
@@ -992,7 +1041,7 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
               {bulk.isPending && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
             </StatusChip>
           </span>
-          <SaveStatusChip state={saveState} compact label={tr({ idle: "saveIdle", queued: "saveQueued", saving: "saveSaving", saved: "saveSaved", retrying: "saveRetrying", error: "saveError", offline: "saveOffline", conflict: "saveConflict" }[saveState])} />
+          <SaveStatusChip state={shownSaveState} compact label={tr(saveLabelKey(shownSaveState, storageUnavailable))} />
           {(saveState === "error" || saveState === "offline") && <button type="button" className="hidden min-h-[40px] px-1 text-sm font-semibold text-brand underline-offset-2 hover:underline sm:inline" onClick={() => flush(true)}>{tr("saveRetry")}</button>}
           <RunnerTools
             infoOpen={infoOpen}
@@ -1014,7 +1063,9 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
               timeLeft={remaining != null ? formatClock(remaining) : null}
             />
           </RunnerTools>
-          {remaining != null && <Timer ms={remaining} label={t("timeLeft")} warn />}
+          {remaining != null && (timeUp
+            ? <StatusChip tone="danger" className="h-9"><Clock className="size-4" aria-hidden />{tr("timeUpChip")}</StatusChip>
+            : <Timer ms={remaining} label={t("timeLeft")} warn />)}
           {isFullTest && activeSection < exam.sections.length - 1 ? (
             <Button size="sm" variant="outline" className="hidden min-h-[40px] px-3 touch-manipulation md:inline-flex" loading={advance.isPending} onClick={() => (multilevelReview && missingWork ? setReview("advance") : setShowAdvanceConfirm(true))}>
               {tr("nextSection")}
@@ -1025,6 +1076,15 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
             <span className="hidden sm:inline">{t("submit")}</span>
           </Button>
         </header>
+
+        {timeUp && attempt.status === "in_progress" && (
+          <div role="status" data-time-up className="mb-2 rounded-card border border-warning-border bg-warning-bg px-3 py-2 text-sm">
+            <p className="font-semibold text-warning">{tr("timeUpTitle")}</p>
+            <p className="text-fg-muted">
+              {tr(isFullTest && activeSection < exam.sections.length - 1 && serverNow < overallDeadline ? "timeUpNextSection" : section?.skill === "speaking" ? "timeUpSpeaking" : "timeUpFinalizing")}
+            </p>
+          </div>
+        )}
 
         {infoOpen && (
           <section id="runner-info" aria-label={tr("infoTitle")} className="mb-3 space-y-3 rounded-card border border-border bg-surface p-3 text-sm sm:p-4">
@@ -1099,6 +1159,9 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
 
         {section && (
           <ErrorBoundary fallbackTitle={tr("sectionLoadError", { section: section.title || t(`skills.${section.skill}`) })}>
+          {/* After the deadline every answer control is disabled in place (nothing remounts). Speaking keeps its
+              controls so a finished recording can still upload within the server's grace window. */}
+          <fieldset className="contents" disabled={timeUp && attempt.status === "in_progress" && section.skill !== "speaking"} data-answers-locked={timeUp || undefined}>
           <div className="space-y-3">
             {section.instructions && (
               <p className="text-sm text-fg-muted">{section.instructions}</p>
@@ -1202,6 +1265,7 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
               focus={focusMode}
             />}
           </div>
+          </fieldset>
           </ErrorBoundary>
         )}
 
@@ -1227,7 +1291,7 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
           open={section?.skill === "speaking" && micCheckLoaded && !micChecked
             && section.groups.some((group) => group.questions.some((question) => question.type === "speaking_task" && !audioSet.has(question.id)))}
           onConfirm={() => setMicChecked(true)}
-          onClose={!strict ? () => setMicChecked(true) : undefined}
+          onClose={!strict ? () => setMicChecked(true, false) : undefined}
         />
 
         <SectionTransitionModal
@@ -1280,17 +1344,17 @@ export function StatusChip({ tone = "neutral", children, className }: { tone?: "
 }
 
 /** Save state as an icon + text chip; the only live region in the runner header. */
-export function SaveStatusChip({ state, label, compact = false }: { state: SaveState; label: string; compact?: boolean }) {
+export function SaveStatusChip({ state, label, compact = false }: { state: DisplaySaveState; label: string; compact?: boolean }) {
   const failed = state === "error" || state === "offline" || state === "conflict";
-  const working = state === "saving" || state === "retrying";
+  const working = state === "saving" || state === "retrying" || state === "submitting";
   return (
     <span role="status" aria-live="polite" title={label}>
-      <StatusChip tone={failed ? "danger" : state === "saved" ? "success" : "neutral"} className={compact ? "max-sm:max-w-[25vw]" : undefined}>
+      <StatusChip tone={failed ? "danger" : state === "saved" || state === "submitted" ? "success" : state === "locked" ? "warning" : "neutral"} className={compact ? "max-sm:max-w-[25vw]" : undefined}>
         {working ? (
           <Loader2 className="size-3.5 shrink-0 animate-spin" aria-hidden />
         ) : failed ? (
           <AlertTriangle className="size-3.5 shrink-0" aria-hidden />
-        ) : state === "saved" ? (
+        ) : state === "saved" || state === "submitted" ? (
           <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />
         ) : null}
         <span className={cn(compact && "min-w-0 truncate", compact && state === "saved" && "max-sm:sr-only")}>{label}</span>

@@ -32,6 +32,7 @@ import {
 import type { MockAttemptMode, MockPracticeSkill, MockSkill } from "@/lib/types";
 import { availablePracticeSkills } from "@/lib/mock-practice";
 import { ExamResumeModal } from "./exam-resume-modal";
+import { ExamReadinessDialog } from "./exam-readiness-dialog";
 import { displayTotalMinutes } from "@/lib/mock-timing";
 import { formatMoney } from "@/lib/utils";
 import { MultilevelReadiness, studentStartMessage } from "./multilevel-student-ui";
@@ -80,7 +81,17 @@ export function MockExamDetailView({ examId }: { examId: string }) {
     return ["writing", "speaking"];
   }, [inProgress, exam?.sections]);
 
+  // Timed attempts open the readiness screen first; only its Start button creates the attempt.
+  const [readiness, setReadiness] = React.useState<{ skills?: MockPracticeSkill[] } | null>(null);
   function onStart(mode: MockAttemptMode, skills?: MockPracticeSkill[]) {
+    if (mode === "timed") {
+      setReadiness({ skills });
+      return;
+    }
+    beginAttempt(mode, skills);
+  }
+
+  function beginAttempt(mode: MockAttemptMode, skills?: MockPracticeSkill[]) {
     if (exam?.ready === false && !(skills?.length && practiceSkills.length)) {
       toast.error("Exam is not ready yet.");
       return;
@@ -135,8 +146,22 @@ export function MockExamDetailView({ examId }: { examId: string }) {
   const unavailable = exam.ready === false;
   const multilevel = exam.type === "multilevel";
 
+  const readinessSkills = (readiness?.skills?.length ? readiness.skills : exam.sections.map((item) => item.skill)) as MockSkill[];
   return (
     <div className="mx-auto max-w-3xl">
+      <ExamReadinessDialog
+        open={readiness !== null}
+        onOpenChange={(open) => { if (!open) setReadiness(null); }}
+        title={exam.title}
+        examType={exam.type}
+        skills={readinessSkills}
+        questionCount={readiness?.skills?.length ? null : exam.questionCount}
+        durationMinutes={readiness?.skills?.length ? null : exam.durationMinutes}
+        sectionDurations={exam.sectionDurations}
+        assignmentId={searchParams?.get("assignment")}
+        starting={start.isPending}
+        onStart={() => beginAttempt("timed", readiness?.skills)}
+      />
       <Link
         href="/mock"
         className="mb-4 inline-flex items-center gap-1.5 text-sm text-fg-muted hover:text-fg"

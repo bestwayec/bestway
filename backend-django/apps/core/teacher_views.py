@@ -577,7 +577,13 @@ def student_assignment_exam_view(request, assignment_id: str):
         raise ContractAPIException("ASSIGNMENT_EXPIRED", "Topshiriq muddati o‘tgan", 409)
     if HomeworkSubmission.objects.filter(assignment=assignment, student_id=actor.id).exists():
         raise ContractAPIException("ASSIGNMENT_ALREADY_SUBMITTED", "Topshiriq topshirilgan", 409)
-    return success({"id": assignment.exam_id, "type": assignment.exam.type})
+    # Readiness screen (5.1 CBT 2.0): the assignment's own timing, so the student sees the real window.
+    return success({
+        "id": assignment.exam_id, "type": assignment.exam.type,
+        "assignmentTitle": assignment.title, "timingPolicy": assignment.timing_policy,
+        "opensAt": assignment.opens_at.isoformat() if assignment.opens_at else None,
+        "deadline": assignment.deadline.isoformat(),
+    })
 
 
 @api_view(["POST"])

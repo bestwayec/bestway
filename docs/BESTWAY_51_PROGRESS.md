@@ -27,6 +27,16 @@ Branch: `feat/bestway-51-exam-monitoring-results` (mirrors the session branch `c
 | G-1 | P1 | Objective-only attempts close after 60 s grace; Speaking keeps 6 min | VERIFIED 35/35 | `mock_deadline.attempt_grace` |
 | T-L | — | Live Telegram delivery, installed BW-Tauri | NOT VERIFIED (no test bot / desktop here) | release checklist §6–7 |
 
+## CBT Exam Experience 2.0 (continuation on the same PR, from `91d6a8b`)
+
+| ID | Task | Status | Evidence |
+| --- | --- | --- | --- |
+| C1.1 | Readiness screen before a timed start: exam type, sections + minutes, positions, assignment window (opens/closes, fixed-close vs individual) and eligibility from the server, rules, device check with Required/Recommended rows (browser features + answer storage, 3-request connection sample, sign-in, synthetic test tone with volume, live microphone level only when Speaking is required). Nothing creates the attempt until Start | DONE | `exam-readiness-dialog.tsx`, `device-check.tsx`, `student_assignment_exam_view` (+timing fields), `cbt2-phase1.spec.ts`, `test_exam51_readiness.py` |
+| C1.3 | Speaking microphone check re-opened after reload / browser restart | FIXED: a passed check is reused per attempt only while the same browser still reports the permission as `granted` (12 h, per user agent); denied/prompt/unknown asks again | `lib/mic-readiness.ts` + spec |
+| C1.4 | Scheduled Listening: buffering, load failure and retry states; retry rejoins the server clock (no restart, no extra play) | DONE | `listening-engine.tsx` |
+| C1.5 | Calm save status: "saving" shown only when a save lasts >0.7 s; offline label says where edits are kept; hand-in / handed-in / locked states; never "saved" without a receipt | DONE | `useCalmSaveState`, `saveLabelKey` |
+| C1.6 | After the server deadline: answer controls disabled in place, "Time is up" chip instead of a stopped clock, finalizing / next-section / Speaking-upload notice | DONE | `mock-runner.tsx` |
+
 ## Last verified tests
 See the test report (final cumulative cycle run on the final head).
 
