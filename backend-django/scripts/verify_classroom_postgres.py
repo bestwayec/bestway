@@ -119,7 +119,11 @@ def verify():
             assert response.status_code == 201, response.data
             existing = HomeworkAssignment.objects.get(pk=response.json()["data"]["id"])
         exam_path = f"/v1/student/assignments/{existing.pk}/exam"
-        assert student.get(exam_path).json()["data"] == {"id": assigned.pk, "type": assigned.type}
+        launch = student.get(exam_path).json()["data"]
+        assert (launch["id"], launch["type"]) == (assigned.pk, assigned.type)
+        # 5.1 readiness screen: the assignment's own timing window comes with the launch data.
+        assert launch["timingPolicy"] == existing.timing_policy and launch["deadline"] == existing.deadline.isoformat()
+        assert launch["assignmentTitle"] == existing.title and launch["opensAt"] is None
         assert second_client.get(exam_path).status_code == 404
         assert teacher.get(exam_path).status_code == 403
         MockExam.objects.filter(pk=assigned.pk).update(is_published=False)
