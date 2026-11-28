@@ -203,7 +203,8 @@
     "fixedNeedsDeadline": "Umumiy yopilish vaqti uchun muddat kiriting.",
     "fixedBadge": "Umumiy yopilish",
     "opensBadge": "Ochiladi: {when}",
-    "tashkent": "Vaqtlar Asia/Tashkent bo‘yicha ko‘rsatiladi."
+    "tashkent": "Vaqtlar Asia/Tashkent bo‘yicha ko‘rsatiladi.",
+    "results": "Natijalar"
   },
   "assessment": {
     "title": "Writing va Speaking tahlili",
@@ -4318,5 +4319,68 @@
     "cancel": "Orqaga",
     "draw": "Durang!",
     "winner": "{name} g‘alaba qozondi!"
+  },
+  "examResultCenter": {
+    "loading": "Natijalar yuklanmoqda…",
+    "failed": "Natijalarni yuklab bo‘lmadi.",
+    "retry": "Qayta urinish",
+    "stage": {
+      "open": "Imtihon ochiq",
+      "preliminary": "Dastlabki",
+      "final": "Yakuniy"
+    },
+    "closes": "Yopiladi: {when}",
+    "fixedClose": "Umumiy yopilish vaqti",
+    "individual": "Shaxsiy davomiylik",
+    "updated": "Yangilandi: {when} (Asia/Tashkent)",
+    "counts": {
+      "eligible": "Jami",
+      "notStarted": "Boshlamagan",
+      "inProgress": "Yozmoqda",
+      "submitted": "Topshirgan",
+      "autoSubmitted": "Avtomatik topshirilgan",
+      "awaitingGrading": "Baholash kutilmoqda",
+      "finalized": "To‘liq baholangan",
+      "notSubmitted": "Topshirmagan"
+    },
+    "average": "Yakuniy natijalar o‘rtachasi",
+    "unavailable": "mavjud emas",
+    "tieNote": "Teng ballar bir xil o‘rinni oladi.",
+    "search": "O‘quvchini qidirish",
+    "filter": "Baholash holati",
+    "all": "Hammasi",
+    "resend": "Telegram hisobotini qayta yuborish",
+    "resendConfirm": "Joriy hisobot Telegramga qayta yuborilsinmi?",
+    "resendQueued": "{count} ta xabar navbatga qo‘yildi.",
+    "rank": "O‘rin",
+    "student": "O‘quvchi",
+    "skill": {
+      "listening": "L",
+      "reading": "R",
+      "writing": "W",
+      "speaking": "S"
+    },
+    "overall": "Umumiy",
+    "growth": "O‘sish",
+    "status": "Holat",
+    "submittedAt": "Topshirilgan",
+    "pending": "Ustoz baholashi kutilmoqda",
+    "previous": "Oldingi",
+    "next": "Keyingi",
+    "participation": {
+      "not_started": "Boshlamagan",
+      "in_progress": "Yozmoqda",
+      "submitted": "Topshirgan",
+      "auto_submitted": "Avtomatik topshirilgan",
+      "not_submitted": "Topshirmagan"
+    },
+    "grading": {
+      "none": "—",
+      "awaiting_assessment": "AI tahlili kutilmoqda",
+      "awaiting_teacher_review": "Ustoz tekshiruvi kutilmoqda",
+      "partially_graded": "Qisman baholangan",
+      "finalized": "Yakunlangan"
+    },
+    "delivery": "Telegram: dastlabki {preliminary}, yakuniy {final}"
   }
 }

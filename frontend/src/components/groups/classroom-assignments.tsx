@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Link } from "@/i18n/navigation";
 import { api } from "@/lib/api-client";
 import type { ClassroomAssignment, ClassroomAssignmentInput, ClassroomVocabularyCollection, VocabularyAssignmentReports } from "@/lib/group-contract.generated";
 
@@ -139,6 +140,7 @@ export function ClassroomAssignments({ groupId, userId }: { groupId: string; use
               <li className="flex flex-wrap justify-between gap-2 py-2" key={task.id}>
                 <span>{task.title}</span>
                 {task.vocabulary_set_id && <Button variant="outline" size="sm" aria-expanded={report === task.id} onClick={() => { setReport(report === task.id ? "" : task.id); setPage(1); setReportSearch(""); }}>{tv("results")}</Button>}
+                {task.exam_id && <Link className="text-sm text-brand underline" href={`/teacher/results/exam/${encodeURIComponent(task.id)}`}>{t("results")}</Link>}
                 {task.timing_policy === "fixed_close" && <span className="rounded bg-surface-muted px-2 text-xs">{t("fixedBadge")}</span>}
                 {task.opens_at && <span className="text-xs text-fg-muted">{t("opensBadge", { when: formatTashkent(task.opens_at) })}</span>}
                 <time className="text-fg-muted" dateTime={task.deadline}>{formatTashkent(task.deadline)}</time>

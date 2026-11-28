@@ -15,13 +15,22 @@ owner-suggested name `feat/bestway-51-exam-monitoring-results` was not used for 
 | 1.7 | P0 | Production entrypoint `run_assessment_worker` runs the sweep; catch-up `finalize_expired_attempts` | VERIFIED locally | same |
 | 1.9A | P0 | Runner: jump targets and instruction line hidden under sticky header + audio panel (fixed `scroll-mt-28` vs real stack height) | IMPLEMENTED, browser screenshot UNVERIFIED | `mock-runner.tsx` measured `--bw-sticky-offset` |
 | 2.x | P0 | Teacher-only final W/S grades | Existing 4.1 server rule confirmed (`assessment.finish` never finalizes) | see Phase 2 |
-| 3.x | P0 | Authoritative report dataset, private teacher leaderboard, durable report lifecycle | NEXT | |
+| 2.12/3.7 | P0 | One authoritative exam report (roster, participation × grading, ranks, growth, stage, revision) | VERIFIED | `exam_report.py`, 35/35 |
+| 2.12 | P0 | Teacher Result Center page + API + Excel (formula-safe) + confirmed resend + delivery status | IMPLEMENTED (API verified, page build/unit verified) | `exam-result-center.tsx` |
+| 3.9/3.14/3.15 | P0 | Private paged teacher leaderboard; durable preliminary/final/revision lifecycle (`ExamReportState`, 30-day catch-up) | VERIFIED (mocked transport) | `exam_report_delivery.py` |
+| 3.11 | P0 | Classroom aggregate report | Existing 5.0 report reused (no names, small-group suppression); fields not extended | PARTIAL |
+| 3.1/3.2 | P0 | Live monitor | Existing 5.0 live room panel unchanged; Result Center counts refresh every 20 s | PARTIAL |
+| 3.4–3.6 | P1 | Student/group progress charts | Only per-exam growth column | NOT DONE |
+| 3.10/3.12 | P1 | Telegram teacher menu, callback pagination | Pages sent as separate messages with a web link | NOT DONE |
+| 4.2 | P0 | Browser journeys A–E, runner screenshots | Not run | NOT DONE |
 
 ## Last verified tests
 - Django pytest (local PostgreSQL 16 + Prisma 5.22 migrate): 1731 passed, 4 skipped.
 - `verify_exam51_deadline_postgres.py`: 31/31 PASS.
 - Frontend: `tsc --noEmit` clean; ESLint 0 errors on changed files; 67 related Vitest specs pass.
 
+See `BESTWAY_51_TEST_REPORT.md` for the latest verified results.
+
 ## Next action
-Phase 2/3: `exam_report.py` authoritative dataset → teacher result endpoint, Excel, Telegram leaderboard,
-`ExamReportState` sweep.
+Browser journeys (runner layout at 1366×768, full IELTS/Multilevel), progress charts, Telegram menu entries;
+check hosted CI on the draft PR.

@@ -203,7 +203,8 @@
     "fixedNeedsDeadline": "A fixed closing time needs a deadline.",
     "fixedBadge": "Fixed close",
     "opensBadge": "Opens {when}",
-    "tashkent": "Times are shown in Asia/Tashkent."
+    "tashkent": "Times are shown in Asia/Tashkent.",
+    "results": "Results"
   },
   "assessment": {
     "title": "Writing & Speaking feedback",
@@ -4318,5 +4319,68 @@
     "cancel": "Back",
     "draw": "Draw!",
     "winner": "{name} wins!"
+  },
+  "examResultCenter": {
+    "loading": "Loading results…",
+    "failed": "Results could not be loaded.",
+    "retry": "Retry",
+    "stage": {
+      "open": "Exam open",
+      "preliminary": "Preliminary",
+      "final": "Final"
+    },
+    "closes": "Closes {when}",
+    "fixedClose": "Fixed closing time",
+    "individual": "Individual duration",
+    "updated": "Updated {when} (Asia/Tashkent)",
+    "counts": {
+      "eligible": "Eligible",
+      "notStarted": "Not started",
+      "inProgress": "In progress",
+      "submitted": "Submitted",
+      "autoSubmitted": "Auto-submitted",
+      "awaitingGrading": "Awaiting grading",
+      "finalized": "Fully graded",
+      "notSubmitted": "Not submitted"
+    },
+    "average": "Average of finalized results",
+    "unavailable": "not available",
+    "tieNote": "Equal scores share a rank.",
+    "search": "Search student",
+    "filter": "Grading status",
+    "all": "All",
+    "resend": "Resend Telegram report",
+    "resendConfirm": "Send the current report to your Telegram again?",
+    "resendQueued": "{count} message(s) queued.",
+    "rank": "Rank",
+    "student": "Student",
+    "skill": {
+      "listening": "L",
+      "reading": "R",
+      "writing": "W",
+      "speaking": "S"
+    },
+    "overall": "Overall",
+    "growth": "Growth",
+    "status": "Status",
+    "submittedAt": "Submitted",
+    "pending": "Awaiting teacher assessment",
+    "previous": "Previous",
+    "next": "Next",
+    "participation": {
+      "not_started": "Not started",
+      "in_progress": "In progress",
+      "submitted": "Submitted",
+      "auto_submitted": "Auto-submitted",
+      "not_submitted": "Not submitted"
+    },
+    "grading": {
+      "none": "—",
+      "awaiting_assessment": "AI analysis pending",
+      "awaiting_teacher_review": "Awaiting teacher review",
+      "partially_graded": "Partially graded",
+      "finalized": "Finalized"
+    },
+    "delivery": "Telegram: preliminary {preliminary}, final {final}"
   }
 }
