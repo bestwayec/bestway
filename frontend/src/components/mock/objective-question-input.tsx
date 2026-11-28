@@ -46,7 +46,7 @@ function CompactTextEntry({ q, value, onChange, disabled, renderPrompt, headerAc
         answered ? "bg-brand text-brand-fg" : "border border-border-strong bg-bg-subtle text-fg")}>
         {numberLabel}<span className="sr-only">{answered ? ` — ${t("answerEntered")}` : ""}</span>
       </span>
-      <div className="min-w-0 flex-1 whitespace-pre-line text-base leading-9 text-fg">
+      <div className="min-w-0 flex-1 whitespace-pre-line text-base leading-8 text-fg sm:leading-9">
         {parts ? <>{text(parts[0], "a")}{field}{text(parts[1], "b")}</> : <>{prompt && <>{text(prompt, "a")} </>}{field}</>}
         {hint && <span id={`hint-${q.id}`} className="ml-2 whitespace-nowrap align-baseline text-xs leading-none text-fg-muted">{hint}</span>}
       </div>
@@ -84,7 +84,7 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
   }
 
   return (
-    <div className={cn("space-y-2 rounded-card border p-3 transition-colors duration-fast sm:p-4", hasResponse ? "border-brand/35 bg-brand-subtle/30" : "border-border bg-surface")}>
+    <div className={cn("space-y-2 rounded-card border p-3 transition-colors duration-fast", compact ? "md:space-y-1.5 md:px-3 md:py-2.5" : "sm:p-4", hasResponse ? "border-brand/35 bg-brand-subtle/30" : "border-border bg-surface")}>
       <div className="flex items-start gap-3">
         <span aria-hidden className={cn("grid size-7 shrink-0 place-items-center rounded-field text-sm font-bold tabular-nums", hasResponse ? "bg-brand text-brand-fg" : "border border-border-strong bg-bg-subtle text-fg")}>{numberLabel}</span>
         {q.prompt && q.prompt.trim() ? (
@@ -149,7 +149,7 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
                   const checked = selected.includes(option);
                   const unavailable = MATCHING_TYPES.has(q.type) && unavailableOptions.includes(option) && !checked;
                   return (
-                    <label key={option} className={cn("flex min-h-11 items-center gap-3 rounded-field border px-3 py-2 text-sm leading-snug transition-colors focus-within:ring-2 focus-within:ring-brand/30", checked ? "border-brand bg-brand-subtle font-medium text-brand-subtle-fg" : "border-border text-fg", unavailable || disabled ? "opacity-50" : "cursor-pointer hover:border-brand/50 hover:bg-bg-subtle")}>
+                    <label key={option} className={cn("flex min-h-11 items-center gap-3 rounded-field border px-3 py-2 text-sm leading-snug", compact && "md:min-h-9 md:py-1.5", " transition-colors focus-within:ring-2 focus-within:ring-brand/30", checked ? "border-brand bg-brand-subtle font-medium text-brand-subtle-fg" : "border-border text-fg", unavailable || disabled ? "opacity-50" : "cursor-pointer hover:border-brand/50 hover:bg-bg-subtle")}>
                       <input type={multiple ? "checkbox" : "radio"} name={`objective-answer-${q.id}`} value={option} checked={checked} disabled={disabled || unavailable}
                         onChange={() => onChange(multiple ? toggleObjectiveOption(value, option, options) : option)} className="size-4 shrink-0 accent-brand" />
                       <span className="min-w-0 flex-1 break-words">{option}</span>

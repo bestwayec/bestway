@@ -22,7 +22,10 @@ Branch: `feat/bestway-51-exam-monitoring-results` (mirrors the session branch `c
 | 3.10/3.12 | P1 | Bot `/exams` menu: exam list, paged leaderboard with prev/next, pending list, web links; permission rechecked per tap | VERIFIED (fake transport) | `telegram_teacher.py` |
 | 3.11 | P0 | Classroom aggregate adds not-submitted/awaiting/graded counts, no names | VERIFIED | `telegram_notify.exam_group_counts` |
 | 3.13 | P0 | Student private auto-submit notice | VERIFIED | `mock_deadline.notify_student` |
-| 4.2 | P0 | Full IELTS/Multilevel browser journeys with Speaking capture and Writing typing | NOT RUN (API/PostgreSQL journeys only) | — |
+| 4.2 | P0 | Full IELTS/Multilevel browser journeys: playback, typing, native Speaking capture, Finish, teacher UI grading, auto hand-in, Result Center/Telegram agreement | VERIFIED (local Chromium; fake mic; emulated fullscreen) | `scripts/browser-acceptance-51/`, `docs/screenshots/bestway51-final/` |
+| UI-R | P0 | Owner feedback: keep original CBT look; compact inline text-entry rows, compact choices, tighter audio panel, navigator "saving" state, premium Result Center + live monitor, <4.0 rule | DONE, browser-verified light/dark at 4 viewports | see test report |
+| G-1 | P1 | Objective-only attempts close after 60 s grace; Speaking keeps 6 min | VERIFIED 35/35 | `mock_deadline.attempt_grace` |
+| T-L | — | Live Telegram delivery, installed BW-Tauri | NOT VERIFIED (no test bot / desktop here) | release checklist §6–7 |
 
 ## Last verified tests
 See the test report (final cumulative cycle run on the final head).

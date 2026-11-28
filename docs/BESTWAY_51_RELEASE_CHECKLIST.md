@@ -7,7 +7,9 @@
 2. Migration `core.0035_exam_timing_policy_and_report_state` is additive (2 nullable/defaulted columns + 1 table); existing assignments stay `individual`. Rollback: previous image ignores the new columns/table.
 3. `backend-django/scripts/deploy_django.sh` already restarts `assessment-worker` — this process now also closes expired exams. Confirm it is running: `docker compose -f docker-compose.django.yml -f docker-compose.django.cutover.yml --profile workers ps`.
 4. Telegram reports are delivered only by the **opt-in** `telegram-outbox` service (`--profile telegram-outbox up -d telegram-outbox`). Without it reports stay queued in PostgreSQL.
-5. Optional env: `EXAM_AUTO_SUBMIT_ENABLED` (default true), `EXAM_AUTO_SUBMIT_GRACE_SECONDS` (360), `EXAM_AUTO_SUBMIT_INTERVAL` (15).
+5. Optional env: `EXAM_AUTO_SUBMIT_ENABLED` (default true), `EXAM_AUTO_SUBMIT_GRACE_SECONDS` (360, Speaking), `EXAM_AUTO_SUBMIT_OBJECTIVE_GRACE_SECONDS` (60), `EXAM_AUTO_SUBMIT_INTERVAL` (15).
+6. Telegram: confirm `TELEGRAM_BOT_TOKEN` is configured and start `telegram-outbox`; confirm the teacher's private chat is linked and the classroom binding is re-verified. Live delivery was **not** verified in the release environment.
+7. Desktop (BW-Tauri): run the installed app against staging once (login, assigned exam, answers, Speaking upload, result) — not verified in this release cycle.
 
 ## Smoke test (synthetic accounts)
 - [ ] Create a short fixed-close exam assignment for a test group; confirm participant count.

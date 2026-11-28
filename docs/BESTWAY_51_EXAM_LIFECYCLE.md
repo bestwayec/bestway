@@ -10,7 +10,10 @@
 
 ## Automatic hand-in (`apps/core/mock_deadline.py`)
 * Runs inside the **assessment worker** (`python manage.py run_assessment_worker`, every `EXAM_AUTO_SUBMIT_INTERVAL`=15 s). Disable only with `EXAM_AUTO_SUBMIT_ENABLED=false`.
-* Eligible: `in_progress` + `timed` attempts whose own deadline passed more than `EXAM_AUTO_SUBMIT_GRACE_SECONDS` (default 360 s) ago. The grace covers the existing Speaking upload recovery window (phase end + 5 min) and a client Finish racing the deadline. Answers are rejected after the deadline (`MOCK_TIME_UP`) during the grace.
+* Eligible: `in_progress` + `timed` attempts whose own deadline has passed by more than their grace:
+  * attempts with Speaking in scope: `EXAM_AUTO_SUBMIT_GRACE_SECONDS` (default 360 s), which covers the Speaking upload recovery window (phase end + 5 min);
+  * objective/Writing-only attempts: `EXAM_AUTO_SUBMIT_OBJECTIVE_GRACE_SECONDS` (default 60 s), enough for a client Finish racing the deadline.
+  Answers are rejected after the deadline (`MOCK_TIME_UP`) during either grace.
 * Attempts with no own timer that belong to an assignment close 3 h after the assignment deadline (`reason=assignment_closed`).
 * Hand-in uses the existing `mock_submissions.submit` (same lock, scoring, `SubmissionHandoff` → assessment jobs, teacher notification, homework sync). Only server-confirmed answers are scored; nothing unsent is claimed.
 * `SELECT … FOR UPDATE SKIP LOCKED` + status re-check: two workers, duplicate sweeps, restarts and a simultaneous manual Finish give one result. No lower time bound → catch-up after downtime. Manual catch-up: `python manage.py finalize_expired_attempts`.
