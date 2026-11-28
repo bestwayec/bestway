@@ -194,7 +194,8 @@ def list_exams(chat_id, message_id, actor, lang):
     rows = list(HomeworkAssignment.objects.select_related('cohort__classroom').filter(cohort__classroom_id__in=own, exam__isnull=False)
                 .order_by('-deadline')[:15])
     if not rows:
-        return _render(chat_id, message_id, t['none'])
+        _render(chat_id, message_id, t['none'])
+        return
     now = timezone.now()
     keyboard = []
     for a in rows:
