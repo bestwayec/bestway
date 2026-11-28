@@ -75,15 +75,15 @@ export function ExamResultCenter({ assignmentId }: { assignmentId: string }) {
   return (
     <div className="space-y-4">
       <header className="rounded-card border border-border bg-surface p-4 sm:p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-fg-muted">{data.groupName} · {t(data.timingPolicy === "fixed_close" ? "fixedClose" : "individual")}</p>
             <h1 className="mt-0.5 text-xl font-semibold leading-tight text-fg sm:text-2xl">{data.examTitle}</h1>
             <p className="mt-1 text-sm text-fg-muted">
               {data.opensAt ? `${t("opens", { when: tashkent(data.opensAt) })} · ` : ""}{t("closes", { when: tashkent(data.deadline) })}
             </p>
           </div>
-          <div className="flex flex-col items-end gap-1.5">
+          <div className="flex shrink-0 flex-row flex-wrap items-center gap-2 sm:flex-col sm:items-end sm:gap-1.5">
             <Badge data-testid="report-stage" variant={stageVariant}>{t(`stage.${data.stage}`)}</Badge>
             {left && <span className="text-sm font-semibold tabular-nums text-fg" data-testid="time-left">{t("timeLeft", { left })}</span>}
             <span className="text-xs text-fg-subtle">{t("updated", { when: tashkent(data.generatedAt) })}</span>
@@ -98,7 +98,7 @@ export function ExamResultCenter({ assignmentId }: { assignmentId: string }) {
         <StatTile label={t("counts.awaitingGrading")} value={c.awaitingGrading} />
         <StatTile label={t("counts.finalized")} value={c.finalized} />
         <StatTile label={t("counts.notSubmitted")} value={c.notSubmitted + c.notStarted} hint={data.stage === "open" ? t("notYet") : undefined} />
-        <StatTile label={t("average")} value={data.stats.average ?? "—"} hint={data.stats.average === null ? t("unavailable") : t("sample", { n: data.stats.sample })} />
+        <StatTile label={t("average")} value={data.stats.average === null ? "—" : data.scale === "ielts" ? data.stats.average.toFixed(2) : data.stats.average} hint={data.stats.average === null ? t("unavailable") : t("sample", { n: data.stats.sample })} />
         <StatTile label={t("completion")} value={rate === null ? "—" : `${rate}%`} />
       </section>
 
@@ -150,10 +150,10 @@ export function ExamResultCenter({ assignmentId }: { assignmentId: string }) {
                       {row.submittedAt && <span className="block text-xs text-fg-subtle">{tashkent(row.submittedAt)}</span>}
                     </TableCell>
                     {SKILLS.map(s => {
-                      const v = scoreCell(row, s, t("pendingShort"));
+                      const v = scoreCell(row, s, t("pendingShort"), data.scale);
                       return <TableCell key={s} numeric className={cn(v === t("pendingShort") && "text-xs font-medium text-warning")} title={v === t("pendingShort") ? t("pending") : undefined}>{v}</TableCell>;
                     })}
-                    <TableCell numeric className="font-semibold">{overallCell(row, t("pendingShort"))}{row.cefr ? <span className="ml-1 text-xs font-normal text-fg-muted">{row.cefr}</span> : null}</TableCell>
+                    <TableCell numeric className="font-semibold">{overallCell(row, t("pendingShort"), data.scale)}{row.cefr ? <span className="ml-1 text-xs font-normal text-fg-muted">{row.cefr}</span> : null}</TableCell>
                     <TableCell numeric className={cn(row.growth !== null && row.growth > 0 && "text-success", row.growth !== null && row.growth < 0 && "text-danger")}>
                       {row.growth === null ? "—" : row.growth > 0 ? `▲ +${row.growth}` : row.growth < 0 ? `▼ ${row.growth}` : "0"}
                     </TableCell>

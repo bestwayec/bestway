@@ -79,7 +79,9 @@ def exam_results_excel_view(request, assignment_id: str):
                   "Participation", "Grading", "Submitted at (UTC)"])
     for r in report["rows"]:
         s = r["scores"]
-        sheet.append([r["rank"], safe_cell(r["name"]), s["listening"], s["reading"], s["writing"], s["speaking"],
+        low = r.get("belowRange") or []
+        sheet.append([r["rank"], safe_cell(r["name"]), "<4.0" if "listening" in low else s["listening"],
+                      "<4.0" if "reading" in low else s["reading"], s["writing"], s["speaking"],
                       r["overall"], r["cefr"], r["growth"], r["participation"], r["grading"],
                       r["submittedAt"].replace(tzinfo=None) if r["submittedAt"] else None])
     buffer = BytesIO()
@@ -130,7 +132,8 @@ def exam_results_pdf_view(request, assignment_id: str):
     doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), title=report["examTitle"])
     head = ["#", "Student", "L", "R", "W", "S", "Overall", "Growth", "Status"]
     body = [[r["rank"] or "—", Paragraph(escape(r["name"]), styles["Normal"]),
-             *[("—" if r["scores"][s] is None else r["scores"][s]) if s not in r["pendingSkills"] else "pending" for s in exam_report.SKILLS],
+             *[("<4.0" if s in (r.get("belowRange") or []) else "—" if r["scores"][s] is None else r["scores"][s])
+               if s not in r["pendingSkills"] else "pending" for s in exam_report.SKILLS],
              "—" if r["overall"] is None else r["overall"], "—" if r["growth"] is None else r["growth"],
              f"{r['participation']} / {r['grading']}"] for r in report["rows"]]
     table = Table([head, *body], repeatRows=1)

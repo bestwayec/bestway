@@ -57,7 +57,8 @@ def line(entry, scale):
         head += f" ({escape(entry['cefr'])})"
     if scale == "raw" and entry.get("rawMax"):
         head += f"/{entry['rawMax']:g}"
-    skills = " | ".join(f"{k[0].upper()}: {fmt(v, scale)}" for k, v in entry["scores"].items() if v is not None)
+    below = entry.get("belowRange") or []
+    skills = " | ".join(f"{k[0].upper()}: {'&lt;4.0' if k in below else fmt(v, scale)}" for k, v in entry["scores"].items() if v is not None)
     return head + (f"\n    {skills}" if skills and scale != "raw" else "")
 
 

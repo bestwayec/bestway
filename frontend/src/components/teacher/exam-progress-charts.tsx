@@ -20,8 +20,9 @@ type GroupProgress = {
   improved: number; declined: number; mayNeedSupport: Array<{ studentId: string; name: string; growth: number }>;
 };
 
+// Distinct hues (not shades of one green) so lines stay identifiable in light and dark themes.
 const COLORS: Record<Skill | "overall", string> = {
-  overall: "var(--accent)", listening: "var(--brand)", reading: "var(--success, #16a34a)", writing: "var(--warning, #d97706)", speaking: "var(--danger, #dc2626)",
+  overall: "var(--brand)", listening: "#0284c7", reading: "#7c3aed", writing: "#d97706", speaking: "#db2777",
 };
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { timeZone: "Asia/Tashkent", month: "short", day: "numeric" });
 

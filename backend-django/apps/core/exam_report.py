@@ -179,7 +179,7 @@ def build(row, *, now=None):
         attempt = attempts.get(sid)
         entry = dict(studentId=sid, name=names.get(sid) or "—", attemptId=None, participation=None, grading="none",
                      scores={s: None for s in SKILLS}, overall=None, cefr=None, rawScore=None, rawMax=None,
-                     pendingSkills=[], aiFailedSkills=[], submittedAt=None, rank=None, previous=None, growth=None)
+                     pendingSkills=[], aiFailedSkills=[], belowRange=[], submittedAt=None, rank=None, previous=None, growth=None)
         if attempt is None:
             entry["participation"] = "not_submitted" if closed else "not_started"
             out_rows.append(entry)
@@ -203,6 +203,9 @@ def build(row, *, now=None):
             if entry["scores"][skill] is None and skill in final_skills and scale == "ielts":
                 job = next(j for j in latest if j["skill"] == skill and j["finalized"])
                 entry["scores"][skill] = _num(final_scores.get(job["id"]), 9)
+        from .mock_scoring import band_is_below_range
+        entry["belowRange"] = [k for k in ("listening", "reading") if band_is_below_range(
+            attempt.exam.type, k, (attempt.section_bands or {}).get(k), (attempt.raw_scores or {}).get(k))]
         entry["rawScore"], entry["rawMax"] = _raw_total(attempt)
         if not pending and attempt.status == "completed":
             entry["grading"] = "finalized"

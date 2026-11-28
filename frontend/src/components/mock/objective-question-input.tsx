@@ -22,11 +22,14 @@ export function splitAtBlank(prompt: string): [string, string] | null {
  * Compact CBT row for a typed answer (completion / short answer): the number, the original
  * prompt with the field inline at its blank, and Flag on one line. Many questions stay visible.
  */
-function CompactTextEntry({ q, value, onChange, disabled, renderPrompt, headerAction, numberLabel, hint }: {
+function CompactTextEntry({ q, value, onChange, disabled, renderPrompt, headerAction, numberLabel, hint: rawHint, groupInstructions }: {
   q: ObjectiveQuestion; value: string; onChange: (value: string) => void; disabled: boolean;
   renderPrompt?: (text: string, part?: string) => React.ReactNode; headerAction?: React.ReactNode; numberLabel: string; hint: string | null;
+  groupInstructions?: string | null;
 }) {
   const t = useTranslations("mock.runnerUx");
+  // The word limit is already stated in the group instruction: repeating it on every row is noise.
+  const hint = rawHint && groupInstructions?.toLowerCase().includes(rawHint.toLowerCase()) ? null : rawHint;
   const answered = !!value.trim();
   const prompt = (q.prompt ?? "").trim();
   const parts = splitAtBlank(prompt);
@@ -52,7 +55,7 @@ function CompactTextEntry({ q, value, onChange, disabled, renderPrompt, headerAc
   );
 }
 
-export function ObjectiveQuestionInput({ question: q, value, onChange, unavailableOptions = [], disabled = false, renderPrompt, headerAction, sharedBank = false, compact = false }: {
+export function ObjectiveQuestionInput({ question: q, value, onChange, unavailableOptions = [], disabled = false, renderPrompt, headerAction, sharedBank = false, compact = false, groupInstructions }: {
   question: ObjectiveQuestion;
   value: string;
   onChange: (value: string) => void;
@@ -65,6 +68,7 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
   sharedBank?: boolean;
   /** Exam window: typed answers render as compact inline rows instead of cards. */
   compact?: boolean;
+  groupInstructions?: string | null;
 }) {
   const t = useTranslations("mock.runnerUx");
   const numberLabel = objectiveNumberLabel(q);
@@ -76,7 +80,7 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
   const isShortOptions = options.length >= 4 && options.every((o) => o.trim().length <= 3);
   if (compact && !sharedBank && !isObjectiveChoice(q)) {
     return <CompactTextEntry q={q} value={value} onChange={onChange} disabled={disabled} renderPrompt={renderPrompt}
-      headerAction={headerAction} numberLabel={numberLabel} hint={hint} />;
+      headerAction={headerAction} numberLabel={numberLabel} hint={hint} groupInstructions={groupInstructions} />;
   }
 
   return (

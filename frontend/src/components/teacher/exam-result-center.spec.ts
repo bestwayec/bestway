@@ -60,3 +60,24 @@ describe("completion rate", () => {
     expect(completionRate({ ...zero, eligible: 3, handedIn: 2 })).toBe(67);
   });
 });
+
+describe("below-range bands", () => {
+  it("shows a stored 3.5 Listening placeholder as <4.0, never 3.5", () => {
+    const row = { studentId: "s", name: "n", attemptId: "a", participation: "submitted" as const, grading: "finalized" as const,
+      scores: { listening: 3.5, reading: 5, writing: 6, speaking: 6 }, overall: 5, cefr: null, rank: 1, rawScore: null, rawMax: null,
+      growth: null, pendingSkills: [] as string[], submittedAt: null, belowRange: ["listening"] };
+    expect(scoreCell(row, "listening", "p")).toBe("<4.0");
+    expect(scoreCell(row, "reading", "p")).toBe("5");
+  });
+});
+
+describe("IELTS formatting", () => {
+  it("shows bands with one decimal", () => {
+    const row = { studentId: "s", name: "n", attemptId: "a", participation: "submitted" as const, grading: "finalized" as const,
+      scores: { listening: 6, reading: 5.5, writing: 6, speaking: 6 }, overall: 6, cefr: null, rank: 1, rawScore: null, rawMax: null,
+      growth: null, pendingSkills: [] as string[], submittedAt: null };
+    expect(scoreCell(row, "listening", "p", "ielts")).toBe("6.0");
+    expect(overallCell(row, "p", "ielts")).toBe("6.0");
+    expect(overallCell({ ...row, overall: 61 }, "p", "multilevel")).toBe("61");
+  });
+});

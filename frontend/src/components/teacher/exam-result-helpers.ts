@@ -6,6 +6,8 @@ export type ExamReportRow = {
   grading: "none" | "awaiting_assessment" | "awaiting_teacher_review" | "partially_graded" | "finalized";
   scores: Record<Skill, number | null>; overall: number | null; cefr: string | null; rank: number | null;
   rawScore: number | null; rawMax: number | null; growth: number | null; pendingSkills: string[]; submittedAt: string | null;
+  /** IELTS Listening/Reading below the lowest published raw mark: the stored 3.5 is shown as "<4.0". */
+  belowRange?: string[];
   monitor?: { currentSkill: string | null; confirmedAnswers: number; lastConfirmedAt: string | null; deadlineAt: string | null; incidents: number } | null;
 };
 export type ExamReport = {
@@ -23,15 +25,21 @@ export const MEDALS: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" 
 export const tashkent = (iso: string) => new Date(iso).toLocaleString(undefined, { timeZone: "Asia/Tashkent", dateStyle: "medium", timeStyle: "short" });
 
 /** A pending subjective grade is a status, never a number: only server-confirmed values are shown. */
-export function scoreCell(row: ExamReportRow, skill: Skill, pendingLabel: string): string {
+/** IELTS bands always show one decimal (6.0); other scales show the value as stored. */
+export function fmtScore(value: number, scale?: string): string {
+  return scale === "ielts" ? value.toFixed(1) : String(value);
+}
+
+export function scoreCell(row: ExamReportRow, skill: Skill, pendingLabel: string, scale?: string): string {
   const value = row.scores[skill];
-  if (value !== null) return String(value);
+  if (value !== null && row.belowRange?.includes(skill)) return "<4.0";
+  if (value !== null) return fmtScore(value, scale);
   return row.pendingSkills.includes(skill) ? pendingLabel : "—";
 }
 
 /** Overall is shown only when final; "pending" only while a subjective grade is awaited. */
-export function overallCell(row: ExamReportRow, pendingLabel: string): string {
-  if (row.overall !== null) return String(row.overall);
+export function overallCell(row: ExamReportRow, pendingLabel: string, scale?: string): string {
+  if (row.overall !== null) return fmtScore(row.overall, scale);
   return ["awaiting_assessment", "awaiting_teacher_review", "partially_graded"].includes(row.grading) ? pendingLabel : "—";
 }
 

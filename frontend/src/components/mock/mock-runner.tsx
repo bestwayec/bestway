@@ -1853,6 +1853,7 @@ function GroupBlock({
                   key={q.id}
                   question={q}
                   groupTitle={group.title ?? undefined}
+                  groupInstructions={group.instructions}
                   attemptId={attemptId}
                   value={answers[q.id] ?? ""}
                   hasAudio={audioSet.has(q.id)}
@@ -2059,9 +2060,11 @@ function QuestionInput({
   isFlagged,
   onToggleFlag,
   promptInTaskPanel = false,
+  groupInstructions,
 }: {
   /** Writing split view: on wide screens the prompt is shown in the task column, not again above the answer. */
   promptInTaskPanel?: boolean;
+  groupInstructions?: string | null;
   question: MockQuestion;
   attemptId: string;
   value: string;
@@ -2147,6 +2150,7 @@ function QuestionInput({
         // Listening question text can be highlighted and annotated like a Reading passage (kept with the attempt).
         renderPrompt={multilevelSkill === "listening" ? (text, part) => <CbtAnnotatedText inline={part !== undefined} text={text} storageKey={`${attemptId}.${q.id}.prompt${part && part !== "a" ? `.${part}` : ""}`} /> : undefined}
         compact={multilevelSkill === "listening" || multilevelSkill === "reading"}
+        groupInstructions={groupInstructions}
       />
     </div>
   );
