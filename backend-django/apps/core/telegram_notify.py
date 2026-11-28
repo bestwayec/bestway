@@ -276,6 +276,8 @@ def homework_group_report(assignment_id: str, *, reason: str = 'closed', now=Non
             a=f'{avg:g}',
             provisional=prov,
         )
+        if row.exam_id:
+            text += exam_group_counts(row, lang, now)
         queued_group = bool(
             outbox.enqueue(
                 f'group:{group_id}',
@@ -319,6 +321,24 @@ def homework_group_report(assignment_id: str, *, reason: str = 'closed', now=Non
         'queuedGroup': queued_group,
         'queuedTeacher': queued_teacher,
     }
+
+
+EXAM_COUNTS = {
+    'uz': "\nTopshirmaganlar: {missing}\nBaholash kutilmoqda: {waiting}\nTo‘liq baholanganlar: {final}\n<i>Yakuniy Writing va Speaking baholari ustoz tomonidan tasdiqlanadi.</i>",
+    'en': "\nNot handed in: {missing}\nAwaiting grading: {waiting}\nFully graded: {final}\n<i>Final Writing and Speaking grades are confirmed by the teacher.</i>",
+}
+
+
+def exam_group_counts(row, lang, now):
+    """Aggregate counts only (no names, no individual scores) from the authoritative exam report."""
+    from . import exam_report
+    try:
+        counts = exam_report.build(row, now=now)['counts']
+    except Exception:  # noqa: BLE001 - the aggregate line is optional, the report must still go out
+        logger.exception('exam report counts unavailable for %s', row.id)
+        return ''
+    return EXAM_COUNTS.get(lang, EXAM_COUNTS['uz']).format(
+        missing=counts['notSubmitted'] + counts['notStarted'], waiting=counts['awaitingGrading'], final=counts['finalized'])
 
 
 def homework_report_sweep(now=None):

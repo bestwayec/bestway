@@ -104,3 +104,48 @@ def exam_results_resend_view(request, assignment_id: str):
     with connection.cursor() as cursor:
         audit(cursor, request.user.id, "exam.report.resend", "HomeworkAssignment", row.id, new=dict(revision=report["revision"], queued=queued))
     return Response({"success": True, "data": dict(queued=queued, revision=report["revision"])}, status=201)
+
+
+@api_view(["GET"])
+@permission_classes([roles("teacher", "admin", "super_admin")])
+def exam_results_pdf_view(request, assignment_id: str):
+    """A4 PDF of the same dataset as the gradebook (ReportLab, Unicode font when available)."""
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Table, TableStyle
+    from xml.sax.saxutils import escape
+    row = exam_report.assignment_for(request.user, assignment_id)
+    report = exam_report.build(row)
+    styles = getSampleStyleSheet()
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), title=report["examTitle"])
+    head = ["#", "Student", "L", "R", "W", "S", "Overall", "Growth", "Status"]
+    body = [[r["rank"] or "—", Paragraph(escape(r["name"]), styles["Normal"]),
+             *[("—" if r["scores"][s] is None else r["scores"][s]) if s not in r["pendingSkills"] else "pending" for s in exam_report.SKILLS],
+             "—" if r["overall"] is None else r["overall"], "—" if r["growth"] is None else r["growth"],
+             f"{r['participation']} / {r['grading']}"] for r in report["rows"]]
+    table = Table([head, *body], repeatRows=1)
+    table.setStyle(TableStyle([("GRID", (0, 0), (-1, -1), 0.25, "#999999"), ("BACKGROUND", (0, 0), (-1, 0), "#e8eef7")]))
+    c = report["counts"]
+    doc.build([Paragraph(escape(f"{report['examTitle']} — {report['groupName']} ({report['stage'].upper()})"), styles["Title"]),
+               Paragraph(escape(f"Eligible {c['eligible']} · handed in {c['handedIn']} (auto {c['autoSubmitted']}) · "
+                                f"fully graded {c['finalized']} · awaiting {c['awaitingGrading']} · not submitted {c['notSubmitted'] + c['notStarted']} · "
+                                f"average {report['stats']['average'] if report['stats']['average'] is not None else 'n/a'} (n={report['stats']['sample']})"),
+                         styles["Normal"]), table])
+    response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="exam-results-{row.id[:8]}.pdf"'
+    return response
+
+
+@api_view(["GET"])
+@permission_classes([roles("teacher", "admin", "super_admin")])
+def group_exam_progress_view(request, group_id: str):
+    from . import exam_progress
+    return Response({"success": True, "data": exam_progress.group_progress(request.user, group_id, request.query_params)})
+
+
+@api_view(["GET"])
+@permission_classes([roles("teacher", "admin", "super_admin")])
+def student_exam_progress_view(request, group_id: str, student_id: str):
+    from . import exam_progress
+    return Response({"success": True, "data": exam_progress.student_progress(request.user, group_id, student_id, request.query_params)})

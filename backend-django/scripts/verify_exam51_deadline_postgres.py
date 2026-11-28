@@ -185,6 +185,9 @@ try:
     call_command('finalize_expired_attempts', stdout=out)
     check(MockAttempt.objects.get(id=att_old).status == 'completed' and 'auto-submitted=' in out.getvalue(),
           'a deadline missed during three days of downtime is finalized by the catch-up command')
+    from apps.core.models import TelegramOutbox
+    check(TelegramOutbox.objects.filter(recipient_id=a.id, dedupe_key=f'auto_submit:{att_old}').count() == 1,
+          'the student privately receives one auto-submit notice')
     detail = api(a).get(f'/v1/mock/attempts/{att_old}')
     check(detail.status_code == 200 and detail.data['data'].get('submissionKind') == 'auto'
           and MockAttempt.objects.get(id=att_old).media_state['__auto_submitted']['reason'] == 'deadline',

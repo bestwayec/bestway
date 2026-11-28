@@ -578,6 +578,9 @@ urlpatterns = [
     path('teacher/exam-assignments/<str:assignment_id>/results', exam_reports.exam_results_view),
     path('teacher/exam-assignments/<str:assignment_id>/results/excel', exam_reports.exam_results_excel_view),
     path('teacher/exam-assignments/<str:assignment_id>/results/resend', exam_reports.exam_results_resend_view),
+    path('teacher/exam-assignments/<str:assignment_id>/results/pdf', exam_reports.exam_results_pdf_view),
+    path('groups/<str:group_id>/exam-progress', exam_reports.group_exam_progress_view),
+    path('groups/<str:group_id>/students/<str:student_id>/exam-progress', exam_reports.student_exam_progress_view),
 
     path('groups/<str:group_id>/report/pdf', group_reports.group_report_pdf_view),
     path('groups/<str:group_id>/report/pdf/', group_reports.group_report_pdf_view),

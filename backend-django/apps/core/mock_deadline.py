@@ -113,6 +113,7 @@ def finalize(attempt_id, now=None):
             audit(cursor, None, 'mock.attempt.auto_submit', 'mockAttempt', attempt.id,
                   new=dict(status=result['status'], deadline=state[AUTO_SUBMIT_KEY]['deadline'],
                            reason=state[AUTO_SUBMIT_KEY]['reason']))
+        transaction.on_commit(lambda: notify_student(attempt, now), robust=True)
     logger.info('Auto-submitted expired attempt %s (%s)', attempt_id, result['status'])
     return result
 
@@ -127,3 +128,15 @@ def sweep(now=None, limit=BATCH):
         except Exception:  # noqa: BLE001 - one broken attempt must not stop the others
             logger.exception('Automatic hand-in of attempt %s failed', attempt_id)
     return done
+
+
+def notify_student(attempt, now):
+    """Private notice to the student only: the server handed the exam in at the deadline."""
+    from html import escape
+    from apps.legacy_schema.models import MockExam
+    from . import telegram_outbox as outbox, telegram_state as state
+    title = MockExam.objects.filter(id=attempt.exam_id).values_list('title', flat=True).first() or 'Exam'
+    lang = state.language_of(attempt.student_id)
+    text = {'uz': f"⏰ <b>{escape(title)}</b> vaqti tugadi. Server saqlangan javoblaringizni avtomatik topshirdi.",
+            'en': f"⏰ Time is up for <b>{escape(title)}</b>. The server handed in your saved answers automatically."}[lang]
+    outbox.enqueue(attempt.student_id, 'results', f'auto_submit:{attempt.id}', text, now=now)

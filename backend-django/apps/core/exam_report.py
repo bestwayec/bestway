@@ -138,6 +138,31 @@ def _previous(row, attempts):
     return out
 
 
+def _monitor(rows, attempts):
+    """Live monitor facts from persisted data only: confirmed (server-stored) answers, last
+    confirmed answer time, current skill and integrity observations. No answer content."""
+    from django.db.models import Count, Max, Q
+    from apps.legacy_schema.models import MockAnswer
+    from .models import ExamIntegrityIncident
+    ids = [a.id for a in attempts.values()]
+    answers = {r["attempt_id"]: r for r in MockAnswer.objects.filter(attempt_id__in=ids).values("attempt_id").annotate(
+        confirmed=Count("id", filter=~Q(response="") | Q(audio_key__isnull=False)), last=Max("updated_at"))} if ids else {}
+    incidents = dict(ExamIntegrityIncident.objects.filter(attempt_id__in=ids).values("attempt_id").annotate(n=Count("id"))
+                     .values_list("attempt_id", "n")) if ids else {}
+    for entry in rows:
+        attempt = attempts.get(entry["studentId"])
+        if attempt is None:
+            entry["monitor"] = None
+            continue
+        info = answers.get(attempt.id, {})
+        entry["monitor"] = dict(currentSkill=attempt.current_skill if attempt.status == "in_progress" else None,
+                                confirmedAnswers=info.get("confirmed", 0),
+                                lastConfirmedAt=aware(info["last"]) if info.get("last") else None,
+                                startedAt=aware(attempt.started_at), deadlineAt=aware(attempt.overall_deadline_at or attempt.deadline_at)
+                                if (attempt.overall_deadline_at or attempt.deadline_at) else None,
+                                incidents=incidents.get(attempt.id, 0))
+
+
 def build(row, *, now=None):
     now = now or timezone.now()
     scale = scale_of(row.exam.type)
@@ -191,6 +216,7 @@ def build(row, *, now=None):
             entry["grading"] = "awaiting_teacher_review"
         out_rows.append(entry)
 
+    _monitor(out_rows, attempts)
     previous = _previous(row, {r["studentId"]: attempts[r["studentId"]] for r in out_rows if r["grading"] == "finalized"})
     for entry in out_rows:
         prior = previous.get(entry["studentId"])

@@ -217,6 +217,57 @@ try:
     joined = '\n'.join(pages)
     check(len(pages) > 1 and all(len(p) <= 4096 for p in pages), f'a 120-student leaderboard is split into {len(pages)} pages under the Telegram limit')
     check(all(joined.count(f'&lt;Talaba &amp; {i:03d}&gt;') == 1 for i in range(120)), 'every student appears exactly once, HTML-escaped')
+
+    # Classroom aggregate carries counts only.
+    grp = TelegramOutbox.objects.filter(group_id=gid).order_by('-id').first()
+    check('Topshirmaganlar: 1' in grp.text and 'ustoz tomonidan tasdiqlanadi' in grp.text and all(n not in grp.text for n in names[:7]),
+          'the classroom aggregate adds non-submitted / awaiting / graded counts and no names')
+
+    # Live monitor facts on the dataset.
+    mon = {r['studentId']: r['monitor'] for r in exam_report.build(row)['rows']}
+    check(mon[s[7].id] is None and mon[s[0].id]['confirmedAnswers'] == 0 and 'incidents' in mon[s[0].id],
+          'monitor fields come from persisted data (no attempt -> no monitor row)')
+
+    # PDF and progress APIs.
+    pdf = api(teacher).get(f'/v1/teacher/exam-assignments/{aid}/results/pdf')
+    check(pdf.status_code == 200 and pdf.content[:4] == b'%PDF', 'the PDF export is generated from the same dataset')
+    check(api(stranger).get(f'/v1/teacher/exam-assignments/{aid}/results/pdf').status_code == 404, 'an unrelated teacher cannot export the PDF')
+    one = api(teacher).get(f'/v1/groups/{gid}/students/{s[0].id}/exam-progress?track=ielts').data['data']
+    check(one['finalized'] == 1 and one['summary']['insufficientHistory'] is True and one['summary']['changeFromPrevious'] is None,
+          'a single comparable result reports insufficient history, no fabricated growth')
+    earlier = attempt(s[0], exam_id, aid, bands={'listening': 7.0, 'reading': 7.0, 'writing': 6.5, 'speaking': 7.0}, overall=7.0)
+    MockAttempt.objects.filter(id=earlier.id).update(submitted_at=timezone.now() - timedelta(days=20), started_at=timezone.now() - timedelta(days=20, hours=2))
+    job(earlier, 'writing', final=6.5)
+    job(earlier, 'speaking', final=7.0)
+    two = api(teacher).get(f'/v1/groups/{gid}/students/{s[0].id}/exam-progress?track=ielts').data['data']
+    check(two['summary']['previous'] == 7.0 and two['summary']['latest'] == 8.0 and two['summary']['changeFromPrevious'] == 1.0
+          and two['summary']['skillChange']['writing'] == 1.0, 'two comparable results give actual overall and skill growth')
+    ml = api(teacher).get(f'/v1/groups/{gid}/students/{s[0].id}/exam-progress?track=multilevel').data['data']
+    check(ml['finalized'] == 0 and ml['scale'] == 'multilevel', 'IELTS results never appear on the Multilevel scale')
+    gp = api(teacher).get(f'/v1/groups/{gid}/exam-progress?track=ielts').data['data']
+    check(len(gp['history']) == 1 and gp['history'][0]['eligible'] == 8 and gp['history'][0]['sample'] == 7, 'group history reports eligible and sample sizes')
+    check(api(stranger).get(f'/v1/groups/{gid}/exam-progress').status_code == 403
+          and api(stranger).get(f'/v1/groups/{gid}/students/{s[0].id}/exam-progress').status_code == 403, 'progress is staff-of-group only')
+
+    # Teacher bot: exam list, paged board, pending list; permission rechecked on each tap.
+    from unittest.mock import patch
+    from apps.core import telegram_teacher as tt
+    sent = []
+    def fake_send(chat, text, reply_markup=None):
+        for line in (reply_markup or {}).get('inline_keyboard', []):
+            for b in line:
+                assert len((b.get('callback_data') or '').encode()) <= 64
+        sent.append((str(chat), text, reply_markup))
+        return {'message_id': 1}
+    with patch.object(tt.api, 'send', side_effect=fake_send), patch.object(tt.api, 'call', return_value=None):
+        tt.handle_callback(7100001, None, 'te')
+        check(any('Mock 07' in str(m[2]) for m in sent), 'the teacher bot lists the exam assignment')
+        tt.handle_callback(7100001, None, f'te:{aid}')
+        check('Student 01' in sent[-1][1] and 'yakuniy' in sent[-1][1], 'the bot shows the authoritative leaderboard')
+        tt.handle_callback(7100001, None, f'tw:{aid}')
+        check(sent[-1][1].startswith('✅') or 'Writing' in sent[-1][1], 'the bot lists pending grading')
+        tt.handle_callback(7100002, None, f'te:{aid}')
+        check(str(sent[-1][0]) == '7100002' and 'Student 01' not in sent[-1][1], 'another teacher tapping the same callback is denied')
 finally:
     TelegramClassroomBinding.objects.filter(group_id__in=fx.groups).delete()
     fx.cleanup()

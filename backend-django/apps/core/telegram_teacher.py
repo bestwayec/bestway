@@ -50,7 +50,7 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
-PREFIXES = ('tg', 'tk', 'tn', 'tq', 'tr', 'tc', 'tp', 'tm', 'ta', 'tv', 'ts', 'tb')
+PREFIXES = ('tg', 'tk', 'tn', 'tq', 'tr', 'tc', 'tp', 'tm', 'ta', 'tv', 'ts', 'tb', 'te', 'tw')
 ID = re.compile(r'^[A-Za-z0-9_-]{8,64}$')
 STAFF = ('teacher', 'admin', 'super_admin')
 KEY_LINE = re.compile(r'(?im)^\s*(?:key|answers?|javoblar|kalit)\s*:?\s*$')
@@ -164,8 +164,77 @@ def _roster(group_id):
 
 def home(chat_id, message_id, actor, lang):
     keyboard = [[dict(text='📝', callback_data='tn'), dict(text='👥', callback_data='tg'), dict(text='🗓', callback_data='tq')],
-                [dict(text='✅', callback_data='ta'), dict(text='📚', callback_data='ts'), dict(text='📢', callback_data='tb')]]
-    _render(chat_id, message_id, tr(lang, 'menu') + '\n📝 /newtest · 👥 /groups · 🗓 /assignments · ✅ /requests · 📚 /sets · 📢 /announce', keyboard)
+                [dict(text='✅', callback_data='ta'), dict(text='📚', callback_data='ts'), dict(text='📢', callback_data='tb')],
+                [dict(text=EXAM_TEXT[lang]['menu'], callback_data='te')]]
+    _render(chat_id, message_id, tr(lang, 'menu') + '\n📝 /newtest · 👥 /groups · 🗓 /assignments · ✅ /requests · 📚 /sets · 📢 /announce · 🏆 /exams', keyboard)
+
+
+EXAM_TEXT = {
+    'uz': dict(menu='🏆 Imtihon natijalari', head='🏆 <b>Imtihonlar</b> (faol, kelgusi va yakunlangan)', none="📭 Imtihon topshiriqlari yo'q.",
+               prev='⬅️ Oldingi sahifa', next='Keyingi sahifa ➡️', pending='⏳ Baholash kutilmoqda', web='💻 Teacher Workspace',
+               excel='📊 Excel hisobot', progress='📈 O‘quvchilar rivojlanishi', no_pending="✅ Baholash kutilayotgan ish yo'q.",
+               stage=dict(open='🟢 faol', preliminary='🟡 dastlabki', final='✅ yakuniy'), upcoming='🔜 kelgusi'),
+    'en': dict(menu='🏆 Exam results', head='🏆 <b>Exams</b> (active, upcoming and closed)', none='📭 No exam assignments.',
+               prev='⬅️ Previous page', next='Next page ➡️', pending='⏳ Awaiting grading', web='💻 Teacher Workspace',
+               excel='📊 Excel report', progress='📈 Student progress', no_pending='✅ Nothing awaits grading.',
+               stage=dict(open='🟢 active', preliminary='🟡 preliminary', final='✅ final'), upcoming='🔜 upcoming'),
+}
+
+
+def _web(path):
+    from django.conf import settings
+    return (getattr(settings, 'PUBLIC_WEB_URL', '') or 'https://bestwayec.uz') + path
+
+
+def list_exams(chat_id, message_id, actor, lang):
+    """Exam assignments of the teacher's own groups; permission is rechecked on every tap."""
+    from .models import HomeworkAssignment
+    t = EXAM_TEXT[lang]
+    own = [g.id for g in _own_groups(actor)]
+    rows = list(HomeworkAssignment.objects.select_related('cohort__classroom').filter(cohort__classroom_id__in=own, exam__isnull=False)
+                .order_by('-deadline')[:15])
+    if not rows:
+        return _render(chat_id, message_id, t['none'])
+    now = timezone.now()
+    keyboard = []
+    for a in rows:
+        label = t['upcoming'] if a.opens_at and a.opens_at > now else t['stage']['open'] if a.deadline > now else '🏁'
+        keyboard.append([dict(text=esc(f'{label} {a.title} · {a.cohort.classroom.name}', 55), callback_data=f'te:{a.id}')])
+    _render(chat_id, message_id, t['head'], keyboard)
+
+
+def exam_board(chat_id, message_id, actor, lang, assignment_id, page=0):
+    from . import exam_report, exam_report_delivery
+    t = EXAM_TEXT[lang]
+    row = exam_report.assignment_for(actor, assignment_id)
+    report = exam_report.build(row)
+    pages = exam_report_delivery.pages(report, lang)
+    page = max(0, min(page, len(pages) - 1))
+    text = (t['stage'].get(report['stage'], '') + '\n' + pages[page])
+    nav = []
+    if page > 0:
+        nav.append(dict(text=t['prev'], callback_data=f'te:{row.id}:{page - 1}'))
+    if page < len(pages) - 1:
+        nav.append(dict(text=t['next'], callback_data=f'te:{row.id}:{page + 1}'))
+    keyboard = ([nav] if nav else []) + [
+        [dict(text=t['pending'], callback_data=f'tw:{row.id}')],
+        [dict(text=t['web'], url=_web(f'/teacher/results/exam/{row.id}'))],
+        [dict(text=t['excel'], url=_web(f'/teacher/results/exam/{row.id}')),
+         dict(text=t['progress'], url=_web(f'/teacher/results/exam/{row.id}#progress'))],
+        [dict(text=tr(lang, 'back'), callback_data='te')]]
+    _render(chat_id, message_id, text, keyboard)
+
+
+def exam_pending(chat_id, message_id, actor, lang, assignment_id):
+    from . import exam_report
+    t = EXAM_TEXT[lang]
+    row = exam_report.assignment_for(actor, assignment_id)
+    rows = [r for r in exam_report.build(row)['rows'] if r['pendingSkills']]
+    lines = [f'<b>{esc(row.title, 80)}</b>'] + [f"• {esc(r['name'], 40)} — {'/'.join(s.capitalize() for s in r['pendingSkills'])}" for r in rows[:60]]
+    if len(rows) > 60:
+        lines.append(f'… +{len(rows) - 60}')
+    _render(chat_id, message_id, '\n'.join(lines) if rows else t['no_pending'],
+            [[dict(text=t['web'], url=_web(f'/teacher/results/exam/{row.id}'))], [dict(text=tr(lang, 'back'), callback_data=f'te:{row.id}')]])
 
 
 def list_groups(chat_id, message_id, actor, lang):
@@ -474,7 +543,7 @@ def announce_step(chat_id, message_id, actor, lang, parts):
 
 # ------------------------------------------------------------------------------------------------ entry points
 
-COMMANDS = {'/ustoz': 'home', '/teacher': 'home', '/newtest': 'new', '/yangitest': 'new', '/groups': 'groups', '/guruhlar': 'groups',
+COMMANDS = {'/ustoz': 'home', '/teacher': 'home', '/exams': 'exams', '/imtihonlar': 'exams', '/newtest': 'new', '/yangitest': 'new', '/groups': 'groups', '/guruhlar': 'groups',
             '/assignments': 'assign', '/topshiriqlar': 'assign', '/requests': 'requests', '/sorovlar': 'requests', '/sets': 'sets', '/announce': 'announce', '/elon': 'announce'}
 
 
@@ -499,7 +568,8 @@ def command(chat_id, text, *, chat_type='private'):
         {'home': lambda: home(chat_id, None, actor, lang), 'new': lambda: start_new_test(chat_id, None, actor, lang),
          'groups': lambda: list_groups(chat_id, None, actor, lang), 'assign': lambda: list_assignments(chat_id, None, actor, lang),
          'requests': lambda: review_requests(chat_id, None, actor, lang), 'sets': lambda: list_sets(chat_id, None, actor, lang),
-         'announce': lambda: announce_step(chat_id, None, actor, lang, ['tb'])}[action]()
+         'announce': lambda: announce_step(chat_id, None, actor, lang, ['tb']),
+         'exams': lambda: list_exams(chat_id, None, actor, lang)}[action]()
     except ContractAPIException as error:
         api.send(chat_id, tr(lang, 'denied') if error.status_code in (403, 404) else tr(lang, 'error'))
     except Exception:  # pragma: no cover
@@ -566,6 +636,12 @@ def handle_callback(from_id, message_id, data, *, chat_type='private'):
                 remind_set(chat_id, message_id, actor, lang, payload['setId'], groups_[int(parts[2])])
         elif cmd == 'tb':
             announce_step(chat_id, message_id, actor, lang, parts)
+        elif cmd == 'te' and len(parts) == 1:
+            list_exams(chat_id, message_id, actor, lang)
+        elif cmd == 'te' and len(parts) in (2, 3) and _valid(parts[1]) and (len(parts) == 2 or parts[2].isdigit()):
+            exam_board(chat_id, message_id, actor, lang, parts[1], int(parts[2]) if len(parts) == 3 else 0)
+        elif cmd == 'tw' and len(parts) == 2 and _valid(parts[1]):
+            exam_pending(chat_id, message_id, actor, lang, parts[1])
         else:
             api.send(chat_id, tr(lang, 'stale'))
     except ContractAPIException as error:
