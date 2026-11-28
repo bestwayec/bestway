@@ -3,57 +3,56 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+import { ArrowDownUp, FileSpreadsheet, FileText, RefreshCw, Send, ShieldAlert } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { StatTile } from "@/components/ui/stat-tile";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Link, useRouter } from "@/i18n/navigation";
 import { api } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
 import { GroupExamProgress, StudentExamProgress } from "./exam-progress-charts";
 
-type Skill = "listening" | "reading" | "writing" | "speaking";
-export type ExamReportRow = {
-  studentId: string; name: string; attemptId: string | null;
-  participation: "not_started" | "in_progress" | "submitted" | "auto_submitted" | "not_submitted";
-  grading: "none" | "awaiting_assessment" | "awaiting_teacher_review" | "partially_graded" | "finalized";
-  scores: Record<Skill, number | null>; overall: number | null; cefr: string | null; rank: number | null;
-  rawScore: number | null; rawMax: number | null; growth: number | null; pendingSkills: string[]; submittedAt: string | null;
-  monitor?: { currentSkill: string | null; confirmedAnswers: number; lastConfirmedAt: string | null; deadlineAt: string | null; incidents: number } | null;
-};
-export type ExamReport = {
-  assignmentId: string; title: string; examTitle: string; groupName: string; groupId: string | null; scale: "ielts" | "multilevel" | "raw";
-  stage: "open" | "preliminary" | "final"; deadline: string; opensAt: string | null; timingPolicy: string; generatedAt: string;
-  counts: Record<"eligible" | "notStarted" | "inProgress" | "submitted" | "autoSubmitted" | "notSubmitted" | "handedIn" | "awaitingGrading" | "finalized", number>;
-  stats: { average: number | null; median: number | null; highest: number | null; sample: number };
-  rows: ExamReportRow[]; pagination: { page: number; limit: number; total: number };
-  delivery: { preliminaryAt: string | null; finalAt: string | null; finalVersion: number; messages: Array<{ key: string; status: string; error: string | null }> };
-};
+import { completionRate, isStale, MEDALS, overallCell, scoreCell, SKILLS, SORTS, tashkent, type ExamReport, type ExamReportRow } from "./exam-result-helpers";
 
-const SKILLS: Skill[] = ["listening", "reading", "writing", "speaking"];
-const tashkent = (iso: string) => new Date(iso).toLocaleString(undefined, { timeZone: "Asia/Tashkent", dateStyle: "medium", timeStyle: "short" });
+export type { ExamReport, ExamReportRow } from "./exam-result-helpers";
+export { completionRate, isStale, overallCell, scoreCell } from "./exam-result-helpers";
 
-/** A pending subjective grade is a status, never a number: only server-confirmed values are shown. */
-export function scoreCell(row: ExamReportRow, skill: Skill, pendingLabel: string): string {
-  const value = row.scores[skill];
-  if (value !== null) return String(value);
-  return row.pendingSkills.includes(skill) ? pendingLabel : "—";
+function remaining(deadline: string, now: number) {
+  const ms = new Date(deadline).getTime() - now;
+  if (ms <= 0) return null;
+  const m = Math.floor(ms / 60_000);
+  return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`;
 }
 
-/** Overall is shown only when final; "pending" only while a subjective grade is awaited. */
-export function overallCell(row: ExamReportRow, pendingLabel: string): string {
-  if (row.overall !== null) return String(row.overall);
-  return ["awaiting_assessment", "awaiting_teacher_review", "partially_graded"].includes(row.grading) ? pendingLabel : "—";
+function StatusBadge({ row }: { row: ExamReportRow }) {
+  const t = useTranslations("examResultCenter");
+  const part = row.participation;
+  if (part === "not_started" || part === "not_submitted") return <Badge size="sm" variant="outline">{t(`participation.${part}`)}</Badge>;
+  if (part === "in_progress") return <Badge size="sm" variant="info">{t("participation.in_progress")}</Badge>;
+  const variant = row.grading === "finalized" ? "success" : row.grading === "partially_graded" ? "brand" : "warning";
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1">
+      <Badge size="sm" variant={variant}>{t(`grading.${row.grading}`)}</Badge>
+      {part === "auto_submitted" && <Badge size="sm" variant="neutral">{t("autoShort")}</Badge>}
+    </span>
+  );
 }
 
 export function ExamResultCenter({ assignmentId }: { assignmentId: string }) {
   const t = useTranslations("examResultCenter");
+  const router = useRouter();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [grading, setGrading] = useState("");
+  const [sort, setSort] = useState<(typeof SORTS)[number]>("rank");
   const [student, setStudent] = useState("");
   const path = `/teacher/exam-assignments/${encodeURIComponent(assignmentId)}/results`;
   const report = useQuery({
-    queryKey: ["exam-result-center", assignmentId, page, search, grading],
-    queryFn: () => api.get<ExamReport>(path, { page, limit: 50, ...(search ? { search } : {}), ...(grading ? { grading } : {}) }),
+    queryKey: ["exam-result-center", assignmentId, page, search, grading, sort],
+    queryFn: () => api.get<ExamReport>(path, { page, limit: 50, sort, ...(search ? { search } : {}), ...(grading ? { grading } : {}) }),
     // Server-derived counts refresh on their own while the exam runs; paused in a hidden tab.
     refetchInterval: query => (query.state.data?.stage === "final" ? false : 20_000),
     refetchIntervalInBackground: false,
@@ -61,117 +60,179 @@ export function ExamResultCenter({ assignmentId }: { assignmentId: string }) {
   const resend = useMutation({ mutationFn: () => api.post<{ queued: number }>(`${path}/resend`, { confirm: true }) });
   const data = report.data;
 
-  if (report.isPending) return <p role="status">{t("loading")}</p>;
-  if (report.isError || !data) return <p role="alert">{t("failed")} <Button size="sm" onClick={() => void report.refetch()}>{t("retry")}</Button></p>;
+  if (report.isPending) return <p role="status" className="p-4">{t("loading")}</p>;
+  if (report.isError || !data) return <p role="alert" className="p-4">{t("failed")} <Button size="sm" onClick={() => void report.refetch()}>{t("retry")}</Button></p>;
   const c = data.counts;
-  const tiles: Array<[string, number]> = [["eligible", c.eligible], ["notStarted", c.notStarted], ["inProgress", c.inProgress],
-    ["submitted", c.submitted], ["autoSubmitted", c.autoSubmitted], ["awaitingGrading", c.awaitingGrading], ["finalized", c.finalized], ["notSubmitted", c.notSubmitted]];
+  const now = new Date(data.generatedAt).getTime();
+  const left = data.stage === "open" ? remaining(data.deadline, now) : null;
+  const rate = completionRate(c);
   const pages = Math.max(1, Math.ceil(data.pagination.total / data.pagination.limit));
+  const stageVariant = data.stage === "final" ? "success" : data.stage === "preliminary" ? "warning" : "info";
+  const openRow = (row: ExamReportRow) => {
+    if (row.attemptId && row.participation !== "in_progress") router.push(`/mock/attempt/${encodeURIComponent(row.attemptId)}`);
+  };
 
   return (
     <div className="space-y-4">
+      <header className="rounded-card border border-border bg-surface p-4 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-fg-muted">{data.groupName} · {t(data.timingPolicy === "fixed_close" ? "fixedClose" : "individual")}</p>
+            <h1 className="mt-0.5 text-xl font-semibold leading-tight text-fg sm:text-2xl">{data.examTitle}</h1>
+            <p className="mt-1 text-sm text-fg-muted">
+              {data.opensAt ? `${t("opens", { when: tashkent(data.opensAt) })} · ` : ""}{t("closes", { when: tashkent(data.deadline) })}
+            </p>
+          </div>
+          <div className="flex flex-col items-end gap-1.5">
+            <Badge data-testid="report-stage" variant={stageVariant}>{t(`stage.${data.stage}`)}</Badge>
+            {left && <span className="text-sm font-semibold tabular-nums text-fg" data-testid="time-left">{t("timeLeft", { left })}</span>}
+            <span className="text-xs text-fg-subtle">{t("updated", { when: tashkent(data.generatedAt) })}</span>
+          </div>
+        </div>
+      </header>
+
+      <section aria-label={t("overview")} className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <StatTile label={t("counts.eligible")} value={c.eligible} hint={t("startedHint", { n: c.eligible - c.notStarted - c.notSubmitted })} />
+        <StatTile label={t("counts.submitted")} value={c.handedIn} hint={t("autoHint", { n: c.autoSubmitted })} />
+        <StatTile label={t("counts.inProgress")} value={c.inProgress} />
+        <StatTile label={t("counts.awaitingGrading")} value={c.awaitingGrading} />
+        <StatTile label={t("counts.finalized")} value={c.finalized} />
+        <StatTile label={t("counts.notSubmitted")} value={c.notSubmitted + c.notStarted} hint={data.stage === "open" ? t("notYet") : undefined} />
+        <StatTile label={t("average")} value={data.stats.average ?? "—"} hint={data.stats.average === null ? t("unavailable") : t("sample", { n: data.stats.sample })} />
+        <StatTile label={t("completion")} value={rate === null ? "—" : `${rate}%`} />
+      </section>
+
+      {data.stage === "open" && <LiveMonitor rows={data.rows} now={now} />}
+
       <Card>
-        <CardHeader>
-          <CardTitle>{data.examTitle} · {data.groupName}</CardTitle>
-          <p className="text-sm text-fg-muted">
-            <span data-testid="report-stage" className="mr-2 rounded bg-surface-muted px-2 py-0.5 font-semibold">{t(`stage.${data.stage}`)}</span>
-            {t("closes", { when: tashkent(data.deadline) })} · {t(data.timingPolicy === "fixed_close" ? "fixedClose" : "individual")} · {t("updated", { when: tashkent(data.generatedAt) })}
-          </p>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
+          <CardTitle>{t("gradebook")}</CardTitle>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline" size="sm"><a href={`/api/backend${path}/excel`} download><FileSpreadsheet />Excel</a></Button>
+            <Button asChild variant="outline" size="sm"><a href={`/api/backend${path}/pdf`} download><FileText />PDF</a></Button>
+            <Button size="sm" variant="outline" disabled={data.stage === "open" || resend.isPending}
+              onClick={() => { if (window.confirm(t("resendConfirm"))) resend.mutate(); }}><Send />{t("resend")}</Button>
+          </div>
         </CardHeader>
-        <CardContent>
-          <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {tiles.map(([key, value]) => (
-              <div className="rounded-md border border-border p-2" key={key}>
-                <dt className="text-xs text-fg-muted">{t(`counts.${key}`)}</dt><dd className="text-xl font-semibold">{value}</dd>
-              </div>
-            ))}
-          </dl>
-          <p className="mt-3 text-sm">{t("average")}: <strong>{data.stats.average ?? t("unavailable")}</strong> (n={data.stats.sample}) · {t("tieNote")}</p>
-        </CardContent>
-      </Card>
-      {data.stage === "open" && <LiveMonitor rows={data.rows} />}
-      <Card>
-        <CardContent className="space-y-3 pt-4">
+        <CardContent className="space-y-3">
           <div className="flex flex-wrap items-end gap-2">
-            <label className="grid gap-1 text-sm">{t("search")}<Input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} maxLength={100} /></label>
+            <label className="grid gap-1 text-sm">{t("search")}<Input className="h-9 w-56" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} maxLength={100} /></label>
             <label className="grid gap-1 text-sm">{t("filter")}
-              <select className="rounded-md border border-border bg-surface p-2" value={grading} onChange={e => { setGrading(e.target.value); setPage(1); }}>
+              <select className="h-9 rounded-field border border-border bg-surface px-2 text-sm" value={grading} onChange={e => { setGrading(e.target.value); setPage(1); }}>
                 <option value="">{t("all")}</option>
                 {["finalized", "partially_graded", "awaiting_teacher_review", "awaiting_assessment", "none"].map(g => <option key={g} value={g}>{t(`grading.${g}`)}</option>)}
               </select>
             </label>
-            <Button asChild variant="outline" size="sm"><a href={`/api/backend${path}/excel`} download>Excel</a></Button>
-            <Button asChild variant="outline" size="sm"><a href={`/api/backend${path}/pdf`} download>PDF</a></Button>
-            <Button size="sm" variant="outline" disabled={data.stage === "open" || resend.isPending}
-              onClick={() => { if (window.confirm(t("resendConfirm"))) resend.mutate(); }}>{t("resend")}</Button>
-            {resend.isSuccess && <span role="status" className="text-sm">{t("resendQueued", { count: resend.data.queued })}</span>}
+            <label className="grid gap-1 text-sm"><span className="inline-flex items-center gap-1"><ArrowDownUp className="size-3.5" aria-hidden />{t("sort")}</span>
+              <select className="h-9 rounded-field border border-border bg-surface px-2 text-sm" value={sort} onChange={e => { setSort(e.target.value as (typeof SORTS)[number]); setPage(1); }}>
+                {SORTS.map(s => <option key={s} value={s}>{t(`sorts.${s}`)}</option>)}
+              </select>
+            </label>
+            {resend.isSuccess && <span role="status" className="text-sm text-success">{t("resendQueued", { count: resend.data.queued })}</span>}
+            {resend.isError && <span role="alert" className="text-sm text-danger">{t("failed")}</span>}
           </div>
-          <Table wrapperClassName="overflow-x-auto">
-            <TableHeader><TableRow>
-              <TableHead>{t("rank")}</TableHead><TableHead>{t("student")}</TableHead>
-              {SKILLS.map(s => <TableHead key={s} numeric>{t(`skill.${s}`)}</TableHead>)}
-              <TableHead numeric>{t("overall")}</TableHead><TableHead numeric>{t("growth")}</TableHead><TableHead>{t("status")}</TableHead><TableHead>{t("submittedAt")}</TableHead>
+          <Table wrapperClassName="max-h-[70vh] overflow-auto rounded-field border border-border" className="text-sm">
+            <TableHeader className="sticky top-0 z-10 bg-surface shadow-[0_1px_0_var(--border)]"><TableRow>
+              <TableHead className="w-14">{t("rank")}</TableHead><TableHead className="min-w-44">{t("student")}</TableHead>
+              {SKILLS.map(s => <TableHead key={s} numeric title={t(`skillFull.${s}`)}>{t(`skill.${s}`)}</TableHead>)}
+              <TableHead numeric>{t("overall")}</TableHead><TableHead numeric>{t("growth")}</TableHead>
+              <TableHead className="min-w-40">{t("status")}</TableHead><TableHead>{t("details")}</TableHead>
             </TableRow></TableHeader>
             <TableBody>
-              {data.rows.map(row => (
-                <TableRow key={row.studentId} data-testid="result-row">
-                  <TableCell>{row.rank ?? "—"}</TableCell>
-                  <TableCell><button type="button" className="text-left underline-offset-2 hover:underline" aria-expanded={student === row.studentId} onClick={() => setStudent(student === row.studentId ? "" : row.studentId)}>{row.name}</button></TableCell>
-                  {SKILLS.map(s => <TableCell key={s} numeric>{scoreCell(row, s, t("pending"))}</TableCell>)}
-                  <TableCell numeric>{overallCell(row, t("pending"))}{row.cefr ? ` (${row.cefr})` : ""}</TableCell>
-                  <TableCell numeric>{row.growth === null ? "—" : row.growth > 0 ? `+${row.growth}` : row.growth}</TableCell>
-                  <TableCell>{t(`participation.${row.participation}`)}{row.participation !== "not_started" && row.participation !== "not_submitted" && row.participation !== "in_progress" ? ` · ${t(`grading.${row.grading}`)}` : ""}</TableCell>
-                  <TableCell>{row.submittedAt ? tashkent(row.submittedAt) : "—"}</TableCell>
-                </TableRow>
-              ))}
+              {data.rows.map(row => {
+                const clickable = Boolean(row.attemptId) && row.participation !== "in_progress";
+                return (
+                  <TableRow key={row.studentId} data-testid="result-row" className={cn(clickable && "cursor-pointer")} onClick={() => openRow(row)}>
+                    <TableCell className="font-semibold tabular-nums">{row.rank ? <span>{MEDALS[row.rank] ? <span aria-hidden className="mr-1">{MEDALS[row.rank]}</span> : null}{row.rank}</span> : "—"}</TableCell>
+                    <TableCell>
+                      <button type="button" className="text-left font-medium text-fg underline-offset-2 hover:underline" aria-expanded={student === row.studentId}
+                        onClick={e => { e.stopPropagation(); setStudent(student === row.studentId ? "" : row.studentId); }}>{row.name}</button>
+                      {row.submittedAt && <span className="block text-xs text-fg-subtle">{tashkent(row.submittedAt)}</span>}
+                    </TableCell>
+                    {SKILLS.map(s => {
+                      const v = scoreCell(row, s, t("pendingShort"));
+                      return <TableCell key={s} numeric className={cn(v === t("pendingShort") && "text-xs font-medium text-warning")} title={v === t("pendingShort") ? t("pending") : undefined}>{v}</TableCell>;
+                    })}
+                    <TableCell numeric className="font-semibold">{overallCell(row, t("pendingShort"))}{row.cefr ? <span className="ml-1 text-xs font-normal text-fg-muted">{row.cefr}</span> : null}</TableCell>
+                    <TableCell numeric className={cn(row.growth !== null && row.growth > 0 && "text-success", row.growth !== null && row.growth < 0 && "text-danger")}>
+                      {row.growth === null ? "—" : row.growth > 0 ? `▲ +${row.growth}` : row.growth < 0 ? `▼ ${row.growth}` : "0"}
+                    </TableCell>
+                    <TableCell><StatusBadge row={row} /></TableCell>
+                    <TableCell>{clickable && row.attemptId
+                      ? <Link onClick={e => e.stopPropagation()} className="text-brand underline-offset-2 hover:underline" href={`/mock/attempt/${encodeURIComponent(row.attemptId)}`}>{t("open")}</Link>
+                      : "—"}</TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>{t("previous")}</Button>
-            <span className="text-sm">{page}/{pages}</span>
-            <Button size="sm" variant="outline" disabled={page >= pages} onClick={() => setPage(page + 1)}>{t("next")}</Button>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>{t("previous")}</Button>
+              <span className="text-sm tabular-nums">{page}/{pages}</span>
+              <Button size="sm" variant="outline" disabled={page >= pages} onClick={() => setPage(page + 1)}>{t("next")}</Button>
+            </div>
+            <p className="text-xs text-fg-muted">{t("tieNote")}</p>
           </div>
           {student && data.groupId && <StudentExamProgress groupId={data.groupId} studentId={student} track={data.scale === "multilevel" ? "multilevel" : "ielts"} />}
-          <p className="text-xs text-fg-muted" data-testid="delivery-status">
-            {t("delivery", { preliminary: data.delivery.preliminaryAt ? tashkent(data.delivery.preliminaryAt) : "—", final: data.delivery.finalAt ? tashkent(data.delivery.finalAt) : "—" })}
-            {data.delivery.messages.slice(0, 3).map(m => ` · ${m.key}: ${m.status}${m.error ? ` (${m.error})` : ""}`).join("")}
-          </p>
+          <DeliveryStatus delivery={data.delivery} />
         </CardContent>
       </Card>
-      {data.groupId && data.scale !== "raw" && <Card id="progress"><CardContent className="pt-4">
+
+      {data.groupId && data.scale !== "raw" && <Card id="progress"><CardContent className="pt-5">
         <GroupExamProgress groupId={data.groupId} track={data.scale === "multilevel" ? "multilevel" : "ielts"} />
       </CardContent></Card>}
     </div>
   );
 }
 
-const STALE_MS = 5 * 60_000;
-/** Last confirmed server activity only; nothing about unsent client state is inferred. */
-export function isStale(lastConfirmedAt: string | null, now: number): boolean {
-  return lastConfirmedAt === null || now - new Date(lastConfirmedAt).getTime() > STALE_MS;
+function DeliveryStatus({ delivery }: { delivery: ExamReport["delivery"] }) {
+  const t = useTranslations("examResultCenter");
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3 text-xs text-fg-muted" data-testid="delivery-status">
+      <span className="font-semibold text-fg">{t("telegram")}</span>
+      <Badge size="sm" variant={delivery.preliminaryAt ? "success" : "outline"}>{t("prelimDelivery", { when: delivery.preliminaryAt ? tashkent(delivery.preliminaryAt) : "—" })}</Badge>
+      <Badge size="sm" variant={delivery.finalAt ? "success" : "outline"}>{t("finalDelivery", { when: delivery.finalAt ? tashkent(delivery.finalAt) : "—" })}{delivery.finalVersion > 1 ? ` · v${delivery.finalVersion}` : ""}</Badge>
+      {delivery.messages.slice(0, 3).map((m, i) => (
+        <Badge key={i} size="sm" variant={m.status === "sent" ? "success" : m.status === "failed" || m.status === "dead" ? "danger" : "neutral"}>
+          {m.key}: {t.has(`deliveryState.${m.status}`) ? t(`deliveryState.${m.status}`) : m.status}{m.error ? ` (${m.error})` : ""}
+        </Badge>
+      ))}
+    </div>
+  );
 }
 
-function LiveMonitor({ rows }: { rows: ExamReportRow[] }) {
+function LiveMonitor({ rows, now }: { rows: ExamReportRow[]; now: number }) {
   const t = useTranslations("examResultCenter");
   const running = rows.filter(r => r.participation === "in_progress" && r.monitor);
-  const [now] = useState(() => Date.now());
-  if (!running.length) return null;
   return (
     <Card data-testid="live-monitor">
-      <CardHeader><CardTitle>{t("monitor")}</CardTitle></CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <CardTitle className="flex items-center gap-2"><RefreshCw className="size-4 text-brand" aria-hidden />{t("monitor")}</CardTitle>
+        <span className="text-xs text-fg-muted">{t("monitorNote")}</span>
+      </CardHeader>
       <CardContent>
-        <Table wrapperClassName="overflow-x-auto">
-          <TableHeader><TableRow><TableHead>{t("student")}</TableHead><TableHead>{t("currentSkill")}</TableHead><TableHead numeric>{t("confirmed")}</TableHead>
-            <TableHead>{t("lastConfirmed")}</TableHead><TableHead numeric>{t("incidents")}</TableHead></TableRow></TableHeader>
-          <TableBody>{running.map(r => (
-            <TableRow key={r.studentId}>
-              <TableCell>{r.name}</TableCell><TableCell>{r.monitor?.currentSkill ?? "—"}</TableCell><TableCell numeric>{r.monitor?.confirmedAnswers ?? 0}</TableCell>
-              <TableCell>{r.monitor?.lastConfirmedAt ? tashkent(r.monitor.lastConfirmedAt) : "—"}{isStale(r.monitor?.lastConfirmedAt ?? null, now) ? ` · ${t("stale")}` : ""}</TableCell>
-              <TableCell numeric>{r.monitor?.incidents ?? 0}</TableCell>
-            </TableRow>))}
-          </TableBody>
-        </Table>
+        {running.length === 0 ? <p className="text-sm text-fg-muted">{t("monitorEmpty")}</p> : (
+          <Table wrapperClassName="overflow-x-auto" className="text-sm">
+            <TableHeader><TableRow><TableHead>{t("student")}</TableHead><TableHead>{t("currentSkill")}</TableHead><TableHead numeric>{t("confirmed")}</TableHead>
+              <TableHead>{t("lastConfirmed")}</TableHead><TableHead>{t("connection")}</TableHead><TableHead numeric>{t("incidents")}</TableHead></TableRow></TableHeader>
+            <TableBody>{running.map(r => {
+              const stale = isStale(r.monitor?.lastConfirmedAt ?? null, now);
+              return (
+                <TableRow key={r.studentId}>
+                  <TableCell className="font-medium">{r.name}</TableCell>
+                  <TableCell className="capitalize">{r.monitor?.currentSkill ?? "—"}</TableCell>
+                  <TableCell numeric>{r.monitor?.confirmedAnswers ?? 0}</TableCell>
+                  <TableCell>{r.monitor?.lastConfirmedAt ? tashkent(r.monitor.lastConfirmedAt) : "—"}</TableCell>
+                  <TableCell><Badge size="sm" variant={stale ? "warning" : "success"}>{t(stale ? "stale" : "active")}</Badge></TableCell>
+                  <TableCell numeric>{r.monitor?.incidents ? <span className="inline-flex items-center gap-1 text-warning"><ShieldAlert className="size-3.5" aria-hidden />{r.monitor.incidents}</span> : 0}</TableCell>
+                </TableRow>
+              );
+            })}</TableBody>
+          </Table>
+        )}
       </CardContent>
     </Card>
   );
 }
+

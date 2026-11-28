@@ -1742,7 +1742,9 @@
       "partQuestions": "{part} savollari",
       "closePalette": "Yopish",
       "passageN": "{n}-matn",
-      "partN": "{n}-qism"
+      "partN": "{n}-qism",
+      "stateSaving": "saqlanmoqda",
+      "legendSaving": "Saqlanmoqda — hali tasdiqlanmagan"
     },
     "advanceConfirm": {
       "title": "Keyingi bo‘limga o‘tasizmi?",
@@ -4389,7 +4391,49 @@
     "incidents": "Nazorat hodisalari",
     "stale": "5+ daqiqa tasdiqlangan faollik yo‘q",
     "progressOf": "Rivojlanishni ko‘rish",
-    "hide": "Yopish"
+    "hide": "Yopish",
+    "opens": "Ochiladi: {when}",
+    "timeLeft": "{left} qoldi",
+    "overview": "Umumiy ko‘rinish",
+    "startedHint": "{n} nafar boshlagan",
+    "autoHint": "{n} tasi avtomatik",
+    "notYet": "imtihon hali ochiq",
+    "sample": "n = {n} yakunlangan",
+    "completion": "Topshirish darajasi",
+    "gradebook": "Baholar jurnali",
+    "sort": "Saralash",
+    "sorts": {
+      "rank": "O‘rin",
+      "overall": "Umumiy",
+      "name": "Ism",
+      "growth": "O‘sish",
+      "submitted": "Topshirilgan"
+    },
+    "skillFull": {
+      "listening": "Listening",
+      "reading": "Reading",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "details": "Batafsil",
+    "open": "Ochish",
+    "pendingShort": "Kutilmoqda",
+    "autoShort": "Avto",
+    "telegram": "Telegram",
+    "prelimDelivery": "Dastlabki: {when}",
+    "finalDelivery": "Yakuniy: {when}",
+    "deliveryState": {
+      "pending": "navbatda",
+      "sending": "yuborilmoqda",
+      "sent": "yuborildi",
+      "failed": "xato",
+      "skipped": "o‘tkazildi",
+      "dead": "yuborilmadi"
+    },
+    "monitorNote": "Server tasdiqlagan ma'lumot · har 20 soniyada yangilanadi",
+    "monitorEmpty": "Hozir hech kim yozmayapti.",
+    "connection": "Faollik",
+    "active": "Faol"
   },
   "examProgress": {
     "loading": "Rivojlanish yuklanmoqda…",
@@ -4411,6 +4455,9 @@
       "reading": "Reading",
       "writing": "Writing",
       "speaking": "Speaking"
-    }
+    },
+    "averageChart": "Imtihonlar bo‘yicha taqqoslanadigan o‘rtacha",
+    "participationChart": "Topshirganlar (jami foizida)",
+    "completionSeries": "Topshirgan %"
   }
 }

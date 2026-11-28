@@ -394,6 +394,9 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
     isMemoryEdit(attempt.id, id, edit)).map(([id]) => id)));
   const [storageUnavailable, setStorageUnavailable] = React.useState(memoryOnly.current.size > 0);
   const [confirmedAnswers, setConfirmedAnswers] = React.useState(initial.ans);
+  // Typed or chosen here but not (yet) echoed by a server receipt: shown as "saving" in the navigator.
+  const unconfirmedQuestions = React.useMemo(() => new Set(Object.keys(answers).filter((id) =>
+    (answers[id] ?? "").trim() !== "" && answers[id] !== (confirmedAnswers[id] ?? ""))), [answers, confirmedAnswers]);
   const [queuedCount, setQueuedCount] = React.useState(edits.current.size);
   const [conflictCount, setConflictCount] = React.useState(0);
   const [submitUnconfirmed, setSubmitUnconfirmed] = React.useState(() => readUnconfirmedSubmit(attempt.id));
@@ -1128,6 +1131,7 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
               audioDurations={audioDurations}
               simulatorMode={simulatorMode}
               flaggedQuestions={flaggedQuestions}
+              unconfirmedQuestions={unconfirmedQuestions}
               onToggleFlag={toggleQuestionFlag}
               onActiveQuestionChange={(number) => {
                 const sectionId = section?.id ?? null;
@@ -1844,7 +1848,7 @@ function GroupBlock({
             )}
             <MatchingOptionBank options={matchingBank} />
             {group.questions.filter((q) => !gapNumbers.has(q.number)).map((q) => (
-              <div key={q.id} id={`q-${q.id}`} className="scroll-mt-[var(--bw-sticky-offset,7rem)]" {...(isWritingSplit ? { "data-testid": "writing-answer-panel" } : {})}>
+              <div key={q.id} id={`q-${q.id}`} data-q-row className="scroll-mt-[var(--bw-sticky-offset,7rem)] [&:has([data-compact-question])]:-my-1.5 [&:has([data-compact-question])]:border-b [&:has([data-compact-question])]:border-border/60" {...(isWritingSplit ? { "data-testid": "writing-answer-panel" } : {})}>
                 <QuestionInput
                   key={q.id}
                   question={q}
@@ -2141,7 +2145,8 @@ function QuestionInput({
         sharedBank={sharedBank}
         headerAction={flagButton}
         // Listening question text can be highlighted and annotated like a Reading passage (kept with the attempt).
-        renderPrompt={multilevelSkill === "listening" ? (text) => <CbtAnnotatedText text={text} storageKey={`${attemptId}.${q.id}.prompt`} /> : undefined}
+        renderPrompt={multilevelSkill === "listening" ? (text, part) => <CbtAnnotatedText inline={part !== undefined} text={text} storageKey={`${attemptId}.${q.id}.prompt${part && part !== "a" ? `.${part}` : ""}`} /> : undefined}
+        compact={multilevelSkill === "listening" || multilevelSkill === "reading"}
       />
     </div>
   );

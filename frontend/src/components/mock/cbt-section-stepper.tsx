@@ -22,6 +22,8 @@ export interface CbtSectionStepperProps {
   audioDurations?: Record<string, number>;
   simulatorMode?: ExamSimulatorMode;
   flaggedQuestions?: Set<string>;
+  /** Answered locally but not yet confirmed by the server (queued or saving). */
+  unconfirmedQuestions?: Set<string>;
   onToggleFlag?: (qid: string) => void;
   onActiveQuestionChange?: (questionNumber: number) => void;
   renderGroupBlock: (
@@ -59,6 +61,7 @@ export function CbtSectionStepper({
   audioSet,
   simulatorMode = "cdi",
   flaggedQuestions: externalFlags,
+  unconfirmedQuestions,
   onToggleFlag: externalToggleFlag,
   onActiveQuestionChange,
   renderGroupBlock,
@@ -238,6 +241,7 @@ export function CbtSectionStepper({
   const paletteButton = (q: (typeof flattenedQuestions)[number], tabStop: string | undefined, onOpen?: () => void) => {
     const isAns = filledPositions(q, answers, audioSet) === objectivePositionCount(q);
     const isFlag = flaggedQuestions.has(q.id);
+    const isPending = isAns && !!unconfirmedQuestions?.has(q.id);
     const isCurrent = q.id === activeQuestionId;
     const isCurrentPart = q.groupIndex === activePartIndex;
     return (
@@ -251,7 +255,7 @@ export function CbtSectionStepper({
         aria-current={isCurrent ? "true" : undefined}
         aria-label={`${t("questionLabel", { label: q.displayLabel, part: q.groupTitle })}, ${
           isAns ? t("stateAnswered") : t("stateNotAnswered")
-        }${isFlag ? `, ${t("stateFlagged")}` : ""}`}
+        }${isPending ? `, ${t("stateSaving")}` : ""}${isFlag ? `, ${t("stateFlagged")}` : ""}`}
         title={`${t("questionLabel", { label: q.displayLabel, part: q.groupTitle })}${
           isAns ? ` - ${t("stateAnswered")}` : ""
         }${isFlag ? ` - ${t("stateFlagged")}` : ""}`}
@@ -271,9 +275,13 @@ export function CbtSectionStepper({
             : "border border-border bg-bg-subtle text-fg-muted hover:text-fg",
           // Flagged keeps its answered / unanswered fill and adds a warning outline and corner mark.
           isFlag && !isDtm && "outline outline-2 -outline-offset-2 outline-warning",
+          // Not yet confirmed by the server: dashed edge and a dot (not colour alone).
+          isPending && "border-2 border-dashed border-brand-fg/80",
         )}
+        data-pending={isPending || undefined}
       >
         {q.displayLabel}
+        {isPending && <span className="absolute bottom-0.5 left-1/2 size-1 -translate-x-1/2 rounded-full bg-current" aria-hidden />}
         {isFlag && <span className="absolute right-0 top-0 size-0 border-l-[10px] border-t-[10px] border-l-transparent border-t-warning" aria-hidden />}
       </button>
     );
@@ -295,6 +303,7 @@ export function CbtSectionStepper({
       <span className="flex items-center gap-1.5"><span className="size-3 rounded-[3px] bg-brand" />{t("legendAnswered")}</span>
       <span className="flex items-center gap-1.5"><span className="size-3 rounded-[3px] border border-border-strong bg-surface outline outline-2 -outline-offset-2 outline-warning" />{t("legendFlagged")}</span>
       <span className="flex items-center gap-1.5"><span className="size-3 rounded-[3px] border border-border-strong bg-surface" />{t("legendUnanswered")}</span>
+      <span className="flex items-center gap-1.5"><span className="size-3 rounded-[3px] border-2 border-dashed border-brand bg-brand/40" />{t("legendSaving")}</span>
     </div>
   );
   const iconButton = "min-h-11 min-w-11 px-2 touch-manipulation md:min-h-10 md:min-w-10";

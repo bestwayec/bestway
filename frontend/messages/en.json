@@ -1742,7 +1742,9 @@
       "partQuestions": "Questions in {part}",
       "closePalette": "Close",
       "passageN": "Passage {n}",
-      "partN": "Part {n}"
+      "partN": "Part {n}",
+      "stateSaving": "saving",
+      "legendSaving": "Saving — not yet confirmed"
     },
     "advanceConfirm": {
       "title": "Move to the next section?",
@@ -4389,7 +4391,49 @@
     "incidents": "Guard events",
     "stale": "no confirmed activity for 5+ min",
     "progressOf": "Show progress",
-    "hide": "Hide"
+    "hide": "Hide",
+    "opens": "Opens {when}",
+    "timeLeft": "{left} left",
+    "overview": "Overview",
+    "startedHint": "{n} started",
+    "autoHint": "{n} auto-submitted",
+    "notYet": "exam still open",
+    "sample": "n = {n} finalized",
+    "completion": "Completion rate",
+    "gradebook": "Gradebook",
+    "sort": "Sort",
+    "sorts": {
+      "rank": "Rank",
+      "overall": "Overall",
+      "name": "Name",
+      "growth": "Growth",
+      "submitted": "Submitted"
+    },
+    "skillFull": {
+      "listening": "Listening",
+      "reading": "Reading",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "details": "Details",
+    "open": "Open",
+    "pendingShort": "Pending",
+    "autoShort": "Auto",
+    "telegram": "Telegram",
+    "prelimDelivery": "Preliminary: {when}",
+    "finalDelivery": "Final: {when}",
+    "deliveryState": {
+      "pending": "queued",
+      "sending": "sending",
+      "sent": "sent",
+      "failed": "failed",
+      "skipped": "skipped",
+      "dead": "failed permanently"
+    },
+    "monitorNote": "Confirmed server data · refreshes every 20 s",
+    "monitorEmpty": "No student is writing right now.",
+    "connection": "Activity",
+    "active": "Active"
   },
   "examProgress": {
     "loading": "Loading progress…",
@@ -4411,6 +4455,9 @@
       "reading": "Reading",
       "writing": "Writing",
       "speaking": "Speaking"
-    }
+    },
+    "averageChart": "Comparable average by exam",
+    "participationChart": "Handed in (% of eligible)",
+    "completionSeries": "Handed in %"
   }
 }

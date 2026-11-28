@@ -30,8 +30,9 @@ export function chartRows(points: Point[]) {
   return points.map(p => ({ label: `${day(p.date)} · ${p.examTitle.slice(0, 18)}`, overall: p.overall, ...p.skills }));
 }
 
-function Chart({ rows, keys, max }: { rows: Array<Record<string, string | number | null>>; keys: Array<Skill | "overall">; max: number }) {
+function Chart({ rows, keys, max, labels }: { rows: Array<Record<string, string | number | null>>; keys: string[]; max: number; labels?: Record<string, string> }) {
   const t = useTranslations("examProgress");
+  const colors: Record<string, string> = { ...COLORS, completion: "var(--brand)" };
   return (
     <div className="h-64 w-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -41,7 +42,7 @@ function Chart({ rows, keys, max }: { rows: Array<Record<string, string | number
           <YAxis domain={[0, max]} tick={{ fontSize: 11, fill: "var(--fg-muted)" }} width={32} />
           <Tooltip contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)" }} />
           <Legend />
-          {keys.map(key => <Line key={key} dataKey={key} name={t(`series.${key}`)} stroke={COLORS[key]} strokeWidth={key === "overall" ? 3 : 1.5}
+          {keys.map(key => <Line key={key} dataKey={key} name={labels?.[key] ?? t(`series.${key}`)} stroke={colors[key]} strokeWidth={key === "overall" || key === "completion" ? 3 : 1.5}
             dot connectNulls={false} isAnimationActive={false} type="monotone" />)}
         </LineChart>
       </ResponsiveContainer>
@@ -58,7 +59,15 @@ export function GroupExamProgress({ groupId, track }: { groupId: string; track: 
   return (
     <section aria-labelledby="group-progress-title" className="space-y-2">
       <h3 id="group-progress-title" className="font-semibold">{t("groupTitle")}</h3>
-      {data.data.history.length < 2 ? <p>{t("insufficient")}</p> : <Chart rows={rows} keys={["overall", "listening", "reading", "writing", "speaking"]} max={track === "multilevel" ? 75 : 9} />}
+      {data.data.history.length < 2 ? <p className="rounded-field border border-dashed border-border p-4 text-sm text-fg-muted">{t("insufficient")}</p> : (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <figure><figcaption className="mb-1 text-sm font-medium text-fg-muted">{t("averageChart")}</figcaption>
+            <Chart rows={rows} keys={["overall", "listening", "reading", "writing", "speaking"]} max={track === "multilevel" ? 75 : 9} /></figure>
+          <figure><figcaption className="mb-1 text-sm font-medium text-fg-muted">{t("participationChart")}</figcaption>
+            <Chart rows={data.data.history.map(h => ({ label: `${day(h.date)} · ${h.title.slice(0, 18)}`, completion: h.completionRate }))}
+              keys={["completion"]} max={100} labels={{ completion: t("completionSeries") }} /></figure>
+        </div>
+      )}
       <ul className="text-sm">
         {data.data.history.map(h => <li key={h.assignmentId}>{day(h.date)} · {h.title}: {t("groupLine", { avg: h.average ?? "—", median: h.median ?? "—", n: h.sample, eligible: h.eligible, rate: h.completionRate ?? "—", pending: h.pending })}</li>)}
       </ul>

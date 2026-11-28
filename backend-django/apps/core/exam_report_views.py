@@ -45,6 +45,15 @@ def exam_results_view(request, assignment_id: str):
     if params.get("search"):
         needle = params["search"][:100].casefold()
         rows = [r for r in rows if needle in r["name"].casefold()]
+    sort = params.get("sort", "rank")
+    if sort == "name":
+        rows = sorted(rows, key=lambda r: r["name"].casefold())
+    elif sort == "overall":
+        rows = sorted(rows, key=lambda r: (r["overall"] is None, -(r["overall"] or 0), r["name"].casefold()))
+    elif sort == "submitted":
+        rows = sorted(rows, key=lambda r: (r["submittedAt"] is None, r["submittedAt"] or 0))
+    elif sort == "growth":
+        rows = sorted(rows, key=lambda r: (r["growth"] is None, -(r["growth"] or 0), r["name"].casefold()))
     try:
         page, limit = max(1, int(params.get("page", 1))), min(200, max(1, int(params.get("limit", 50))))
     except ValueError:

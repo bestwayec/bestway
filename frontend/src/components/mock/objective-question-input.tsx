@@ -9,17 +9,62 @@ import { cn } from "@/lib/utils";
 import { answerRuleHint, isObjectiveChoice, MATCHING_TYPES, objectiveNumberLabel, objectiveOptions, selectedObjectiveOptions, toggleObjectiveOption, type ObjectiveQuestion } from "@/lib/objective-question";
 
 /** Shared objective controls for active attempts and author student previews. */
-export function ObjectiveQuestionInput({ question: q, value, onChange, unavailableOptions = [], disabled = false, renderPrompt, headerAction, sharedBank = false }: {
+/** The first run of 3+ underscores or an ellipsis gap in a prompt: where the answer field belongs. */
+const BLANK = /_{3,}|…{1,}|\.{4,}/;
+
+export function splitAtBlank(prompt: string): [string, string] | null {
+  const match = BLANK.exec(prompt);
+  if (!match) return null;
+  return [prompt.slice(0, match.index), prompt.slice(match.index + match[0].length)];
+}
+
+/**
+ * Compact CBT row for a typed answer (completion / short answer): the number, the original
+ * prompt with the field inline at its blank, and Flag on one line. Many questions stay visible.
+ */
+function CompactTextEntry({ q, value, onChange, disabled, renderPrompt, headerAction, numberLabel, hint }: {
+  q: ObjectiveQuestion; value: string; onChange: (value: string) => void; disabled: boolean;
+  renderPrompt?: (text: string, part?: string) => React.ReactNode; headerAction?: React.ReactNode; numberLabel: string; hint: string | null;
+}) {
+  const t = useTranslations("mock.runnerUx");
+  const answered = !!value.trim();
+  const prompt = (q.prompt ?? "").trim();
+  const parts = splitAtBlank(prompt);
+  const text = (chunk: string, part: string) => (renderPrompt ? renderPrompt(chunk, part) : chunk);
+  const field = (
+    <Input value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled}
+      aria-label={t("answerFor", { number: numberLabel })} aria-describedby={hint ? `hint-${q.id}` : undefined}
+      autoComplete="off" spellCheck={false} data-compact-answer
+      className={cn("mx-1 inline-flex h-8 min-h-8 w-40 max-w-full px-2 py-0 align-baseline text-base sm:w-48", answered && "border-brand/60")} />
+  );
+  return (
+    <div className="flex items-start gap-2.5 py-2" data-compact-question data-answered={answered || undefined}>
+      <span className={cn("mt-0.5 grid h-7 min-w-7 shrink-0 place-items-center rounded-field px-1 text-sm font-bold tabular-nums",
+        answered ? "bg-brand text-brand-fg" : "border border-border-strong bg-bg-subtle text-fg")}>
+        {numberLabel}<span className="sr-only">{answered ? ` — ${t("answerEntered")}` : ""}</span>
+      </span>
+      <div className="min-w-0 flex-1 whitespace-pre-line text-base leading-9 text-fg">
+        {parts ? <>{text(parts[0], "a")}{field}{text(parts[1], "b")}</> : <>{prompt && <>{text(prompt, "a")} </>}{field}</>}
+        {hint && <span id={`hint-${q.id}`} className="ml-2 whitespace-nowrap align-baseline text-xs leading-none text-fg-muted">{hint}</span>}
+      </div>
+      {headerAction}
+    </div>
+  );
+}
+
+export function ObjectiveQuestionInput({ question: q, value, onChange, unavailableOptions = [], disabled = false, renderPrompt, headerAction, sharedBank = false, compact = false }: {
   question: ObjectiveQuestion;
   value: string;
   onChange: (value: string) => void;
   unavailableOptions?: string[];
   disabled?: boolean;
   /** Lets the exam window make the question text highlightable (Listening). */
-  renderPrompt?: (text: string) => React.ReactNode;
+  renderPrompt?: (text: string, part?: string) => React.ReactNode;
   /** Beside the question number, at the end of the first row (the exam window's Flag). */
   headerAction?: React.ReactNode;
   sharedBank?: boolean;
+  /** Exam window: typed answers render as compact inline rows instead of cards. */
+  compact?: boolean;
 }) {
   const t = useTranslations("mock.runnerUx");
   const numberLabel = objectiveNumberLabel(q);
@@ -29,6 +74,10 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
   const hint = answerRuleHint(q);
   const hasResponse = multiple ? selected.length > 0 : !!value.trim();
   const isShortOptions = options.length >= 4 && options.every((o) => o.trim().length <= 3);
+  if (compact && !sharedBank && !isObjectiveChoice(q)) {
+    return <CompactTextEntry q={q} value={value} onChange={onChange} disabled={disabled} renderPrompt={renderPrompt}
+      headerAction={headerAction} numberLabel={numberLabel} hint={hint} />;
+  }
 
   return (
     <div className={cn("space-y-2 rounded-card border p-3 transition-colors duration-fast sm:p-4", hasResponse ? "border-brand/35 bg-brand-subtle/30" : "border-border bg-surface")}>

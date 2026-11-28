@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { scoreCell, type ExamReportRow } from "./exam-result-center";
+import { scoreCell, type ExamReportRow } from "./exam-result-helpers";
 
 const row = (over: Partial<ExamReportRow>): ExamReportRow => ({
   studentId: "s", name: "Student 01", attemptId: "a", participation: "submitted", grading: "partially_graded",
@@ -19,7 +19,7 @@ describe("Result Center score cells", () => {
   });
 });
 
-import { isStale } from "./exam-result-center";
+import { isStale } from "./exam-result-helpers";
 import { chartRows } from "./exam-progress-charts";
 
 describe("monitor freshness and progress rows", () => {
@@ -37,7 +37,7 @@ describe("monitor freshness and progress rows", () => {
   });
 });
 
-import { overallCell } from "./exam-result-center";
+import { overallCell } from "./exam-result-helpers";
 
 describe("overall cell", () => {
   const base = { studentId: "s", name: "n", attemptId: null, scores: { listening: null, reading: null, writing: null, speaking: null },
@@ -48,5 +48,15 @@ describe("overall cell", () => {
   it("labels an awaited subjective grade as pending and shows a final value", () => {
     expect(overallCell({ ...base, participation: "submitted", grading: "awaiting_teacher_review" }, "pending")).toBe("pending");
     expect(overallCell({ ...base, participation: "submitted", grading: "finalized", overall: 6.5 }, "pending")).toBe("6.5");
+  });
+});
+
+import { completionRate } from "./exam-result-helpers";
+
+describe("completion rate", () => {
+  it("is unavailable with no eligible students and rounds otherwise", () => {
+    const zero = { eligible: 0, notStarted: 0, inProgress: 0, submitted: 0, autoSubmitted: 0, notSubmitted: 0, handedIn: 0, awaitingGrading: 0, finalized: 0 };
+    expect(completionRate(zero)).toBeNull();
+    expect(completionRate({ ...zero, eligible: 3, handedIn: 2 })).toBe(67);
   });
 });

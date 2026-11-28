@@ -27,6 +27,8 @@ interface CbtAnnotatedTextProps {
   storageKey: string;
   className?: string;
   fontSize?: number | string;
+  /** Render inside a line of text (Listening prompt split around an inline answer field). */
+  inline?: boolean;
 }
 
 export const CBT_ANNOTATIONS_UPDATED_EVENT = "cbt-annotations-updated";
@@ -217,6 +219,7 @@ export function CbtAnnotatedText({
   storageKey,
   className,
   fontSize,
+  inline = false,
 }: CbtAnnotatedTextProps) {
   const t = useTranslations("mock.textTools");
   const [annotations, setAnnotations] = React.useState<CbtAnnotations>(() =>
@@ -482,7 +485,7 @@ export function CbtAnnotatedText({
   return (
     <div
       ref={containerRef}
-      className={cn("relative select-text", className)}
+      className={cn("relative select-text", inline && "inline", className)}
       style={fontSize ? { fontSize } : undefined}
       onMouseUp={() => {
         window.setTimeout(handleSelection, 20);
@@ -644,7 +647,7 @@ export function CbtAnnotatedText({
       )}
 
       {/* Paragraphs rendering */}
-      <div className="space-y-3">
+      <div className={inline ? "inline" : "space-y-3"}>
         {paragraphs.map((para, pIdx) => {
           const segments = buildSegments(
             para,
@@ -657,7 +660,7 @@ export function CbtAnnotatedText({
           );
 
           return (
-            <p key={pIdx} className="leading-relaxed">
+            <p key={pIdx} className={inline ? "inline" : "leading-relaxed"}>
               {segments.map((seg, sIdx) => {
                 let content: React.ReactNode = seg.text;
 

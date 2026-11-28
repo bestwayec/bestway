@@ -187,7 +187,7 @@ function ScheduledListeningAudio({
     : null;
 
   return (
-    <div className="mt-3 space-y-2 rounded-field border border-border bg-bg-subtle p-3" data-testid="listening-scheduled">
+    <div className="mt-2 rounded-field border border-border bg-bg-subtle px-3 py-2" data-testid="listening-scheduled">
       {objectUrl && (
         <audio
           ref={audioRef}
@@ -199,7 +199,7 @@ function ScheduledListeningAudio({
           <track kind="captions" />
         </audio>
       )}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         {!schedule ? (
           <Button size="sm" onClick={begin} disabled={busy}>
             <Play />
@@ -234,8 +234,10 @@ function ScheduledListeningAudio({
           <span className="ml-auto text-sm font-semibold tabular-nums" aria-live="polite">{t("listeningReview", { time: fmt(reviewLeft) })}</span>
         )}
         {reviewLeft === 0 && <span className="ml-auto text-sm font-semibold text-warning">{t("listeningReviewOver")}</span>}
+        {!schedule && (failed
+          ? <p role="alert" className="min-w-0 basis-full text-xs font-medium text-danger">{t("listeningStartFailed")}</p>
+          : <p className="min-w-0 flex-1 basis-72 text-xs leading-snug text-fg-muted">{t("listeningRulesScheduled")}</p>)}
       </div>
-      {!schedule && <p className="text-xs text-fg-muted">{failed ? t("listeningStartFailed") : t("listeningRulesScheduled")}</p>}
     </div>
   );
 }
@@ -422,7 +424,7 @@ function PlainListeningAudio({
   }
 
   return (
-    <div className="mt-3 space-y-2 rounded-field border border-border bg-bg-subtle p-3">
+    <div className="mt-2 space-y-1.5 rounded-field border border-border bg-bg-subtle px-3 py-2">
       {/* Hidden audio: no native controls → no pause/seek UI. Volume via control below. */}
       <audio
         ref={audioRef}
