@@ -208,6 +208,29 @@ try:
     sub_c = HomeworkSubmission.objects.get(assignment_id=third.data['data']['id'], student_id=c.id)
     check(sub_c.status == 'graded' and sub_c.score_percent == 0, 'an empty auto hand-in is a real 0% (not missing), because the student started')
 
+    # Grace: objective-only attempts close after 60 s; Speaking keeps the 6-minute upload recovery window.
+    from apps.legacy_schema.models import MockSection
+    exam5, _ = fx.reading_exam()
+    exam6, _ = fx.reading_exam()
+    MockSection.objects.create(id=str(__import__('uuid').uuid4()), exam_id=exam6, skill='speaking', title='Speaking', sort_order=1, duration_minutes=14)
+    fifth = t.post(f'/v1/groups/{gid}/assignments', {'title': 'Objective', 'exam_id': exam5, 'deadline': (timezone.now() + timedelta(hours=1)).isoformat()}, format='json')
+    sixth = t.post(f'/v1/groups/{gid}/assignments', {'title': 'Speaking', 'exam_id': exam6, 'deadline': (timezone.now() + timedelta(hours=1)).isoformat()}, format='json')
+    att_o = start(a, exam5, fifth.data['data']['id'])
+    att_s = start(b, exam6, sixth.data['data']['id'])
+    from apps.core.mock_practice import SCOPE_KEY
+    row_s = MockAttempt.objects.get(id=att_s)
+    state = dict(row_s.media_state)
+    state[SCOPE_KEY] = dict(state[SCOPE_KEY], skills=['reading', 'speaking'])
+    MockAttempt.objects.filter(id=att_s).update(media_state=state)   # Speaking in this attempt's scope
+    expire(att_o, timedelta(minutes=2))
+    expire(att_s, timedelta(minutes=2))
+    mock_deadline.sweep()
+    check(MockAttempt.objects.get(id=att_o).status != 'in_progress', 'an objective-only attempt is handed in 60 s after its deadline')
+    check(MockAttempt.objects.get(id=att_s).status == 'in_progress', 'an attempt with Speaking keeps the 6-minute upload recovery grace')
+    expire(att_s, timedelta(minutes=7))
+    mock_deadline.sweep()
+    check(MockAttempt.objects.get(id=att_s).status != 'in_progress', 'the Speaking attempt is handed in after its grace')
+
     # Untimed legacy attempt linked to a closed assignment does not stay open forever.
     exam4, _ = fx.reading_exam()
     fourth = t.post(f'/v1/groups/{gid}/assignments', {'title': 'Legacy', 'exam_id': exam4,

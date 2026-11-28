@@ -46,6 +46,28 @@ def grace():
         return timedelta(seconds=360)
 
 
+def objective_grace():
+    """Grace for attempts with no Speaking in scope: only a racing Finish needs time (answers
+    after the deadline are already rejected), so these close sooner than Speaking attempts."""
+    try:
+        return min(grace(), timedelta(seconds=max(0, int(os.environ.get('EXAM_AUTO_SUBMIT_OBJECTIVE_GRACE_SECONDS', '60')))))
+    except ValueError:
+        return min(grace(), timedelta(seconds=60))
+
+
+def has_speaking(attempt):
+    """Speaking in this attempt's scope keeps the full upload-recovery grace."""
+    from apps.legacy_schema.models import MockSection
+    from .mock_practice import is_partial, scope
+    if is_partial(attempt):
+        return 'speaking' in ((scope(attempt) or {}).get('skills') or [])
+    return MockSection.objects.filter(exam_id=attempt.exam_id, skill='speaking').exists()
+
+
+def attempt_grace(attempt):
+    return grace() if has_speaking(attempt) else objective_grace()
+
+
 NO_DEADLINE_CAP = timedelta(hours=3)
 BATCH = 50
 
@@ -59,7 +81,7 @@ def closing_time(attempt, assignments=None):
     """When the server may hand the attempt in, or None while it may still run."""
     deadline = own_deadline(attempt)
     if deadline is not None:
-        return deadline + grace() if attempt.mode == 'timed' else None
+        return deadline + attempt_grace(attempt) if attempt.mode == 'timed' else None
     assignment_id = (attempt.media_state or {}).get(ASSIGNMENT_KEY)
     if not assignment_id:
         return None
@@ -72,7 +94,7 @@ def closing_time(attempt, assignments=None):
 
 def candidates(now, limit=BATCH):
     """Bounded list of expired in-progress attempt ids, oldest deadline first."""
-    cutoff = now - grace()
+    cutoff = now - objective_grace()   # finalize() re-checks the attempt's own grace
     timed = list(MockAttempt.objects.filter(status='in_progress', mode='timed')
                  .annotate(close=Coalesce('overall_deadline_at', 'deadline_at'))
                  .filter(close__lt=cutoff).order_by('close').values_list('id', flat=True)[:limit])
