@@ -36,6 +36,12 @@ Branch: `feat/bestway-51-exam-monitoring-results` (mirrors the session branch `c
 | C1.4 | Scheduled Listening: buffering, load failure and retry states; retry rejoins the server clock (no restart, no extra play) | DONE | `listening-engine.tsx` |
 | C1.5 | Calm save status: "saving" shown only when a save lasts >0.7 s; offline label says where edits are kept; hand-in / handed-in / locked states; never "saved" without a receipt | DONE | `useCalmSaveState`, `saveLabelKey` |
 | C1.6 | After the server deadline: answer controls disabled in place, "Time is up" chip instead of a stopped clock, finalizing / next-section / Speaking-upload notice | DONE | `mock-runner.tsx` |
+| C2.2 | Exam Settings 2.0 (extends the existing settings): theme (as site / light / dark), comfortable line spacing, reduce motion, strong focus outline, Restore defaults (also resets Reading/Writing panel widths and volume); 5.0 settings load unchanged; applied as classes in place (no remount) | DONE | `lib/exam-settings.ts`, `exam-toolbar.tsx`, `globals.css` |
+| C2.3 | Smart navigator: All / Unanswered / Answered / Flagged / Not yet saved filters with counts in the overview; states independent; `O` opens the overview; jump-to-question event | DONE | `cbt-section-stepper.tsx`, `cbt2-phase2.spec.ts` |
+| C2.4 | Shortcut help lists the new `O` key; existing typing/IME guard reused unchanged | DONE | `runner-shortcuts.tsx` |
+| C2.7 | Task pictures (charts, maps, diagrams): accessible Enlarge dialog using the same protected file | DONE | `group-image.tsx` |
+| C2.9 | Submission review: unanswered and flagged numbers of still-open sections only (tap to jump), Writing tasks answered, Speaking recordings held by the server, unsynchronised / offline warning | DONE | `lib/submit-review.ts`, `submit-confirm-modal.tsx` |
+| C2.6 | Reading passage scroll restore, split preference persistence | ALREADY PRESENT (reused, not duplicated) | `mock-runner.tsx` `readingPositionKey` |
 
 ## Last verified tests
 See the test report (final cumulative cycle run on the final head).

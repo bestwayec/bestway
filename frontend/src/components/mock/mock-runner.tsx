@@ -77,7 +77,7 @@ import { SubmitConfirmModal } from "./submit-confirm-modal";
 import { AdvanceConfirmModal } from "./advance-confirm-modal";
 import { clipboardDecision, countWords, suggestedWritingMinutes, WRITING_AREA_ATTRIBUTE } from "@/lib/writing-rules";
 import { ExamToolbar, type ExamToolbarHandle } from "./exam-toolbar";
-import { COLOUR_CLASS, DEFAULT_EXAM_SETTINGS, EXAM_VOLUME_EVENT, loadExamSettings, saveExamSettings, TEXT_ZOOM, timerAlert, timerTone, type ExamSettings } from "@/lib/exam-settings";
+import { examSettingsClasses, DEFAULT_EXAM_SETTINGS, EXAM_VOLUME_EVENT, loadExamSettings, saveExamSettings, TEXT_ZOOM, timerAlert, timerTone, type ExamSettings } from "@/lib/exam-settings";
 import { readLocal, resolveOnOpen, toDocument, touchLocal } from "@/lib/exam-workspace";
 import { ExamNotesPanel } from "./exam-notes-panel";
 import { VocabLookup, VOCAB_TEXT_ATTRIBUTE } from "./vocab-lookup";
@@ -90,6 +90,8 @@ import {
   type AnswerEdit, type AnswerReceipt, type QueuedAnswer,
 } from "@/lib/answer-queue";
 import { AnswerQueueBanner } from "./answer-queue-banner";
+import { submitReview } from "@/lib/submit-review";
+import { requestQuestionJump } from "./cbt-section-stepper";
 import { ApiError } from "@/lib/api-client";
 import { installHaptics } from "@/lib/haptics";
 import { WritingImageOcr } from "./writing-image-ocr";
@@ -842,6 +844,12 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
 
   const answered = exam ? countAnswered(exam, answers, audioSet) : 0;
   const timeUp = remaining != null && remaining <= 0;
+  // Submission review: only sections the student may still open (a full test has closed earlier ones).
+  const reviewData = showSubmitConfirm && exam ? submitReview(
+    exam.sections,
+    new Set(isSingleSection ? exam.sections.slice(0, 1).map((item) => item.skill) : lockedSection && attempt.currentSkill ? [attempt.currentSkill as MockSkill] : exam.sections.map((item) => item.skill)),
+    answers, audioSet, flaggedQuestions, (item) => item.title || t(`skills.${item.skill}`),
+  ) : null;
   // What the header says about saving: never "saved" without a receipt; unsynchronised edits stay visible after time is up.
   const shownSaveState: DisplaySaveState = submit.isPending ? "submitting"
     : isSubmitted(attempt.status) ? "submitted"
@@ -923,7 +931,7 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
   const showQuestionPosition = Boolean(section) && !guidedMultilevel;
   const activeTask = section?.skill === "writing" || section?.skill === "speaking" ? activeTaskBySkill[section.skill] ?? 0 : 0;
 
-  const contrastClasses = COLOUR_CLASS[examSettings.colours];
+  const contrastClasses = examSettingsClasses(examSettings);
   // Index of the last Listening part that has a recording (all parts share one recording when a single audio is used).
   const listeningGroups = section?.skill === "listening"
     ? examContentUnits(section.groups ?? [], "listening", exam?.type !== "multilevel").map((unit) => unit.source) : [];
@@ -1318,6 +1326,19 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
           flaggedCount={flaggedQuestions.size}
           isSingleSection={isSingleSection}
           skillName={targetSkill}
+          unansweredItems={reviewData?.unanswered}
+          flaggedItems={reviewData?.flagged}
+          writing={reviewData?.writing}
+          speaking={reviewData?.speaking}
+          pendingSaves={queuedCount}
+          offline={saveState === "offline"}
+          onJump={(item) => {
+            setShowSubmitConfirm(false);
+            const index = exam.sections.findIndex((candidate) => candidate.skill === item.skill);
+            if (index >= 0 && index !== activeSection && !lockedSection) { flush(); setActiveSection(index); }
+            // The navigator of the (re)opened section listens for the jump once it is on screen.
+            window.setTimeout(() => requestQuestionJump(item.id), 150);
+          }}
         />
       </div>
     </ExamLocker>

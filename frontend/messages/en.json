@@ -1624,7 +1624,9 @@
       "timeUpTitle": "Time is up. Your answers are locked.",
       "timeUpFinalizing": "Your saved responses are being handed in. Keep this page open until the confirmation appears; answers that were not saved to the server before the deadline are not counted.",
       "timeUpNextSection": "This section has closed. Moving to the next section…",
-      "timeUpSpeaking": "No new recordings can start. A recording that already finished is still being uploaded within the permitted time; keep this page open."
+      "timeUpSpeaking": "No new recordings can start. A recording that already finished is still being uploaded within the permitted time; keep this page open.",
+      "pictureEnlarge": "Enlarge picture: {name}",
+      "pictureEnlargeShort": "Enlarge"
     },
     "title": "Mock exams",
     "partialPracticeResult": "Selected task practice result",
@@ -1753,7 +1755,18 @@
       "passageN": "Passage {n}",
       "partN": "Part {n}",
       "stateSaving": "saving",
-      "legendSaving": "Saving — not yet confirmed"
+      "legendSaving": "Saving — not yet confirmed",
+      "filterLabel": "Show questions",
+      "filter_all": "All",
+      "filter_unanswered": "Unanswered",
+      "filter_answered": "Answered",
+      "filter_flagged": "Flagged",
+      "filter_pending": "Not yet saved",
+      "filterEmpty_all": "This section has no questions.",
+      "filterEmpty_unanswered": "Every question has an answer.",
+      "filterEmpty_answered": "No answers yet.",
+      "filterEmpty_flagged": "No flagged questions.",
+      "filterEmpty_pending": "Every answer has reached the server."
     },
     "advanceConfirm": {
       "title": "Move to the next section?",
@@ -1877,7 +1890,14 @@
       "answeredCard": "Answered",
       "unansweredCard": "Unanswered",
       "flaggedCard": "Flagged",
-      "flaggedNotice": "You have {count} flagged questions for review."
+      "flaggedNotice": "You have {count} flagged questions for review.",
+      "writingDone": "Writing: {done} of {total} tasks answered",
+      "speakingDone": "Speaking: {done} of {total} recordings received by the server",
+      "pendingSaves": "{count, plural, one {# answer has} other {# answers have}} not reached the server yet. Wait for “Saved to server”, or it will not be counted.",
+      "pendingOffline": "You are offline. {count, plural, one {# answer is} other {# answers are}} kept only on this device and cannot be handed in until the connection returns.",
+      "unansweredList": "Unanswered — tap to open",
+      "flaggedList": "Flagged for review",
+      "jumpHint": "Only sections that are still open are listed."
     },
     "resumeDialog": {
       "title": "Which section do you want to continue?",
@@ -2030,7 +2050,20 @@
       "listeningBuffering": "Buffering… the recording continues on the exam clock",
       "listeningLoadingMedia": "Loading the recording…",
       "listeningMediaFailed": "The recording could not be loaded on this device. Retry; it rejoins at the exam clock and does not start again. If it keeps failing, tell your teacher.",
-      "listeningRetry": "Retry"
+      "listeningRetry": "Retry",
+      "theme": "Theme",
+      "theme_site": "As the site",
+      "theme_light": "Light",
+      "theme_dark": "Dark",
+      "lineSpacing": "Line spacing",
+      "lineSpacing_normal": "Standard",
+      "lineSpacing_relaxed": "Comfortable",
+      "reduceMotion": "Reduce motion",
+      "reduceMotionHint": "No animations or smooth scrolling in the exam window.",
+      "strongFocus": "Strong focus outline",
+      "strongFocusHint": "A thick outline shows where the keyboard is.",
+      "restoreHint": "Text size, colours, theme, spacing, volume and panel widths. Your answers and the time are not affected.",
+      "restoreDefaults": "Restore defaults"
     },
     "textTools": {
       "toolbar": "Text tools",
@@ -2185,7 +2218,8 @@
       "flag": "Flag or unflag the question",
       "highlight": "Highlight the selected text",
       "help": "Show this list",
-      "close": "Close a dialog or panel"
+      "close": "Close a dialog or panel",
+      "overview": "Open the question overview"
     },
     "ocr": {
       "zoomTitle": "Handwritten page (enlarged)",
