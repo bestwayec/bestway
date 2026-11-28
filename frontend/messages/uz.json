@@ -1873,7 +1873,10 @@
       "internalCertificate": "BestWay ichki natija (PDF)",
       "disclosureLockedTitle": "To'g'ri javoblar va skriptlar vaqtincha yopiq",
       "disclosureLockedDeadline": "To'g'ri javoblar, audio skriptlar va tahlillar {date} dan keyin yoki barcha guruh o'quvchilari topshirgach ochiladi.",
-      "disclosureLockedGroup": "To'g'ri javoblar, audio skriptlar va tahlillar guruh muddati tugagach yoki barcha o'quvchilar topshirgach ochiladi."
+      "disclosureLockedGroup": "To'g'ri javoblar, audio skriptlar va tahlillar guruh muddati tugagach yoki barcha o'quvchilar topshirgach ochiladi.",
+      "mistakesSummary": "Listening va Reading’da {count} ta savol xato yoki javobsiz qoldi.",
+      "reviewMistakes": "Xatolarimni ko‘rib chiqish",
+      "showAllAnswers": "Barcha javoblarni ko‘rsatish"
     },
     "submitDialog": {
       "title": "Imtihonni topshirish",
@@ -2156,7 +2159,9 @@
       "state_pending": "Hali tekshirilmagan",
       "where": "Javob qayerda?",
       "whereFor": "{number}-savol javobi qayerda?",
-      "revealed": "javob ko'rsatilgan"
+      "revealed": "javob ko'rsatilgan",
+      "filter_mistakes": "Xatolarim ({count})",
+      "empty_mistakes": "Bu yerda xato yo‘q — barcha javoblar to‘g‘ri."
     },
     "reviewExplain": {
       "passageLabel": "Javobi ajratilgan matn",
@@ -4532,7 +4537,15 @@
     "monitorNote": "Server tasdiqlagan ma'lumot · har 20 soniyada yangilanadi",
     "monitorEmpty": "Hozir hech kim yozmayapti.",
     "connection": "Faollik",
-    "active": "Faol"
+    "active": "Faol",
+    "pendingTitle": "Ushbu sahifada {count} ta o‘quvchi Writing/Speaking baholashingizni kutmoqda",
+    "gradeNext": "Keyingisini baholash: {name}",
+    "monitorInProgress": "{n} ta jarayonda",
+    "monitorQuiet": "{n} tasida yaqinda tasdiqlangan javob yo‘q",
+    "monitorIncidents": "{n} tasida qayd etilgan holatlar bor",
+    "monitorAttentionOnly": "Faqat e’tibor talab qilganlar",
+    "monitorHonesty": "Server tasdiqlagan javoblarga asoslanadi. Jim o‘quvchi o‘qiyotgan yoki yozayotgan bo‘lishi mumkin — bu aloqa uzilganining isboti emas; holatlar jazo emas, kuzatuvdir.",
+    "minutesAgo": "{n} daqiqa oldin"
   },
   "examProgress": {
     "loading": "Rivojlanish yuklanmoqda…",

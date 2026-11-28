@@ -68,6 +68,15 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
   const grade = useGradeMock(attempt.id);
   const [certModalOpen, setCertModalOpen] = React.useState(false);
   const [feedbackModalOpen, setFeedbackModalOpen] = React.useState(false);
+  // Personal mistake review: the student's own wrong and unanswered objective answers of this attempt.
+  const [reviewMode, setReviewMode] = React.useState<"all" | "mistakes">(() => {
+    try { return typeof window !== "undefined" && new URLSearchParams(window.location.search).get("review") === "mistakes" ? "mistakes" : "all"; }
+    catch { return "all"; }
+  });
+  const mistakeCount = attempt.status === "completed" || attempt.status === "grading"
+    ? attempt.sections.filter((section) => !MANUAL_SKILLS.has(section.skill))
+      .reduce((total, section) => { const counts = objectiveReviewCounts(section.groups); return total + counts.wrong + counts.unanswered; }, 0)
+    : 0;
 
   const isIelts = attempt.examType !== "multilevel";
   const completed = attempt.status === "completed";
@@ -403,6 +412,15 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
           </p>
         </Card>
       )}
+      {mistakeCount > 0 && (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-2 rounded-card border border-border bg-surface px-4 py-3" data-testid="mistake-review">
+          <p className="text-sm text-fg">{t("resultView.mistakesSummary", { count: mistakeCount })}</p>
+          <Button type="button" size="sm" variant={reviewMode === "mistakes" ? "subtle" : "outline"} aria-pressed={reviewMode === "mistakes"}
+            onClick={() => setReviewMode((mode) => (mode === "mistakes" ? "all" : "mistakes"))}>
+            {t(reviewMode === "mistakes" ? "resultView.showAllAnswers" : "resultView.reviewMistakes")}
+          </Button>
+        </div>
+      )}
       <div className="mt-6 space-y-4">
         {attempt.sections.map((s) => {
           const canGrade = isStaff && MANUAL_SKILLS.has(s.skill);
@@ -410,7 +428,8 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
           if (!MANUAL_SKILLS.has(s.skill)) {
             return (
               <ResultReviewTable
-                key={s.id}
+                key={`${s.id}-${reviewMode}`}
+                initialFilter={reviewMode}
                 title={t(`skills.${s.skill}`)}
                 skill={s.skill}
                 groups={s.groups}

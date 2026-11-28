@@ -42,6 +42,12 @@ Branch: `feat/bestway-51-exam-monitoring-results` (mirrors the session branch `c
 | C2.7 | Task pictures (charts, maps, diagrams): accessible Enlarge dialog using the same protected file | DONE | `group-image.tsx` |
 | C2.9 | Submission review: unanswered and flagged numbers of still-open sections only (tap to jump), Writing tasks answered, Speaking recordings held by the server, unsynchronised / offline warning | DONE | `lib/submit-review.ts`, `submit-confirm-modal.tsx` |
 | C2.6 | Reading passage scroll restore, split preference persistence | ALREADY PRESENT (reused, not duplicated) | `mock-runner.tsx` `readingPositionKey` |
+| C3.2 | Pre-publication checks added to the builder's Review panel: duplicate question identifiers, answer keys the scorer could never match (same rule as `mock_rules.choice_index`), T/F/NG and Y/N/NG keys (same canonical form as the scorer), more answers than options, gap placeholders without a question / used twice, completion questions without a gap, numbering holes, missing instructions, IELTS Task 1 without its visual. Nothing is invented or auto-fixed | DONE | `exam-builder/checks.ts`, `publication-checks.spec.ts` |
+| C3.3/3.4 | Result review: "My mistakes" filter (wrong + unanswered, never pending marks), mistake summary with "Review my mistakes" (`?review=mistakes`); keys still only when the server discloses them | DONE | `result-review-table.tsx`, `mock-result-view.tsx` |
+| C3.5 | Live monitor: in-progress / quiet / incident counts, "only those needing a look" filter, minutes since the last confirmed answer, explicit note that quiet ≠ disconnected and incidents ≠ penalties | DONE | `exam-result-center.tsx`, `exam-control-center.spec.ts` |
+| C3.6 | Assessment queue on the Result Center: pending Writing/Speaking students on the page and "Assess next" into the existing teacher-only grading view | DONE | same |
+| C3.1 | Builder student preview: existing production renderers reused; a phone-width preview was NOT added (the runner uses viewport breakpoints, so a narrowed box would show a misleading desktop layout) | NOT DONE — limitation | — |
+| C3.8 | Telegram reports, `/exams` menu and outbox untouched | PRESERVED | — |
 
 ## Last verified tests
 See the test report (final cumulative cycle run on the final head).

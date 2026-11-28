@@ -1873,7 +1873,10 @@
       "internalCertificate": "BestWay internal result (PDF)",
       "disclosureLockedTitle": "Answer key & scripts temporarily withheld",
       "disclosureLockedDeadline": "Correct answers, audio scripts, and model explanations unlock on {date} or once all group students submit.",
-      "disclosureLockedGroup": "Correct answers, audio scripts, and model explanations unlock after the group deadline or once all classmates submit."
+      "disclosureLockedGroup": "Correct answers, audio scripts, and model explanations unlock after the group deadline or once all classmates submit.",
+      "mistakesSummary": "{count, plural, one {# question was} other {# questions were}} wrong or left unanswered in Listening and Reading.",
+      "reviewMistakes": "Review my mistakes",
+      "showAllAnswers": "Show all answers"
     },
     "submitDialog": {
       "title": "Finish the exam",
@@ -2156,7 +2159,9 @@
       "state_pending": "Not marked yet",
       "where": "Where is the answer?",
       "whereFor": "Where is the answer to question {number}?",
-      "revealed": "answer shown"
+      "revealed": "answer shown",
+      "filter_mistakes": "My mistakes ({count})",
+      "empty_mistakes": "No mistakes here — every answer was correct."
     },
     "reviewExplain": {
       "passageLabel": "Passage with the answer highlighted",
@@ -4532,7 +4537,15 @@
     "monitorNote": "Confirmed server data · refreshes every 20 s",
     "monitorEmpty": "No student is writing right now.",
     "connection": "Activity",
-    "active": "Active"
+    "active": "Active",
+    "pendingTitle": "{count, plural, one {# student on this page awaits} other {# students on this page await}} your Writing/Speaking assessment",
+    "gradeNext": "Assess next: {name}",
+    "monitorInProgress": "{n} in progress",
+    "monitorQuiet": "{n} without a recent confirmed answer",
+    "monitorIncidents": "{n} with recorded incidents",
+    "monitorAttentionOnly": "Only those needing a look",
+    "monitorHonesty": "Based on answers the server confirmed. A quiet student may be reading or writing — it is not evidence of a disconnection, and incidents are observations, not penalties.",
+    "minutesAgo": "{n} min ago"
   },
   "examProgress": {
     "loading": "Loading progress…",

@@ -54,3 +54,21 @@ export function completionRate(counts: ExamReport["counts"]): number | null {
   return counts.eligible ? Math.round((100 * counts.handedIn) / counts.eligible) : null;
 }
 
+
+/** Rows the teacher can still assess (subjective grade outstanding), in gradebook order. */
+export function pendingAssessmentRows(rows: ExamReportRow[]): ExamReportRow[] {
+  return rows.filter((row) => Boolean(row.attemptId) && row.participation !== "in_progress"
+    && ["awaiting_assessment", "awaiting_teacher_review", "partially_graded"].includes(row.grading));
+}
+
+/** Live monitor rows needing a look: no confirmed answer for a while, or recorded incidents. Never a verdict. */
+export function monitorAttention(row: ExamReportRow, now: number): { stale: boolean; incidents: boolean } {
+  return { stale: isStale(row.monitor?.lastConfirmedAt ?? null, now), incidents: (row.monitor?.incidents ?? 0) > 0 };
+}
+
+/** "3 min ago" style age of the last confirmed answer, in whole minutes (null when none). */
+export function minutesSince(iso: string | null | undefined, now: number): number | null {
+  if (!iso) return null;
+  const at = Date.parse(iso);
+  return Number.isFinite(at) ? Math.max(0, Math.floor((now - at) / 60_000)) : null;
+}

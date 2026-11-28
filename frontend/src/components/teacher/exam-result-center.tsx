@@ -15,7 +15,7 @@ import { api } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import { GroupExamProgress, StudentExamProgress } from "./exam-progress-charts";
 
-import { completionRate, isStale, MEDALS, overallCell, scoreCell, SKILLS, SORTS, tashkent, type ExamReport, type ExamReportRow } from "./exam-result-helpers";
+import { completionRate, isStale, MEDALS, minutesSince, monitorAttention, overallCell, pendingAssessmentRows, scoreCell, SKILLS, SORTS, tashkent, type ExamReport, type ExamReportRow } from "./exam-result-helpers";
 
 export type { ExamReport, ExamReportRow } from "./exam-result-helpers";
 export { completionRate, isStale, overallCell, scoreCell } from "./exam-result-helpers";
@@ -103,6 +103,8 @@ export function ExamResultCenter({ assignmentId }: { assignmentId: string }) {
       </section>
 
       {data.stage === "open" && <LiveMonitor rows={data.rows} now={now} />}
+
+      <PendingAssessment rows={data.rows} />
 
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
@@ -202,16 +204,50 @@ function DeliveryStatus({ delivery }: { delivery: ExamReport["delivery"] }) {
   );
 }
 
+/** Assessment queue on this page: the next student whose Writing/Speaking still needs the teacher. */
+function PendingAssessment({ rows }: { rows: ExamReportRow[] }) {
+  const t = useTranslations("examResultCenter");
+  const pending = pendingAssessmentRows(rows);
+  if (!pending.length) return null;
+  return (
+    <Card data-testid="pending-assessment">
+      <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-5">
+        <div className="min-w-0">
+          <p className="font-semibold text-fg">{t("pendingTitle", { count: pending.length })}</p>
+          <p className="truncate text-sm text-fg-muted">{pending.slice(0, 6).map((row) => row.name).join(", ")}{pending.length > 6 ? "…" : ""}</p>
+        </div>
+        <Button asChild size="sm"><Link href={`/mock/attempt/${encodeURIComponent(pending[0].attemptId!)}`}>{t("gradeNext", { name: pending[0].name })}</Link></Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 function LiveMonitor({ rows, now }: { rows: ExamReportRow[]; now: number }) {
   const t = useTranslations("examResultCenter");
-  const running = rows.filter(r => r.participation === "in_progress" && r.monitor);
+  const [attentionOnly, setAttentionOnly] = useState(false);
+  const inProgress = rows.filter(r => r.participation === "in_progress" && r.monitor);
+  const quiet = inProgress.filter(r => monitorAttention(r, now).stale).length;
+  const withIncidents = inProgress.filter(r => monitorAttention(r, now).incidents).length;
+  const running = attentionOnly ? inProgress.filter(r => { const a = monitorAttention(r, now); return a.stale || a.incidents; }) : inProgress;
   return (
     <Card data-testid="live-monitor">
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle className="flex items-center gap-2"><RefreshCw className="size-4 text-brand" aria-hidden />{t("monitor")}</CardTitle>
         <span className="text-xs text-fg-muted">{t("monitorNote")}</span>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-3">
+        {inProgress.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 text-sm" data-testid="monitor-summary">
+            <Badge size="sm" variant="neutral">{t("monitorInProgress", { n: inProgress.length })}</Badge>
+            <Badge size="sm" variant={quiet ? "warning" : "neutral"}>{t("monitorQuiet", { n: quiet })}</Badge>
+            <Badge size="sm" variant={withIncidents ? "warning" : "neutral"}>{t("monitorIncidents", { n: withIncidents })}</Badge>
+            <label className="ml-auto inline-flex items-center gap-2 text-fg-muted">
+              <input type="checkbox" className="size-4 accent-brand" checked={attentionOnly} onChange={e => setAttentionOnly(e.target.checked)} />
+              {t("monitorAttentionOnly")}
+            </label>
+          </div>
+        )}
+        <p className="text-xs text-fg-muted">{t("monitorHonesty")}</p>
         {running.length === 0 ? <p className="text-sm text-fg-muted">{t("monitorEmpty")}</p> : (
           <Table wrapperClassName="overflow-x-auto" className="text-sm">
             <TableHeader><TableRow><TableHead>{t("student")}</TableHead><TableHead>{t("currentSkill")}</TableHead><TableHead numeric>{t("confirmed")}</TableHead>
@@ -223,7 +259,7 @@ function LiveMonitor({ rows, now }: { rows: ExamReportRow[]; now: number }) {
                   <TableCell className="font-medium">{r.name}</TableCell>
                   <TableCell className="capitalize">{r.monitor?.currentSkill ?? "—"}</TableCell>
                   <TableCell numeric>{r.monitor?.confirmedAnswers ?? 0}</TableCell>
-                  <TableCell>{r.monitor?.lastConfirmedAt ? tashkent(r.monitor.lastConfirmedAt) : "—"}</TableCell>
+                  <TableCell>{r.monitor?.lastConfirmedAt ? <>{tashkent(r.monitor.lastConfirmedAt)} <span className="text-xs text-fg-muted">· {t("minutesAgo", { n: minutesSince(r.monitor.lastConfirmedAt, now) ?? 0 })}</span></> : "—"}</TableCell>
                   <TableCell><Badge size="sm" variant={stale ? "warning" : "success"}>{t(stale ? "stale" : "active")}</Badge></TableCell>
                   <TableCell numeric>{r.monitor?.incidents ? <span className="inline-flex items-center gap-1 text-warning"><ShieldAlert className="size-3.5" aria-hidden />{r.monitor.incidents}</span> : 0}</TableCell>
                 </TableRow>
