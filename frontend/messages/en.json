@@ -4381,6 +4381,36 @@
       "partially_graded": "Partially graded",
       "finalized": "Finalized"
     },
-    "delivery": "Telegram: preliminary {preliminary}, final {final}"
+    "delivery": "Telegram: preliminary {preliminary}, final {final}",
+    "monitor": "Live monitor",
+    "currentSkill": "Current skill",
+    "confirmed": "Confirmed answers",
+    "lastConfirmed": "Last confirmed answer",
+    "incidents": "Guard events",
+    "stale": "no confirmed activity for 5+ min",
+    "progressOf": "Show progress",
+    "hide": "Hide"
+  },
+  "examProgress": {
+    "loading": "Loading progress…",
+    "failed": "Progress could not be loaded.",
+    "groupTitle": "Group progress",
+    "studentTitle": "Progress — {name}",
+    "insufficient": "Not enough comparable finalized results yet (at least two are needed).",
+    "groupLine": "average {avg}, median {median} (n={n} of {eligible}), handed in {rate}%, awaiting grading {pending}",
+    "movement": "Latest exam vs previous: {improved} improved, {declined} declined.",
+    "support": "May benefit from extra support",
+    "caveat": "Changes show observed test performance on comparable exams, not a guaranteed change in proficiency. Group populations can differ between exams.",
+    "studentLine": "Completed {completed}, finalized {finalized}, participation {rate}%",
+    "summary": "First {first} · previous {previous} · latest {latest} · best {best} · change {change} (since first {total})",
+    "showSkills": "Show skills",
+    "track": "Track",
+    "series": {
+      "overall": "Overall",
+      "listening": "Listening",
+      "reading": "Reading",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    }
   }
 }

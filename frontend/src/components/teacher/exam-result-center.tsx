@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/lib/api-client";
+import { GroupExamProgress, StudentExamProgress } from "./exam-progress-charts";
 
 type Skill = "listening" | "reading" | "writing" | "speaking";
 export type ExamReportRow = {
@@ -16,9 +17,10 @@ export type ExamReportRow = {
   grading: "none" | "awaiting_assessment" | "awaiting_teacher_review" | "partially_graded" | "finalized";
   scores: Record<Skill, number | null>; overall: number | null; cefr: string | null; rank: number | null;
   rawScore: number | null; rawMax: number | null; growth: number | null; pendingSkills: string[]; submittedAt: string | null;
+  monitor?: { currentSkill: string | null; confirmedAnswers: number; lastConfirmedAt: string | null; deadlineAt: string | null; incidents: number } | null;
 };
 export type ExamReport = {
-  assignmentId: string; title: string; examTitle: string; groupName: string; scale: "ielts" | "multilevel" | "raw";
+  assignmentId: string; title: string; examTitle: string; groupName: string; groupId: string | null; scale: "ielts" | "multilevel" | "raw";
   stage: "open" | "preliminary" | "final"; deadline: string; opensAt: string | null; timingPolicy: string; generatedAt: string;
   counts: Record<"eligible" | "notStarted" | "inProgress" | "submitted" | "autoSubmitted" | "notSubmitted" | "handedIn" | "awaitingGrading" | "finalized", number>;
   stats: { average: number | null; median: number | null; highest: number | null; sample: number };
@@ -41,6 +43,7 @@ export function ExamResultCenter({ assignmentId }: { assignmentId: string }) {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [grading, setGrading] = useState("");
+  const [student, setStudent] = useState("");
   const path = `/teacher/exam-assignments/${encodeURIComponent(assignmentId)}/results`;
   const report = useQuery({
     queryKey: ["exam-result-center", assignmentId, page, search, grading],
@@ -80,6 +83,7 @@ export function ExamResultCenter({ assignmentId }: { assignmentId: string }) {
           <p className="mt-3 text-sm">{t("average")}: <strong>{data.stats.average ?? t("unavailable")}</strong> (n={data.stats.sample}) · {t("tieNote")}</p>
         </CardContent>
       </Card>
+      {data.stage === "open" && <LiveMonitor rows={data.rows} />}
       <Card>
         <CardContent className="space-y-3 pt-4">
           <div className="flex flex-wrap items-end gap-2">
@@ -91,6 +95,7 @@ export function ExamResultCenter({ assignmentId }: { assignmentId: string }) {
               </select>
             </label>
             <Button asChild variant="outline" size="sm"><a href={`/api/backend${path}/excel`} download>Excel</a></Button>
+            <Button asChild variant="outline" size="sm"><a href={`/api/backend${path}/pdf`} download>PDF</a></Button>
             <Button size="sm" variant="outline" disabled={data.stage === "open" || resend.isPending}
               onClick={() => { if (window.confirm(t("resendConfirm"))) resend.mutate(); }}>{t("resend")}</Button>
             {resend.isSuccess && <span role="status" className="text-sm">{t("resendQueued", { count: resend.data.queued })}</span>}
@@ -105,7 +110,7 @@ export function ExamResultCenter({ assignmentId }: { assignmentId: string }) {
               {data.rows.map(row => (
                 <TableRow key={row.studentId} data-testid="result-row">
                   <TableCell>{row.rank ?? "—"}</TableCell>
-                  <TableCell>{row.name}</TableCell>
+                  <TableCell><button type="button" className="text-left underline-offset-2 hover:underline" aria-expanded={student === row.studentId} onClick={() => setStudent(student === row.studentId ? "" : row.studentId)}>{row.name}</button></TableCell>
                   {SKILLS.map(s => <TableCell key={s} numeric>{scoreCell(row, s, t("pending"))}</TableCell>)}
                   <TableCell numeric>{row.overall ?? (row.grading === "finalized" ? "—" : t("pending"))}{row.cefr ? ` (${row.cefr})` : ""}</TableCell>
                   <TableCell numeric>{row.growth === null ? "—" : row.growth > 0 ? `+${row.growth}` : row.growth}</TableCell>
@@ -120,12 +125,47 @@ export function ExamResultCenter({ assignmentId }: { assignmentId: string }) {
             <span className="text-sm">{page}/{pages}</span>
             <Button size="sm" variant="outline" disabled={page >= pages} onClick={() => setPage(page + 1)}>{t("next")}</Button>
           </div>
+          {student && data.groupId && <StudentExamProgress groupId={data.groupId} studentId={student} track={data.scale === "multilevel" ? "multilevel" : "ielts"} />}
           <p className="text-xs text-fg-muted" data-testid="delivery-status">
             {t("delivery", { preliminary: data.delivery.preliminaryAt ? tashkent(data.delivery.preliminaryAt) : "—", final: data.delivery.finalAt ? tashkent(data.delivery.finalAt) : "—" })}
             {data.delivery.messages.slice(0, 3).map(m => ` · ${m.key}: ${m.status}${m.error ? ` (${m.error})` : ""}`).join("")}
           </p>
         </CardContent>
       </Card>
+      {data.groupId && data.scale !== "raw" && <Card id="progress"><CardContent className="pt-4">
+        <GroupExamProgress groupId={data.groupId} track={data.scale === "multilevel" ? "multilevel" : "ielts"} />
+      </CardContent></Card>}
     </div>
+  );
+}
+
+const STALE_MS = 5 * 60_000;
+/** Last confirmed server activity only; nothing about unsent client state is inferred. */
+export function isStale(lastConfirmedAt: string | null, now: number): boolean {
+  return lastConfirmedAt === null || now - new Date(lastConfirmedAt).getTime() > STALE_MS;
+}
+
+function LiveMonitor({ rows }: { rows: ExamReportRow[] }) {
+  const t = useTranslations("examResultCenter");
+  const running = rows.filter(r => r.participation === "in_progress" && r.monitor);
+  const [now] = useState(() => Date.now());
+  if (!running.length) return null;
+  return (
+    <Card data-testid="live-monitor">
+      <CardHeader><CardTitle>{t("monitor")}</CardTitle></CardHeader>
+      <CardContent>
+        <Table wrapperClassName="overflow-x-auto">
+          <TableHeader><TableRow><TableHead>{t("student")}</TableHead><TableHead>{t("currentSkill")}</TableHead><TableHead numeric>{t("confirmed")}</TableHead>
+            <TableHead>{t("lastConfirmed")}</TableHead><TableHead numeric>{t("incidents")}</TableHead></TableRow></TableHeader>
+          <TableBody>{running.map(r => (
+            <TableRow key={r.studentId}>
+              <TableCell>{r.name}</TableCell><TableCell>{r.monitor?.currentSkill ?? "—"}</TableCell><TableCell numeric>{r.monitor?.confirmedAnswers ?? 0}</TableCell>
+              <TableCell>{r.monitor?.lastConfirmedAt ? tashkent(r.monitor.lastConfirmedAt) : "—"}{isStale(r.monitor?.lastConfirmedAt ?? null, now) ? ` · ${t("stale")}` : ""}</TableCell>
+              <TableCell numeric>{r.monitor?.incidents ?? 0}</TableCell>
+            </TableRow>))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }

@@ -18,3 +18,21 @@ describe("Result Center score cells", () => {
     expect(scoreCell(row({ scores: { listening: null, reading: 6, writing: null, speaking: null }, pendingSkills: [] }), "listening", "p")).toBe("—");
   });
 });
+
+import { isStale } from "./exam-result-center";
+import { chartRows } from "./exam-progress-charts";
+
+describe("monitor freshness and progress rows", () => {
+  it("marks missing or old confirmed activity as stale", () => {
+    const now = Date.parse("2026-11-28T10:00:00Z");
+    expect(isStale(null, now)).toBe(true);
+    expect(isStale("2026-11-28T09:50:00Z", now)).toBe(true);
+    expect(isStale("2026-11-28T09:58:00Z", now)).toBe(false);
+  });
+  it("keeps missing skill scores as null, never 0", () => {
+    const rows = chartRows([{ attemptId: "a", examTitle: "Mock", date: "2026-11-01T00:00:00Z", overall: 6.5,
+      skills: { listening: 7, reading: null, writing: 6, speaking: null } }]);
+    expect(rows[0].reading).toBeNull();
+    expect(rows[0].overall).toBe(6.5);
+  });
+});

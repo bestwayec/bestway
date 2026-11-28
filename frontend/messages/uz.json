@@ -4381,6 +4381,36 @@
       "partially_graded": "Qisman baholangan",
       "finalized": "Yakunlangan"
     },
-    "delivery": "Telegram: dastlabki {preliminary}, yakuniy {final}"
+    "delivery": "Telegram: dastlabki {preliminary}, yakuniy {final}",
+    "monitor": "Jonli kuzatuv",
+    "currentSkill": "Joriy bo‘lim",
+    "confirmed": "Tasdiqlangan javoblar",
+    "lastConfirmed": "Oxirgi tasdiqlangan javob",
+    "incidents": "Nazorat hodisalari",
+    "stale": "5+ daqiqa tasdiqlangan faollik yo‘q",
+    "progressOf": "Rivojlanishni ko‘rish",
+    "hide": "Yopish"
+  },
+  "examProgress": {
+    "loading": "Rivojlanish yuklanmoqda…",
+    "failed": "Rivojlanishni yuklab bo‘lmadi.",
+    "groupTitle": "Guruh rivojlanishi",
+    "studentTitle": "Rivojlanish — {name}",
+    "insufficient": "Taqqoslanadigan yakuniy natijalar yetarli emas (kamida ikkita kerak).",
+    "groupLine": "o‘rtacha {avg}, mediana {median} (n={n} / {eligible}), topshirganlar {rate}%, baholash kutilmoqda {pending}",
+    "movement": "Oxirgi imtihon oldingisiga nisbatan: {improved} nafar o‘sdi, {declined} nafar pasaydi.",
+    "support": "Qo‘shimcha yordam foydali bo‘lishi mumkin",
+    "caveat": "O‘zgarishlar taqqoslanadigan imtihonlardagi natijani ko‘rsatadi, til darajasining kafolatli o‘zgarishini emas. Guruh tarkibi imtihonlar orasida farq qilishi mumkin.",
+    "studentLine": "Topshirgan {completed}, yakunlangan {finalized}, ishtirok {rate}%",
+    "summary": "Birinchi {first} · oldingi {previous} · oxirgi {latest} · eng yaxshi {best} · o‘zgarish {change} (boshidan {total})",
+    "showSkills": "Ko‘nikmalarni ko‘rsatish",
+    "track": "Yo‘nalish",
+    "series": {
+      "overall": "Umumiy",
+      "listening": "Listening",
+      "reading": "Reading",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    }
   }
 }
